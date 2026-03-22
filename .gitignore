@@ -24,3 +24,9 @@ Thumbs.db
 
 # ── Claude Code internal settings (machine-local) ─────────────────────────────
 .claude/
+
+.env*
+
+# SSH keys
+github
+github.pub
