@@ -59,19 +59,12 @@ else
 fi
 
 # ── 2. ubuntu-drivers ─────────────────────────────────────────────────────────
-print_section "ubuntu-drivers"
+# Note: autoinstall is intentionally skipped — it selects the "recommended" driver
+# (535) which can downgrade an explicitly-managed newer driver (580) and fail DKMS
+# on mainline kernels. Driver versions are managed explicitly via apt above.
+print_section "Driver recommendations"
 
 if has_cmd ubuntu-drivers; then
-    print_step "ubuntu-drivers autoinstall"
-    if sudo_silent ubuntu-drivers autoinstall; then
-        print_ok
-        record_ok
-    else
-        print_warn "ubuntu-drivers autoinstall returned non-zero"
-        record_warn
-    fi
-
-    print_section "Driver recommendations"
     ubuntu-drivers devices 2>/dev/null | grep -E "(modalias|driver|recommended)" | while IFS= read -r l; do
         print_info "${l}"
     done
@@ -102,10 +95,10 @@ else
     fwupd_check=$(fwupdmgr get-updates 2>&1 || true)
     echo "$fwupd_check" >> "${LOG_FILE}"
 
-    if echo "$fwupd_check" | grep -q "No upgrades for"; then
+    if echo "$fwupd_check" | grep -qiE "No upgrades for|No updates available"; then
         print_ok "No firmware updates available"
         record_ok
-    elif echo "$fwupd_check" | grep -qiE "upgrade|update"; then
+    elif echo "$fwupd_check" | grep -qiE "upgrade available|updates available|^\s+Version:"; then
         print_warn "Firmware updates available — apply manually with: fwupdmgr update"
         print_info "Available updates:"
         echo "$fwupd_check" | grep -E "(Version|Summary|Description)" | head -10 | while IFS= read -r l; do

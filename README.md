@@ -115,7 +115,7 @@ Ubuntu_Aktualizacje/
 | **npm** | `update-npm.sh` | All global npm packages via brew Node.js; installs from config; runs `npm audit` |
 | **pip** | `update-pip.sh` | pip user packages + pipx isolated tools; upgrades all outdated |
 | **Flatpak** | `update-flatpak.sh` | All Flatpak apps; cleans unused runtimes |
-| **Drivers** | `update-drivers.sh` | NVIDIA 580 (apt), NVIDIA Container Toolkit, ubuntu-drivers autoinstall, Dell/Intel/GPU firmware (fwupd) |
+| **Drivers** | `update-drivers.sh` | NVIDIA 580 (apt), NVIDIA Container Toolkit, ubuntu-drivers recommendations (info only), Dell/Intel/GPU firmware (fwupd) |
 | **Inventory** | `update-inventory.sh` | Regenerates `APPS.md` with full current state |
 
 ---

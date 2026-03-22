@@ -51,7 +51,7 @@ GLOBAL_COUNT="${#INSTALLED_GLOBALS[@]}"
 # ── 2. Check for outdated globals ─────────────────────────────────────────────
 print_section "Checking for outdated packages"
 
-outdated_json=$("${NPM_BIN}" outdated -g --json 2>/dev/null || echo "{}")
+outdated_json=$("${NPM_BIN}" outdated -g --json 2>/dev/null) || true
 echo "$outdated_json" >> "${LOG_FILE}"
 
 outdated_count=$(echo "$outdated_json" | python3 -c "
