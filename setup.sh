@@ -7,6 +7,7 @@
 #   ./setup.sh --discover       Scan this machine → write/update config files
 #   ./setup.sh --check          Dry-run: show what's installed vs missing
 #   ./setup.sh --update-config  Like --discover but merges into existing config
+#   ./setup.sh --rollback       Restore config files from latest .bak_* backup
 #
 # FLAGS (combine with any mode):
 #   --nvidia        Install NVIDIA driver (auto-detected by default)
@@ -26,6 +27,9 @@
 #
 #   # Check what would be installed (no changes):
 #   ./setup.sh --check
+#
+#   # Undo last --discover (restore previous config):
+#   ./setup.sh --rollback
 # =============================================================================
 set -euo pipefail
 
@@ -54,6 +58,7 @@ while [[ $# -gt 0 ]]; do
         --discover)         MODE="discover" ;;
         --check)            MODE="check" ;;
         --update-config)    MODE="update-config" ;;
+        --rollback)         MODE="rollback" ;;
         --nvidia)           OPT_NVIDIA="yes" ;;
         --no-nvidia)        OPT_NVIDIA="no" ;;
         --no-brew)          OPT_BREW=0 ;;
@@ -81,6 +86,48 @@ print_info "Kernel  : ${KERNEL_VER}"
 print_info "Machine : ${HW_VENDOR} ${HW_MODEL}"
 print_info "Log     : ${LOG_FILE}"
 echo
+
+# =============================================================================
+# MODE: ROLLBACK — restore config files from latest backup
+# =============================================================================
+if [[ "$MODE" == "rollback" ]]; then
+    print_header "Rollback — Restoring config files from backup"
+
+    RESTORED=0
+    FAILED=0
+
+    for f in "${CONFIG_DIR}"/*.list "${CONFIG_DIR}"/*.conf; do
+        [[ -f "$f" ]] || continue
+        base="$f"
+        # Find most recent backup
+        latest_bak=$(ls -t "${base}".bak_* 2>/dev/null | head -1)
+        if [[ -z "$latest_bak" ]]; then
+            print_info "$(basename "$base"): no backup found — skipping"
+            continue
+        fi
+
+        bak_date=$(echo "$latest_bak" | grep -oP '\d{8}_\d{6}$' || echo "unknown")
+        print_step "Restore $(basename "$base") (from backup ${bak_date})"
+
+        if [[ $OPT_NONINTERACTIVE -eq 0 ]]; then
+            echo -ne "  ${YELLOW}Restore?${RESET} [y/N] "
+            read -r ans
+            [[ "${ans,,}" != "y" ]] && { print_info "skipped"; continue; }
+        fi
+
+        # Backup current state before restoring
+        cp "$base" "${base}.bak_$(date +%Y%m%d_%H%M%S)_pre_rollback" 2>/dev/null || true
+        cp "$latest_bak" "$base"
+        print_ok "restored from $(basename "$latest_bak")"
+        RESTORED=$((RESTORED + 1))
+    done
+
+    echo
+    print_info "Restored: ${RESTORED} file(s)"
+    [[ $FAILED -gt 0 ]] && print_warn "Failed: ${FAILED} file(s)"
+    print_info "Run './setup.sh --check' to verify state."
+    exit 0
+fi
 
 # =============================================================================
 # MODE: DISCOVER — scan machine → write config files

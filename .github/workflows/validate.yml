@@ -1,0 +1,153 @@
+name: Validate Config
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'config/**'
+      - 'scripts/**'
+      - 'lib/**'
+      - 'setup.sh'
+      - 'update-all.sh'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-configs:
+    name: Validate config files
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check config file syntax
+        run: |
+          echo "── Checking config files ──"
+          errors=0
+
+          for f in config/*.list; do
+            # Check for lines that aren't comments, blank, or valid package names
+            invalid=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$|^[a-zA-Z0-9@._/-]+' "$f" 2>/dev/null || true)
+            if [[ -n "$invalid" ]]; then
+              echo "❌ Invalid lines in $f:"
+              echo "$invalid"
+              errors=$((errors + 1))
+            else
+              count=$(grep -cvE '^[[:space:]]*#|^[[:space:]]*$' "$f" 2>/dev/null || echo 0)
+              echo "✔  $f ($count packages)"
+            fi
+          done
+
+          [[ $errors -eq 0 ]] && echo "" && echo "All config files valid." || exit 1
+
+      - name: Check shell script syntax
+        run: |
+          echo "── Checking shell scripts ──"
+          errors=0
+
+          find . -name "*.sh" -not -path "./.git/*" | sort | while read -r script; do
+            if bash -n "$script" 2>&1; then
+              echo "✔  $script"
+            else
+              echo "❌ Syntax error in $script"
+              errors=$((errors + 1))
+            fi
+          done
+
+          # Re-check for exit code (subshell above hides errors)
+          bash_errors=$(find . -name "*.sh" -not -path "./.git/*" -exec bash -n {} \; 2>&1 | wc -l)
+          [[ "$bash_errors" -eq 0 ]] || { echo "Shell syntax errors found!"; exit 1; }
+
+      - name: Check required files exist
+        run: |
+          echo "── Checking required files ──"
+          required=(
+            "update-all.sh"
+            "setup.sh"
+            "lib/common.sh"
+            "lib/detect.sh"
+            "lib/repos.sh"
+            "scripts/update-apt.sh"
+            "scripts/update-snap.sh"
+            "scripts/update-brew.sh"
+            "scripts/update-npm.sh"
+            "scripts/update-pip.sh"
+            "scripts/update-flatpak.sh"
+            "scripts/update-drivers.sh"
+            "scripts/update-inventory.sh"
+            "scripts/rebuild-dkms.sh"
+            "scripts/notify.sh"
+            "config/apt-packages.list"
+            "config/apt-repos.list"
+            "config/snap-packages.list"
+            "config/brew-formulas.list"
+            "config/brew-casks.list"
+            "config/npm-globals.list"
+            "config/pip-packages.list"
+            "config/pipx-packages.list"
+            "config/flatpak-packages.list"
+            "APPS.md.example"
+            "README.md"
+          )
+
+          missing=0
+          for f in "${required[@]}"; do
+            if [[ -f "$f" ]]; then
+              echo "✔  $f"
+            else
+              echo "❌ MISSING: $f"
+              missing=$((missing + 1))
+            fi
+          done
+
+          [[ $missing -eq 0 ]] || { echo "$missing required files missing!"; exit 1; }
+
+      - name: Check APPS.md is gitignored
+        run: |
+          if git check-ignore -q APPS.md 2>/dev/null; then
+            echo "✔  APPS.md is gitignored (correct)"
+          else
+            echo "❌ APPS.md is NOT gitignored — machine-specific inventory must not be committed"
+            exit 1
+          fi
+
+      - name: Check no secrets in tracked files
+        run: |
+          echo "── Checking for leaked secrets ──"
+          # Patterns that should never appear in tracked files
+          if git grep -lE '(ghp_|github_pat_|glpat-|xox[baprs]-)[A-Za-z0-9]' -- \
+              ':!*.env*' ':!*.local' ':!*secret*' 2>/dev/null; then
+            echo "❌ Potential GitHub/GitLab tokens found in tracked files!"
+            exit 1
+          else
+            echo "✔  No obvious tokens found"
+          fi
+
+  check-readme:
+    name: README completeness
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check README sections
+        run: |
+          required_sections=(
+            "## Overview"
+            "## Quick Start"
+            "## What Gets Updated"
+            "## Migration"
+            "## Git & GitHub"
+          )
+          missing=0
+          for section in "${required_sections[@]}"; do
+            if grep -q "$section" README.md 2>/dev/null; then
+              echo "✔  Found: $section"
+            else
+              echo "⚠  Missing section: $section"
+              missing=$((missing + 1))
+            fi
+          done
+          # Warn but don't fail on README sections
+          echo "README check complete ($missing sections missing — non-blocking)"
