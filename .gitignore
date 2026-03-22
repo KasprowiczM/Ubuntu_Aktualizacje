@@ -1,0 +1,15 @@
+# Logs — keep directory, ignore log files
+logs/*.log
+
+# Editor / IDE
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code internal settings (not project-relevant)
+.claude/
