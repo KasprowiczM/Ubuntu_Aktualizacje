@@ -1,0 +1,178 @@
+# APPS.md — Software Inventory
+
+> **NOTE:** This is an example/template file. The real `APPS.md` is
+> machine-specific and git-ignored. Run `./scripts/update-inventory.sh`
+> (or `./update-all.sh`) to generate it on your machine.
+
+---
+
+> **Host:** my-laptop
+> **OS:** Ubuntu 24.04.4 LTS
+> **Kernel:** 6.x.x-generic
+> **Architecture:** x86-64
+> **Last updated:** 2026-01-01 12:00:00
+> **Hardware:** Dell Inc. Precision 5520 (laptop)
+> **CPU:** Intel Core i7-7820HQ CPU @ 2.90GHz
+> **RAM:** 32 GB
+
+---
+
+## Table of Contents
+
+1. [APT Packages](#apt-packages)
+2. [Snap Packages](#snap-packages)
+3. [Homebrew Formulas](#homebrew-formulas)
+4. [Homebrew Casks](#homebrew-casks)
+5. [npm Global Packages](#npm-global-packages)
+6. [Drivers & Firmware](#drivers--firmware)
+7. [Flatpak](#flatpak)
+8. [APT Sources](#apt-sources)
+
+---
+
+## APT Packages
+
+> Total manually installed: 85 packages
+
+### OS Core
+
+| Package | Version |
+|---------|---------|
+| `ubuntu-desktop` | 1.539.2 |
+| `ubuntu-desktop-minimal` | 1.539.2 |
+| `ubuntu-standard` | 1.539.2 |
+| `ubuntu-minimal` | 1.539.2 |
+
+### Configured Applications
+
+> Packages listed in `config/apt-packages.list`
+
+| Application | Package | Version | Status |
+|-------------|---------|---------|--------|
+| Brave Browser | `brave-browser` | 1.88.134 | ✔ installed |
+| Google Chrome | `google-chrome-stable` | 146.0.x | ✔ installed |
+| VS Code | `code` | 1.112.0 | ✔ installed |
+| Docker CE | `docker-ce` | 5:29.x.x | ✔ installed |
+| NVIDIA Container Toolkit | `nvidia-container-toolkit` | 1.19.0-1 | ✔ installed |
+| MegaSync | `megasync` | 6.1.1 | ✔ installed |
+| Proton Mail | `proton-mail` | 1.12.1 | ✔ installed |
+| ProtonVPN | `proton-vpn-gnome-desktop` | 0.10.1 | ✔ installed |
+| Remote Desktop Manager | `remotedesktopmanager` | 2025.x.x | ✔ installed |
+| Grub Customizer | `grub-customizer` | 5.2.5 | ✔ installed |
+| Rclone | `rclone` | 1.60.x | ✔ installed |
+| Midnight Commander | `mc` | 3:4.8.30 | ✔ installed |
+| BleachBit | `bleachbit` | 4.6.0 | ✔ installed |
+
+---
+
+## Snap Packages
+
+### User Applications
+
+| Application | Version | Revision | Channel | Publisher |
+|-------------|---------|----------|---------|-----------|
+| **firefox** | 148.0.2-1 | 7967 | latest/stable | mozilla** |
+| **thunderbird** | 140.x.x | 1029 | latest/stable | canonical** |
+| **keepassxc** | 2.7.9 | 1854 | latest/stable | keepassxreboot |
+| **htop** | 3.4.1 | 5548 | latest/stable | maxiberta* |
+| **firmware-updater** | 0+git.xxx | 223 | latest/stable | canonical** |
+
+### Runtime / Base Snaps
+
+| Snap | Version | Revision |
+|------|---------|----------|
+| `bare` | 1.0 | 5 |
+| `core22` | 20260225 | 2411 |
+| `core24` | 20260211 | 1499 |
+| `gnome-46-2404` | 0+git.xxx | 153 |
+
+---
+
+## Homebrew Formulas
+
+> Prefix: `/home/linuxbrew/.linuxbrew`
+
+### Configured Formulas
+
+| Formula | Version | In Config |
+|---------|---------|-----------|
+| `gemini-cli` | 0.34.0 | ✔ |
+| `opencode` | 1.2.20 | ✔ |
+| `qwen-code` | 0.12.6 | ✔ |
+| `node` | 25.8.1_1 | ✔ |
+| `python@3.14` | 3.14.3_1 | ✔ |
+| `gcc` | 15.2.0_1 | ✔ |
+| `ripgrep` | 15.1.0 | ✔ |
+
+---
+
+## Homebrew Casks
+
+| Application | Version | In Config |
+|-------------|---------|-----------|
+| **claude-code** | 2.1.81 | ✔ |
+| **codex** | 0.116.0 | ✔ |
+
+---
+
+## npm Global Packages
+
+> npm binary: `/home/linuxbrew/.linuxbrew/bin/npm`
+> Node.js: `v25.8.1`
+
+| Package | Version | In Config |
+|---------|---------|-----------|
+| `npm` | 11.11.0 | — |
+
+---
+
+## Drivers & Firmware
+
+### GPU Drivers
+
+| Component | Details |
+|-----------|---------|
+| GPU detected | NVIDIA Corporation GM107GLM [Quadro M1200 Mobile] |
+| NVIDIA present | Yes |
+| `nvidia-driver-580` | 580.126.09-0ubuntu0.24.04.2 |
+| nvidia-smi | Quadro M1200, 580.126.09 |
+| Running kernel | 6.x.x-generic |
+
+### Firmware (fwupd)
+
+| Device | Current Version |
+|--------|----------------|
+| Dell Inc. Precision 5520 | 1.40.0 |
+| Intel Core i7-7820HQ | 0x000000f8 |
+
+### System Firmware
+
+| Property | Value |
+|----------|-------|
+| BIOS Version | 1.40.0 |
+| BIOS Date | 09/03/2024 |
+| System | Precision 5520 |
+
+---
+
+## Flatpak
+
+_Flatpak not installed on this machine._
+
+---
+
+## APT Sources
+
+| Source File | Content |
+|-------------|---------|
+| `brave-browser-release.sources` | Types: deb URIs: https://brave-browser-apt-release.s3.brave.com/ |
+| `docker.sources` | Types: deb URIs: https://download.docker.com/linux/ubuntu |
+| `google-chrome.list` | deb [arch=amd64 ...] https://dl.google.com/linux/chrome/deb/ stable main |
+| `nvidia-container-toolkit.list` | deb [signed-by=...] https://nvidia.github.io/... |
+| `vscode.sources` | Types: deb URIs: https://packages.microsoft.com/repos/vscode |
+| `meganz.list` | deb [arch=amd64 ...] https://mega.nz/linux/repo/... |
+| `protonvpn-stable.sources` | Types: deb URIs: https://repo.protonvpn.com/debian |
+
+---
+
+*This is an EXAMPLE file. The real `APPS.md` is generated by `scripts/update-inventory.sh`.*

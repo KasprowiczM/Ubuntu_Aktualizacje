@@ -149,3 +149,10 @@ else
 fi
 
 print_summary "Drivers & Firmware Summary"
+
+# ── Update inventory (skipped when called from update-all.sh) ─────────────────
+if [[ "${INVENTORY_SILENT:-0}" != "1" ]]; then
+    print_section "Updating APPS.md"
+    print_step "update-inventory.sh"
+    bash "${SCRIPT_DIR}/scripts/update-inventory.sh" && print_ok || print_warn "inventory update failed"
+fi

@@ -1,112 +1,103 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/update-apt.sh — Update & upgrade APT packages (OS + all apt sources)
+# scripts/update-apt.sh — Update & upgrade all APT-managed packages
 #
-# Covers:
-#   • Ubuntu core OS packages
-#   • Brave Browser          (brave-browser-release.sources)
-#   • Google Chrome          (google-chrome.list)
-#   • VS Code                (vscode.sources)
-#   • Docker CE              (docker.sources)
-#   • NVIDIA Container Toolkit (nvidia-container-toolkit.list)
-#   • MegaSync               (meganz.list)
-#   • ProtonVPN              (protonvpn-stable.sources)
-#   • Proton Mail            (protonvpn-stable.sources)
-#   • Remote Desktop Manager (remotedesktopmanager)
-#   • Grub Customizer        (PPA: danielrichter2007)
-#   • NVIDIA drivers         (ubuntu repo: nvidia-driver-580)
-#   • Rclone                 (ubuntu repo)
-#   • All other apt packages
+# Reads package list from: config/apt-packages.list
+# Reads repo list from:    config/apt-repos.list
+#
+# Covers: Ubuntu OS, Brave, Chrome, VSCode, Docker, MegaSync, ProtonVPN,
+#         Proton Mail, RDM, Grub Customizer, NVIDIA driver, Rclone, and
+#         any other apt-managed package on the system.
 # =============================================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
+source "${SCRIPT_DIR}/lib/detect.sh"
+
+CONFIG_APT="${SCRIPT_DIR}/config/apt-packages.list"
 
 print_header "APT — System & Application Updates"
 
 require_sudo
 
-# ── 1. Refresh package lists ──────────────────────────────────────────────────
+# ── 1. Refresh all apt sources ────────────────────────────────────────────────
 print_section "Refreshing package lists"
 
 print_step "apt-get update"
 if sudo_silent apt-get update -q; then
-    print_ok
-    record_ok
+    print_ok; record_ok
 else
-    print_error "apt-get update failed — check /etc/apt/sources.list.d/ for broken repos"
-    record_err
-fi
-
-# ── 2. Upgrade all APT packages ───────────────────────────────────────────────
-print_section "Upgrading packages"
-
-print_step "apt-get upgrade (safe)"
-if sudo_silent apt-get upgrade -y -q \
-    -o Dpkg::Options::="--force-confdef" \
-    -o Dpkg::Options::="--force-confold"; then
-    print_ok
-    record_ok
-else
-    print_warn "apt-get upgrade returned non-zero — some packages may be on hold"
+    print_warn "apt-get update had errors — some repos may be unavailable"
     record_warn
 fi
 
-print_step "apt-get dist-upgrade (kernel/metapackages)"
-if sudo_silent apt-get dist-upgrade -y -q \
-    -o Dpkg::Options::="--force-confdef" \
-    -o Dpkg::Options::="--force-confold"; then
-    print_ok
-    record_ok
+# ── 2. Safe upgrade (keep existing config files) ─────────────────────────────
+print_section "Upgrading packages"
+
+APT_OPTS=(
+    -y -q
+    -o Dpkg::Options::="--force-confdef"
+    -o Dpkg::Options::="--force-confold"
+    -o APT::Get::Show-Versions=true
+)
+
+print_step "apt-get upgrade"
+if sudo_silent apt-get upgrade "${APT_OPTS[@]}"; then
+    print_ok; record_ok
+else
+    print_warn "upgrade returned non-zero — some packages may be held"
+    record_warn
+fi
+
+print_step "apt-get dist-upgrade (metapackages & kernel)"
+if sudo_silent apt-get dist-upgrade "${APT_OPTS[@]}"; then
+    print_ok; record_ok
 else
     print_warn "dist-upgrade returned non-zero"
     record_warn
 fi
 
-# ── 3. Auto-remove orphaned packages ─────────────────────────────────────────
+# ── 3. Cleanup ────────────────────────────────────────────────────────────────
 print_section "Cleaning up"
 
 print_step "Remove orphaned packages"
-if sudo_silent apt-get autoremove -y -q; then
-    print_ok
-    record_ok
-else
-    print_warn "autoremove returned non-zero"
-    record_warn
-fi
+sudo_silent apt-get autoremove -y -q && print_ok || { print_warn "autoremove non-zero"; record_warn; }
 
 print_step "Clean package cache"
-if sudo_silent apt-get autoclean -q; then
-    print_ok
-    record_ok
+sudo_silent apt-get autoclean -q && print_ok || { print_warn "autoclean non-zero"; record_warn; }
+
+# ── 4. Version report (from config) ──────────────────────────────────────────
+print_section "Key package versions (from config/apt-packages.list)"
+
+if [[ -f "$CONFIG_APT" ]]; then
+    while IFS= read -r pkg; do
+        [[ -z "$pkg" ]] && continue
+        ver=$(apt_pkg_version "$pkg")
+        if [[ -n "$ver" ]]; then
+            print_info "${pkg}: ${ver}"
+        else
+            print_warn "${pkg}: NOT INSTALLED"
+            record_warn
+        fi
+    done < <(parse_config_names "$CONFIG_APT")
 else
-    print_warn "autoclean returned non-zero"
-    record_warn
+    print_warn "Config file not found: ${CONFIG_APT}"
 fi
 
-# ── 4. Report what changed ────────────────────────────────────────────────────
-print_section "Key package versions"
-declare -A KEY_PKGS=(
-    [brave-browser]="Brave Browser"
-    [google-chrome-stable]="Google Chrome"
-    [code]="VS Code"
-    [docker-ce]="Docker CE"
-    [megasync]="MegaSync"
-    [proton-mail]="Proton Mail"
-    [proton-vpn-gtk-app]="Proton VPN"
-    [remotedesktopmanager]="Remote Desktop Manager"
-    [grub-customizer]="Grub Customizer"
-    [nvidia-driver-580]="NVIDIA Driver 580"
-    [rclone]="Rclone"
-    [nodejs]="Node.js (system apt)"
-)
-
-for pkg in "${!KEY_PKGS[@]}"; do
-    ver=$(dpkg -l "$pkg" 2>/dev/null | awk '/^ii/{print $3}')
-    if [[ -n "$ver" ]]; then
-        print_info "${KEY_PKGS[$pkg]}: ${ver}"
-    fi
-done
+# ── 5. Reboot check ───────────────────────────────────────────────────────────
+if [[ -f /var/run/reboot-required ]]; then
+    echo
+    print_warn "*** REBOOT REQUIRED ***"
+    [[ -f /var/run/reboot-required.pkgs ]] && \
+        print_info "  Packages: $(paste -sd', ' /var/run/reboot-required.pkgs)"
+fi
 
 print_summary "APT Update Summary"
+
+# ── Update inventory (skipped when called from update-all.sh) ─────────────────
+if [[ "${INVENTORY_SILENT:-0}" != "1" ]]; then
+    print_section "Updating APPS.md"
+    print_step "update-inventory.sh"
+    bash "${SCRIPT_DIR}/scripts/update-inventory.sh" && print_ok || print_warn "inventory update failed"
+fi

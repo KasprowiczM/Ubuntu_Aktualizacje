@@ -1,0 +1,19 @@
+# =============================================================================
+# config/apt-repos.list — Third-party APT repositories to add
+#
+# One repo ID per line. Each ID maps to a setup function in lib/repos.sh.
+# Format: <repo_id>  [# comment]
+#
+# To add a new repo:
+#   1. Add the ID here
+#   2. Add a corresponding _setup_repo_<id>() function in lib/repos.sh
+# =============================================================================
+
+brave                       # Brave Browser
+chrome                      # Google Chrome
+vscode                      # VS Code (Microsoft)
+docker                      # Docker CE
+nvidia-container-toolkit    # NVIDIA Container Toolkit
+megasync                    # MEGA cloud sync client
+protonvpn                   # ProtonVPN + Proton Mail
+grub-customizer-ppa         # Grub Customizer (PPA)

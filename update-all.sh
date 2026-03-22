@@ -20,6 +20,11 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
+source "${SCRIPT_DIR}/lib/detect.sh"
+
+# Suppress per-script inventory calls when running from master script
+# (master runs inventory once at the end as step 6)
+export INVENTORY_SILENT=1
 
 # ── Parse arguments ───────────────────────────────────────────────────────────
 NO_DRIVERS=0

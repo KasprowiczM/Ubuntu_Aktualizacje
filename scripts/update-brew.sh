@@ -2,136 +2,143 @@
 # =============================================================================
 # scripts/update-brew.sh — Update Homebrew (Linuxbrew) formulas and casks
 #
-# Covers formulas:
-#   • AI/Dev tools: gemini-cli, opencode, qwen-code, node, ripgrep
-#   • Languages:    python@3.14, gcc
-#   • Libraries:    openssl@3, icu4c, sqlite, readline, ncurses, etc.
-#   • All other brew formulas
-#
-# Covers casks:
-#   • claude-code (Anthropic Claude Code CLI)
-#   • codex       (OpenAI Codex CLI)
+# Reads formula list from: config/brew-formulas.list
+# Reads cask list from:    config/brew-casks.list
 # =============================================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
+source "${SCRIPT_DIR}/lib/detect.sh"
 
-# Linuxbrew environment
-export HOMEBREW_PREFIX="/home/linuxbrew/.linuxbrew"
-export HOMEBREW_NO_AUTO_UPDATE=1          # We update manually below
+CONFIG_FORMULAS="${SCRIPT_DIR}/config/brew-formulas.list"
+CONFIG_CASKS="${SCRIPT_DIR}/config/brew-casks.list"
+
+export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_ANALYTICS=1
 export HOMEBREW_NO_ENV_HINTS=1
-BREW="${HOMEBREW_PREFIX}/bin/brew"
-
-if [[ ! -x "${BREW}" ]]; then
-    print_error "Homebrew not found at ${BREW}"
-    exit 1
-fi
 
 print_header "Homebrew — Formula & Cask Updates"
 
-# ── 1. Update Homebrew itself (fetch new formulae/taps) ───────────────────────
+detect_package_managers
+
+if [[ $HAS_BREW -eq 0 ]]; then
+    print_warn "Homebrew not found — skipping (run setup.sh to install)"
+    exit 0
+fi
+
+# ── 1. Update Homebrew itself ──────────────────────────────────────────────────
 print_section "Updating Homebrew"
 
 print_step "brew update"
-if run_silent "${BREW}" update; then
-    print_ok
-    record_ok
+if run_silent "${BREW_BIN}" update; then
+    print_ok; record_ok
 else
-    print_warn "brew update returned non-zero (may be a network issue)"
+    print_warn "brew update returned non-zero (network issue?)"
     record_warn
 fi
 
-# ── 2. Show what will be upgraded ─────────────────────────────────────────────
-print_section "Checking outdated packages"
+# ── 2. Show outdated ──────────────────────────────────────────────────────────
+print_section "Outdated packages"
 
-outdated_formulas=$("${BREW}" outdated --formula 2>/dev/null || true)
-outdated_casks=$("${BREW}" outdated --cask 2>/dev/null || true)
+outdated_f=$("${BREW_BIN}" outdated --formula 2>/dev/null || true)
+outdated_c=$("${BREW_BIN}" outdated --cask   2>/dev/null || true)
 
-if [[ -z "$outdated_formulas" && -z "$outdated_casks" ]]; then
+if [[ -z "$outdated_f" && -z "$outdated_c" ]]; then
     print_info "Everything is up to date"
 else
-    [[ -n "$outdated_formulas" ]] && { print_info "Outdated formulas:"; echo "$outdated_formulas" | while IFS= read -r l; do print_info "  $l"; done; }
-    [[ -n "$outdated_casks"   ]] && { print_info "Outdated casks:";   echo "$outdated_casks"   | while IFS= read -r l; do print_info "  $l"; done; }
+    [[ -n "$outdated_f" ]] && echo "$outdated_f" | while IFS= read -r l; do print_info "  formula: $l"; done
+    [[ -n "$outdated_c" ]] && echo "$outdated_c" | while IFS= read -r l; do print_info "  cask:    $l"; done
 fi
 
 # ── 3. Upgrade all formulas ───────────────────────────────────────────────────
 print_section "Upgrading formulas"
 
-print_step "brew upgrade (all formulas)"
-if run_silent "${BREW}" upgrade --formula; then
-    print_ok
-    record_ok
+print_step "brew upgrade --formula"
+if run_silent "${BREW_BIN}" upgrade --formula; then
+    print_ok; record_ok
 else
-    print_warn "Some formulas failed to upgrade — check log for details"
+    print_warn "Some formulas failed to upgrade"
     record_warn
 fi
 
-# ── 4. Upgrade casks ──────────────────────────────────────────────────────────
+# ── 4. Upgrade casks (from config) ───────────────────────────────────────────
 print_section "Upgrading casks"
 
-CASKS=("claude-code" "codex")
-for cask in "${CASKS[@]}"; do
-    print_step "brew upgrade --cask ${cask}"
-    if "${BREW}" list --cask "$cask" &>/dev/null; then
-        if run_silent "${BREW}" upgrade --cask "$cask"; then
-            print_ok
+if [[ -f "$CONFIG_CASKS" ]]; then
+    while IFS= read -r cask; do
+        [[ -z "$cask" ]] && continue
+        print_step "brew upgrade --cask ${cask}"
+        if ! brew_cask_installed "$cask"; then
+            print_warn "Not installed: ${cask} (run setup.sh)"
+            record_warn
+            continue
+        fi
+        current_ver=$(brew_cask_version "$cask")
+        if run_silent "${BREW_BIN}" upgrade --cask "$cask"; then
+            new_ver=$(brew_cask_version "$cask")
+            [[ "$new_ver" != "$current_ver" ]] && print_ok "${current_ver} → ${new_ver}" || print_ok "already latest"
             record_ok
         else
-            # Not-an-error if already up to date (exit 0), but cask may print warnings
-            already_latest=$("${BREW}" info --cask "$cask" 2>/dev/null | grep "Already installed" || true)
-            if [[ -n "$already_latest" ]]; then
-                print_skipped "already latest"
-                record_ok
-            else
-                print_warn "cask ${cask} upgrade returned non-zero"
-                record_warn
-            fi
+            print_warn "cask ${cask} upgrade failed"
+            record_warn
         fi
-    else
-        print_skipped "not installed"
-    fi
-done
-
-# ── 5. Cleanup old versions ───────────────────────────────────────────────────
-print_section "Cleaning up old versions"
-
-print_step "brew cleanup"
-if run_silent "${BREW}" cleanup --prune=7; then
-    print_ok
-    record_ok
-else
-    print_warn "cleanup returned non-zero"
-    record_warn
+    done < <(parse_config_names "$CONFIG_CASKS")
 fi
 
-# ── 6. Doctor check ───────────────────────────────────────────────────────────
-print_section "Brew health check"
+# ── 5. Cleanup ────────────────────────────────────────────────────────────────
+print_section "Cleanup"
+
+print_step "brew cleanup (keep last 7 days)"
+run_silent "${BREW_BIN}" cleanup --prune=7 && print_ok || { print_warn "cleanup non-zero"; record_warn; }
+
+# ── 6. Brew doctor ────────────────────────────────────────────────────────────
+print_section "Health check"
 
 print_step "brew doctor"
-doctor_out=$("${BREW}" doctor 2>&1 || true)
-echo "$doctor_out" >> "${LOG_FILE}"
-if echo "$doctor_out" | grep -q "Your system is ready to brew"; then
-    print_ok "system is ready to brew"
-    record_ok
+doc=$("${BREW_BIN}" doctor 2>&1 || true)
+echo "$doc" >> "${LOG_FILE}"
+if echo "$doc" | grep -q "Your system is ready to brew"; then
+    print_ok; record_ok
 else
-    print_warn "brew doctor found issues — check log"
-    echo "$doctor_out" | grep -E "^Warning:" | head -5 | while IFS= read -r l; do print_info "  $l"; done
+    print_warn "brew doctor found issues"
+    echo "$doc" | grep "^Warning:" | head -3 | while IFS= read -r l; do print_info "  $l"; done
     record_warn
 fi
 
-# ── 7. Current versions ───────────────────────────────────────────────────────
-print_section "Key formula & cask versions"
+# ── 7. Version report (from config) ──────────────────────────────────────────
+print_section "Formula versions (from config)"
 
-KEY_FORMULAS=("gemini-cli" "opencode" "qwen-code" "node" "ripgrep" "python@3.14" "gcc" "openssl@3")
-for f in "${KEY_FORMULAS[@]}"; do
-    ver=$("${BREW}" list --versions "$f" 2>/dev/null | awk '{print $2}')
-    [[ -n "$ver" ]] && print_info "${f}: ${ver}"
-done
-for c in "${CASKS[@]}"; do
-    ver=$(ls "${HOMEBREW_PREFIX}/Caskroom/${c}/" 2>/dev/null | tail -1)
-    [[ -n "$ver" ]] && print_info "${c} (cask): ${ver}"
-done
+if [[ -f "$CONFIG_FORMULAS" ]]; then
+    while IFS= read -r f; do
+        [[ -z "$f" ]] && continue
+        if brew_formula_installed "$f"; then
+            print_info "${f}: $(brew_formula_version "$f")"
+        else
+            print_warn "${f}: NOT INSTALLED"
+            record_warn
+        fi
+    done < <(parse_config_names "$CONFIG_FORMULAS")
+fi
+
+print_section "Cask versions (from config)"
+if [[ -f "$CONFIG_CASKS" ]]; then
+    while IFS= read -r c; do
+        [[ -z "$c" ]] && continue
+        if brew_cask_installed "$c"; then
+            print_info "${c}: $(brew_cask_version "$c")"
+        else
+            print_warn "${c}: NOT INSTALLED"
+            record_warn
+        fi
+    done < <(parse_config_names "$CONFIG_CASKS")
+fi
 
 print_summary "Homebrew Update Summary"
+
+# ── Update inventory (skipped when called from update-all.sh) ─────────────────
+if [[ "${INVENTORY_SILENT:-0}" != "1" ]]; then
+    print_section "Updating APPS.md"
+    print_step "update-inventory.sh"
+    bash "${SCRIPT_DIR}/scripts/update-inventory.sh" && print_ok || print_warn "inventory update failed"
+fi

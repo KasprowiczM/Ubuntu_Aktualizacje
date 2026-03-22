@@ -1,437 +1,574 @@
 #!/usr/bin/env bash
 # =============================================================================
-# setup.sh — Migration & bootstrap script
+# setup.sh — Universal migration & bootstrap script
 #
-# Run this on a FRESH Ubuntu 24.04 system after cloning the repo:
+# MODES:
+#   ./setup.sh                  Migrate: install everything from config/
+#   ./setup.sh --discover       Scan this machine → write/update config files
+#   ./setup.sh --check          Dry-run: show what's installed vs missing
+#   ./setup.sh --update-config  Like --discover but merges into existing config
 #
-#   git clone https://github.com/YOUR_USERNAME/Ubuntu_Aktualizacje.git
-#   cd Ubuntu_Aktualizacje
-#   chmod +x setup.sh && ./setup.sh
+# FLAGS (combine with any mode):
+#   --nvidia        Install NVIDIA driver (auto-detected by default)
+#   --no-brew       Skip Homebrew installation
+#   --no-snaps      Skip Snap packages
+#   --no-npm        Skip npm global packages
+#   --non-interactive  No prompts (for CI/automation)
+#   --help          Show usage
 #
-# What it does:
-#   1.  Verifies Ubuntu 24.04
-#   2.  Installs APT prerequisites (curl, git, wget, gpg, etc.)
-#   3.  Adds all third-party APT repositories (Brave, Chrome, VSCode, Docker,
-#       NVIDIA Container Toolkit, MegaSync, ProtonVPN)
-#   4.  Installs all APT applications
-#   5.  Installs Homebrew (Linuxbrew)
-#   6.  Installs all Homebrew formulas and casks
-#   7.  Installs Snap packages
-#   8.  Configures ~/.bashrc / ~/.profile PATH entries for Linuxbrew
-#   9.  Installs NVIDIA driver 580 (optional)
-#   10. Runs update-all.sh to bootstrap to latest versions
-#   11. Generates initial APPS.md
+# EXAMPLES:
+#   # Fresh machine setup:
+#   git clone https://github.com/KasprowiczM/Ubuntu_Aktualizacje.git
+#   cd Ubuntu_Aktualizacje && ./setup.sh
+#
+#   # Capture current machine state into config files:
+#   ./setup.sh --discover
+#
+#   # Check what would be installed (no changes):
+#   ./setup.sh --check
 # =============================================================================
 set -euo pipefail
-
-# ── Bootstrap colors (before common.sh is available) ──────────────────────────
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-BLUE='\033[0;34m'; BOLD='\033[1m'; RESET='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_DIR="${SCRIPT_DIR}/logs"
 mkdir -p "${LOG_DIR}"
-SETUP_LOG="${LOG_DIR}/setup_$(date +%Y%m%d_%H%M%S).log"
-export LOG_FILE="${SETUP_LOG}"
+export LOG_FILE="${LOG_DIR}/setup_$(date +%Y%m%d_%H%M%S).log"
 
-step()  { echo -ne "  ${BOLD}▶${RESET}  $* ... "; }
-ok()    { echo -e "${GREEN}✔${RESET}"; echo "OK: $*" >> "${SETUP_LOG}"; }
-warn()  { echo -e "${YELLOW}⚠  $*${RESET}"; echo "WARN: $*" >> "${SETUP_LOG}"; }
-fail()  { echo -e "${RED}✘  $*${RESET}"; echo "FAIL: $*" >> "${SETUP_LOG}"; }
-info()  { echo -e "     $*"; echo "INFO: $*" >> "${SETUP_LOG}"; }
-header(){ echo; echo -e "${BOLD}${BLUE}══ $* ══${RESET}"; echo; }
-has()   { command -v "$1" &>/dev/null; }
-s()     { sudo "$@" >> "${SETUP_LOG}" 2>&1; }  # sudo silent
+# ── Bootstrap: load libs ──────────────────────────────────────────────────────
+source "${SCRIPT_DIR}/lib/common.sh"
+source "${SCRIPT_DIR}/lib/detect.sh"
+source "${SCRIPT_DIR}/lib/repos.sh"
 
-# ── Flags ─────────────────────────────────────────────────────────────────────
-INSTALL_NVIDIA=0
-SKIP_BREW=0
-SKIP_SNAPS=0
-NON_INTERACTIVE=0
+CONFIG_DIR="${SCRIPT_DIR}/config"
+
+# ── Parse arguments ───────────────────────────────────────────────────────────
+MODE="migrate"
+OPT_NVIDIA="auto"
+OPT_BREW=1
+OPT_SNAPS=1
+OPT_NPM=1
+OPT_NONINTERACTIVE=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --nvidia)          INSTALL_NVIDIA=1 ;;
-        --skip-brew)       SKIP_BREW=1 ;;
-        --skip-snaps)      SKIP_SNAPS=1 ;;
-        --non-interactive) NON_INTERACTIVE=1 ;;
+        --discover)         MODE="discover" ;;
+        --check)            MODE="check" ;;
+        --update-config)    MODE="update-config" ;;
+        --nvidia)           OPT_NVIDIA="yes" ;;
+        --no-nvidia)        OPT_NVIDIA="no" ;;
+        --no-brew)          OPT_BREW=0 ;;
+        --no-snaps)         OPT_SNAPS=0 ;;
+        --no-npm)           OPT_NPM=0 ;;
+        --non-interactive)  OPT_NONINTERACTIVE=1 ;;
         -h|--help)
-            echo "Usage: $0 [--nvidia] [--skip-brew] [--skip-snaps] [--non-interactive]"
+            sed -n '/^# MODES:/,/^#.*EXAMPLES/p' "$0" | sed 's/^# //' | sed 's/^#//'
             exit 0 ;;
+        *) print_error "Unknown argument: $1"; exit 1 ;;
     esac
     shift
 done
 
-# ── Intro ─────────────────────────────────────────────────────────────────────
-echo
-echo -e "${BOLD}${BLUE}╔════════════════════════════════════════════════════╗${RESET}"
-echo -e "${BOLD}${BLUE}║   Ubuntu_Aktualizacje — Migration & Setup Script   ║${RESET}"
-echo -e "${BOLD}${BLUE}╚════════════════════════════════════════════════════╝${RESET}"
-echo
-info "Log: ${SETUP_LOG}"
+# ── Banner ────────────────────────────────────────────────────────────────────
+print_header "Ubuntu_Aktualizacje — Setup [mode: ${MODE}]"
+detect_os
+detect_hardware
+detect_gpu
+detect_package_managers
+
+print_info "Host    : $(hostname)"
+print_info "OS      : ${OS_PRETTY}"
+print_info "Kernel  : ${KERNEL_VER}"
+print_info "Machine : ${HW_VENDOR} ${HW_MODEL}"
+print_info "Log     : ${LOG_FILE}"
 echo
 
-# ── 1. Check Ubuntu version ───────────────────────────────────────────────────
-header "1. System Check"
+# =============================================================================
+# MODE: DISCOVER — scan machine → write config files
+# =============================================================================
+if [[ "$MODE" == "discover" || "$MODE" == "update-config" ]]; then
+    print_header "Discovery Mode — Scanning installed packages"
 
-OS_ID=$(grep '^ID=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"')
-OS_VER=$(grep '^VERSION_ID=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"')
+    _confirm_overwrite() {
+        local file="$1"
+        if [[ -f "$file" && $OPT_NONINTERACTIVE -eq 0 ]]; then
+            echo -ne "  ${YELLOW}Overwrite ${file}?${RESET} [y/N] "
+            read -r ans
+            [[ "${ans,,}" != "y" ]] && return 1
+        fi
+        return 0
+    }
 
-step "Ubuntu 24.04 check"
-if [[ "$OS_ID" != "ubuntu" ]]; then
-    fail "Not Ubuntu (found: ${OS_ID}). This script targets Ubuntu 24.04."
-    exit 1
+    _backup_config() {
+        local file="$1"
+        [[ -f "$file" ]] && cp "$file" "${file}.bak_$(date +%Y%m%d_%H%M%S)"
+    }
+
+    # ── Discover APT packages ──────────────────────────────────────────────────
+    print_section "Scanning APT packages"
+    APT_OUT="${CONFIG_DIR}/apt-packages.list"
+    _confirm_overwrite "$APT_OUT" && {
+        _backup_config "$APT_OUT"
+        {
+            echo "# APT packages — discovered on $(hostname) at $(date '+%Y-%m-%d')"
+            echo "# Edit this file to add/remove packages for migration."
+            echo ""
+            echo "# ── Manually installed (non-automatic) ──────────────────────────────────────"
+            apt-mark showmanual 2>/dev/null | sort | while read -r pkg; do
+                # Skip low-level base packages unlikely to be intentional
+                case "$pkg" in
+                    ubuntu-desktop|ubuntu-desktop-minimal|ubuntu-standard|ubuntu-minimal|\
+                    ubuntu-session|gdm3|snapd|plymouth*|systemd*|grub*|shim*|linux-*|\
+                    locales|adduser|login|passwd|sudo) continue ;;
+                esac
+                ver=$(apt_pkg_version "$pkg")
+                echo "${pkg}  # ${ver}"
+            done
+        } > "$APT_OUT"
+        print_ok "Written: ${APT_OUT}"
+        record_ok
+    }
+
+    # ── Discover Snap packages ─────────────────────────────────────────────────
+    print_section "Scanning Snap packages"
+    SNAP_OUT="${CONFIG_DIR}/snap-packages.list"
+    _confirm_overwrite "$SNAP_OUT" && {
+        _backup_config "$SNAP_OUT"
+        {
+            echo "# Snap packages — discovered on $(hostname) at $(date '+%Y-%m-%d')"
+            echo ""
+            scan_snaps_user | while IFS='|' read -r name ver rev chan pub; do
+                echo "${name}  # ${ver} (${chan})"
+            done
+        } > "$SNAP_OUT"
+        print_ok "Written: ${SNAP_OUT}"
+        record_ok
+    }
+
+    # ── Discover Brew formulas ─────────────────────────────────────────────────
+    if [[ $HAS_BREW -eq 1 ]]; then
+        print_section "Scanning Homebrew formulas"
+        BREW_FORM_OUT="${CONFIG_DIR}/brew-formulas.list"
+        _confirm_overwrite "$BREW_FORM_OUT" && {
+            _backup_config "$BREW_FORM_OUT"
+            {
+                echo "# Homebrew formulas — discovered on $(hostname) at $(date '+%Y-%m-%d')"
+                echo "# Note: dependency-only formulas are included — remove if not needed."
+                echo ""
+                scan_brew_formulas | while read -r name ver; do
+                    # Skip known pure-dependency formulas
+                    case "$name" in
+                        berkeley-db*|gmp|isl|libmpc|mpfr|binutils) echo "# ${name}  # ${ver}  (dependency)" ;;
+                        *) echo "${name}  # ${ver}" ;;
+                    esac
+                done
+            } > "$BREW_FORM_OUT"
+            print_ok "Written: ${BREW_FORM_OUT}"
+            record_ok
+        }
+
+        print_section "Scanning Homebrew casks"
+        BREW_CASK_OUT="${CONFIG_DIR}/brew-casks.list"
+        _confirm_overwrite "$BREW_CASK_OUT" && {
+            _backup_config "$BREW_CASK_OUT"
+            {
+                echo "# Homebrew casks — discovered on $(hostname) at $(date '+%Y-%m-%d')"
+                echo ""
+                scan_brew_casks | while IFS='|' read -r name ver; do
+                    echo "${name}  # ${ver}"
+                done
+            } > "$BREW_CASK_OUT"
+            print_ok "Written: ${BREW_CASK_OUT}"
+            record_ok
+        }
+    fi
+
+    # ── Discover npm globals ───────────────────────────────────────────────────
+    if [[ -n "${NPM_BIN:-}" ]]; then
+        print_section "Scanning npm global packages"
+        NPM_OUT="${CONFIG_DIR}/npm-globals.list"
+        _confirm_overwrite "$NPM_OUT" && {
+            _backup_config "$NPM_OUT"
+            {
+                echo "# npm global packages — discovered on $(hostname) at $(date '+%Y-%m-%d')"
+                echo "# npm itself is managed by Homebrew (node formula) — do not add it here."
+                echo ""
+                scan_npm_globals | grep -v '^npm|' | while IFS='|' read -r name ver; do
+                    echo "${name}  # ${ver}"
+                done
+            } > "$NPM_OUT"
+            print_ok "Written: ${NPM_OUT}"
+            record_ok
+        }
+    fi
+
+    print_summary "Discovery complete"
+    echo
+    print_info "Config files updated in: ${CONFIG_DIR}/"
+    print_info "Review them, then run './setup.sh' on a new machine to migrate."
+    exit 0
 fi
-if [[ "$OS_VER" != "24.04" ]]; then
-    warn "Expected Ubuntu 24.04, found ${OS_VER}. Proceeding — some packages may differ."
-else
-    ok "Ubuntu ${OS_VER}"
+
+# =============================================================================
+# MODE: CHECK — show what's installed vs what config expects
+# =============================================================================
+if [[ "$MODE" == "check" ]]; then
+    print_header "Check Mode — Comparing config vs installed state"
+
+    _check_apt() {
+        print_section "APT packages"
+        local missing=() present=()
+        while IFS= read -r pkg; do
+            [[ -z "$pkg" ]] && continue
+            if apt_installed "$pkg"; then
+                present+=("$pkg ($(apt_pkg_version "$pkg")"))")
+            else
+                missing+=("$pkg")
+            fi
+        done < <(parse_config_names "${CONFIG_DIR}/apt-packages.list")
+        for p in "${present[@]}"; do print_info "  ${GREEN}✔${RESET} ${p}"; done
+        for m in "${missing[@]}"; do print_warn "  ✘ MISSING: ${m}"; done
+    }
+
+    _check_snaps() {
+        print_section "Snap packages"
+        while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            local pkg; pkg=$(echo "$line" | awk '{print $1}')
+            if snap_installed "$pkg"; then
+                print_info "  ${GREEN}✔${RESET} ${pkg} ($(snap_version "$pkg"))"
+            else
+                print_warn "  ✘ MISSING: ${pkg}"
+            fi
+        done < <(parse_config_lines "${CONFIG_DIR}/snap-packages.list")
+    }
+
+    _check_brew() {
+        [[ $HAS_BREW -eq 0 ]] && { print_warn "Homebrew not installed"; return; }
+        print_section "Brew formulas"
+        while IFS= read -r f; do
+            [[ -z "$f" ]] && continue
+            if brew_formula_installed "$f"; then
+                print_info "  ${GREEN}✔${RESET} ${f} ($(brew_formula_version "$f"))"
+            else
+                print_warn "  ✘ MISSING: ${f}"
+            fi
+        done < <(parse_config_names "${CONFIG_DIR}/brew-formulas.list")
+
+        print_section "Brew casks"
+        while IFS= read -r c; do
+            [[ -z "$c" ]] && continue
+            if brew_cask_installed "$c"; then
+                print_info "  ${GREEN}✔${RESET} ${c} ($(brew_cask_version "$c"))"
+            else
+                print_warn "  ✘ MISSING: ${c}"
+            fi
+        done < <(parse_config_names "${CONFIG_DIR}/brew-casks.list")
+    }
+
+    _check_npm() {
+        [[ -z "${NPM_BIN:-}" ]] && return
+        print_section "npm global packages"
+        while IFS= read -r pkg; do
+            [[ -z "$pkg" ]] && continue
+            if npm_pkg_installed "$pkg"; then
+                print_info "  ${GREEN}✔${RESET} ${pkg} ($(npm_pkg_version "$pkg"))"
+            else
+                print_warn "  ✘ MISSING: ${pkg}"
+            fi
+        done < <(parse_config_names "${CONFIG_DIR}/npm-globals.list")
+    }
+
+    _check_apt
+    _check_snaps
+    [[ $OPT_BREW -eq 1 ]] && _check_brew
+    [[ $OPT_NPM -eq 1 ]]  && _check_npm
+
+    print_summary "Check complete — no changes made"
+    exit 0
 fi
 
-# ── 2. Sudo ───────────────────────────────────────────────────────────────────
-step "Authenticate sudo"
-sudo -v || { fail "sudo required"; exit 1; }
+# =============================================================================
+# MODE: MIGRATE — install everything from config on this machine
+# =============================================================================
+
+assert_ubuntu
+
+# ── Sudo authentication ────────────────────────────────────────────────────────
+print_section "Authentication"
+print_step "sudo"
+sudo -v || { print_error "sudo required"; exit 1; }
 (while true; do sudo -n true; sleep 50; done) &
-SUDO_PID=$!
-trap 'kill ${SUDO_PID} 2>/dev/null' EXIT INT TERM
-ok
+SUDO_KEEP_PID=$!
+trap 'kill "${SUDO_KEEP_PID}" 2>/dev/null; true' EXIT INT TERM
+print_ok
 
-# ── 3. APT prerequisites ───────────────────────────────────────────────────────
-header "2. APT Prerequisites"
+# =============================================================================
+# STEP 1 — APT prerequisites
+# =============================================================================
+print_header "Step 1/7 — APT Prerequisites"
 
-PREREQUISITES=(
+PREREQS=(
     curl wget git gpg ca-certificates apt-transport-https
     software-properties-common gnupg lsb-release
-    build-essential file procps
+    build-essential file procps python3
 )
 
-step "apt-get update"
-s apt-get update -q && ok || warn "update had issues"
+print_step "apt-get update"
+sudo_silent apt-get update -q && print_ok || { print_warn "update had issues"; record_warn; }
 
-step "Install prerequisites: ${PREREQUISITES[*]}"
-s apt-get install -y -q "${PREREQUISITES[@]}" && ok || { fail "prerequisite install failed"; exit 1; }
-
-# ── 4. Add third-party APT repositories ───────────────────────────────────────
-header "3. Third-Party APT Repositories"
-
-# Helper: add a signed repo
-add_repo() {
-    local name="$1" keyurl="$2" keyfile="$3" repofile="$4" repoentry="$5"
-    step "Add ${name} repo"
-    if [[ -f "$repofile" ]]; then
-        info "(already exists)"
-        return
-    fi
-    curl -fsSL "$keyurl" | sudo gpg --dearmor -o "$keyfile" >> "${SETUP_LOG}" 2>&1
-    echo "$repoentry" | sudo tee "$repofile" >> "${SETUP_LOG}"
-    ok
-}
-
-# Brave Browser
-add_repo "Brave Browser" \
-    "https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg" \
-    "/usr/share/keyrings/brave-browser-archive-keyring.gpg" \
-    "/etc/apt/sources.list.d/brave-browser-release.sources" \
-    "Types: deb
-URIs: https://brave-browser-apt-release.s3.brave.com/
-Suites: stable
-Components: main
-Architectures: amd64
-Signed-By: /usr/share/keyrings/brave-browser-archive-keyring.gpg"
-
-# Google Chrome
-step "Add Google Chrome repo"
-if [[ ! -f "/etc/apt/sources.list.d/google-chrome.list" ]]; then
-    curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | \
-        sudo gpg --dearmor -o /usr/share/keyrings/google-linux-signing-key.gpg >> "${SETUP_LOG}" 2>&1
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux-signing-key.gpg] \
-https://dl.google.com/linux/chrome/deb/ stable main" | \
-        sudo tee /etc/apt/sources.list.d/google-chrome.list >> "${SETUP_LOG}"
-    ok
+print_step "Install base prerequisites"
+if sudo_silent apt-get install -y -q "${PREREQS[@]}"; then
+    print_ok; record_ok
 else
-    info "(already exists)"
+    print_error "Prerequisite install failed"; exit 1
 fi
 
-# VS Code
-step "Add VS Code repo"
-if [[ ! -f "/etc/apt/sources.list.d/vscode.sources" ]]; then
-    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | \
-        sudo gpg --dearmor -o /usr/share/keyrings/microsoft-archive-keyring.gpg >> "${SETUP_LOG}" 2>&1
-    echo "Types: deb
-URIs: https://packages.microsoft.com/repos/vscode
-Suites: stable
-Components: main
-Architectures: amd64
-Signed-By: /usr/share/keyrings/microsoft-archive-keyring.gpg" | \
-        sudo tee /etc/apt/sources.list.d/vscode.sources >> "${SETUP_LOG}"
-    ok
-else
-    info "(already exists)"
+# =============================================================================
+# STEP 2 — APT repositories
+# =============================================================================
+print_header "Step 2/7 — Third-Party APT Repositories"
+
+while IFS= read -r repo_id; do
+    [[ -z "$repo_id" ]] && continue
+    setup_repo "$repo_id" || true
+done < <(parse_config_names "${CONFIG_DIR}/apt-repos.list")
+
+print_step "apt-get update (after adding repos)"
+sudo_silent apt-get update -q && print_ok || { print_warn "update had issues"; record_warn; }
+
+# =============================================================================
+# STEP 3 — APT packages
+# =============================================================================
+print_header "Step 3/7 — APT Application Install"
+
+# Auto-detect NVIDIA and add driver to install list
+if [[ "$OPT_NVIDIA" == "auto" ]]; then
+    detect_gpu
+    [[ $HAS_NVIDIA -eq 1 ]] && OPT_NVIDIA="yes"
 fi
 
-# Docker CE
-step "Add Docker repo"
-if [[ ! -f "/etc/apt/sources.list.d/docker.sources" ]]; then
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
-        sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg >> "${SETUP_LOG}" 2>&1
-    echo "Types: deb
-URIs: https://download.docker.com/linux/ubuntu
-Suites: $(lsb_release -cs)
-Components: stable
-Architectures: amd64
-Signed-By: /usr/share/keyrings/docker-archive-keyring.gpg" | \
-        sudo tee /etc/apt/sources.list.d/docker.sources >> "${SETUP_LOG}"
-    ok
-else
-    info "(already exists)"
-fi
+INSTALL_PKGS=()
+SKIP_PKGS=()
+MISSING_PKGS=()
 
-# NVIDIA Container Toolkit
-step "Add NVIDIA Container Toolkit repo"
-if [[ ! -f "/etc/apt/sources.list.d/nvidia-container-toolkit.list" ]]; then
-    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
-        sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg >> "${SETUP_LOG}" 2>&1
-    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-        sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-        sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list >> "${SETUP_LOG}"
-    ok
-else
-    info "(already exists)"
-fi
-
-# MegaSync
-step "Add MegaSync repo"
-if [[ ! -f "/etc/apt/sources.list.d/meganz.list" ]]; then
-    curl -fsSL https://mega.nz/linux/repo/xUbuntu_24.04/Release.key | \
-        sudo gpg --dearmor -o /usr/share/keyrings/meganz-archive-keyring.gpg >> "${SETUP_LOG}" 2>&1
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/meganz-archive-keyring.gpg] \
-https://mega.nz/linux/repo/xUbuntu_24.04/ ./" | \
-        sudo tee /etc/apt/sources.list.d/meganz.list >> "${SETUP_LOG}"
-    ok
-else
-    info "(already exists)"
-fi
-
-# ProtonVPN
-step "Add ProtonVPN repo"
-if [[ ! -f "/etc/apt/sources.list.d/protonvpn-stable.sources" ]]; then
-    curl -fsSL https://repo.protonvpn.com/debian/public_key.asc | \
-        sudo gpg --dearmor -o /usr/share/keyrings/protonvpn-stable-keyring.gpg >> "${SETUP_LOG}" 2>&1
-    echo "Types: deb
-URIs: https://repo.protonvpn.com/debian
-Suites: stable
-Components: main
-Architectures: amd64
-Signed-By: /usr/share/keyrings/protonvpn-stable-keyring.gpg" | \
-        sudo tee /etc/apt/sources.list.d/protonvpn-stable.sources >> "${SETUP_LOG}"
-    ok
-else
-    info "(already exists)"
-fi
-
-# Remote Desktop Manager (Devolutions)
-step "Add Remote Desktop Manager repo"
-if ! dpkg -l remotedesktopmanager &>/dev/null; then
-    RDM_DEB_URL="https://cdn.devolutions.net/download/Linux/RDM/$(curl -s https://devolutions.net/remote-desktop-manager/release-notes/linux/ 2>/dev/null | grep -oP '\d+\.\d+\.\d+\.\d+' | head -1)/remotedesktopmanager_amd64.deb"
-    warn "Remote Desktop Manager requires manual .deb download from: https://devolutions.net/remote-desktop-manager/home/linuxdownload"
-    info "Run: sudo dpkg -i remotedesktopmanager_amd64.deb && sudo apt-get install -f"
-else
-    info "(already installed)"
-fi
-
-# Grub Customizer PPA
-step "Add Grub Customizer PPA"
-if [[ ! -f "/etc/apt/sources.list.d/danielrichter2007-ubuntu-grub-customizer-noble.sources" ]]; then
-    s add-apt-repository -y ppa:danielrichter2007/grub-customizer && ok || warn "PPA add failed"
-else
-    info "(already exists)"
-fi
-
-step "apt-get update (after adding repos)"
-s apt-get update -q && ok || warn "update had issues"
-
-# ── 5. Install APT applications ───────────────────────────────────────────────
-header "4. Install APT Applications"
-
-APT_APPS=(
-    brave-browser
-    google-chrome-stable
-    code
-    docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-    nvidia-container-toolkit
-    megasync
-    proton-vpn-gnome-desktop proton-mail
-    grub-customizer
-    rclone
-    mc bleachbit remmina
-    git curl wget unzip zip
-    build-essential
-)
-
-# Optional: NVIDIA driver
-if [[ $INSTALL_NVIDIA -eq 1 ]]; then
-    APT_APPS+=(nvidia-driver-580)
-fi
-
-for pkg in "${APT_APPS[@]}"; do
-    step "apt install ${pkg}"
-    if dpkg -l "$pkg" &>/dev/null; then
-        info "(already installed)"
+while IFS= read -r pkg; do
+    [[ -z "$pkg" ]] && continue
+    if apt_installed "$pkg"; then
+        SKIP_PKGS+=("$pkg")
     else
-        if s apt-get install -y -q \
+        INSTALL_PKGS+=("$pkg")
+    fi
+done < <(parse_config_names "${CONFIG_DIR}/apt-packages.list")
+
+[[ "$OPT_NVIDIA" == "yes" && -n "${NVIDIA_DRIVER_VER:-}" ]] && \
+    INSTALL_PKGS+=("nvidia-driver-${NVIDIA_DRIVER_VER}")
+[[ "$OPT_NVIDIA" == "yes" && -z "${NVIDIA_DRIVER_VER:-}" ]] && \
+    INSTALL_PKGS+=("nvidia-driver-580")
+
+print_info "Already installed : ${#SKIP_PKGS[@]} packages"
+print_info "To install        : ${#INSTALL_PKGS[@]} packages"
+
+if [[ ${#INSTALL_PKGS[@]} -gt 0 ]]; then
+    for pkg in "${INSTALL_PKGS[@]}"; do
+        print_step "apt install ${pkg}"
+        if sudo_silent apt-get install -y -q \
             -o Dpkg::Options::="--force-confdef" \
             -o Dpkg::Options::="--force-confold" \
             "$pkg"; then
-            ok
+            print_ok; record_ok
         else
-            warn "Failed to install ${pkg} — may need manual intervention"
+            print_warn "Failed: ${pkg} (may need manual install or different source)"
+            MISSING_PKGS+=("$pkg")
+            record_warn
         fi
-    fi
-done
+    done
+fi
 
-# ── 6. Install Homebrew (Linuxbrew) ───────────────────────────────────────────
-if [[ $SKIP_BREW -eq 0 ]]; then
-    header "5. Homebrew (Linuxbrew)"
-
-    BREW_BIN="/home/linuxbrew/.linuxbrew/bin/brew"
-    if [[ -x "${BREW_BIN}" ]]; then
-        info "Homebrew already installed at /home/linuxbrew/.linuxbrew"
+# ── Docker post-install ────────────────────────────────────────────────────────
+if apt_installed docker-ce; then
+    print_step "Add ${USER} to docker group"
+    if groups "${USER}" 2>/dev/null | grep -q docker; then
+        print_info "(already in docker group)"
     else
-        step "Install Homebrew"
+        sudo_silent usermod -aG docker "${USER}" && print_ok || { print_warn "Failed"; record_warn; }
+        print_warn "Logout/in required for docker without sudo (or: newgrp docker)"
+    fi
+fi
+
+# =============================================================================
+# STEP 4 — Homebrew
+# =============================================================================
+if [[ $OPT_BREW -eq 1 ]]; then
+    print_header "Step 4/7 — Homebrew (Linuxbrew)"
+
+    if [[ $HAS_BREW -eq 0 ]]; then
+        print_step "Install Homebrew"
         NONINTERACTIVE=1 /bin/bash -c \
             "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" \
-            >> "${SETUP_LOG}" 2>&1 && ok || { fail "Homebrew install failed"; exit 1; }
+            >> "${LOG_FILE}" 2>&1 && print_ok || { print_error "Homebrew install failed"; exit 1; }
+        detect_package_managers  # re-detect to pick up new brew
+    else
+        print_info "Homebrew already installed at ${BREW_PREFIX}"
     fi
 
-    # PATH setup
-    BREW_SHELL_CONFIG='
+    # ── Add brew to shell PATH ─────────────────────────────────────────────────
+    BREW_SHELLENV='
 # Homebrew (Linuxbrew)
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"'
-
-    for rcfile in ~/.bashrc ~/.profile ~/.zshrc; do
-        [[ -f "$rcfile" ]] || continue
-        if ! grep -q "linuxbrew" "$rcfile" 2>/dev/null; then
-            step "Add brew PATH to ${rcfile}"
-            echo "${BREW_SHELL_CONFIG}" >> "$rcfile" && ok || warn "Failed to update ${rcfile}"
-        fi
-    done
-
+if [[ -x "/home/linuxbrew/.linuxbrew/bin/brew" ]]; then
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-
-    # Install Brew formulas
-    header "5a. Homebrew Formulas"
-
-    BREW_FORMULAS=(
-        node gcc python@3.14 ripgrep
-        gemini-cli opencode qwen-code
-        openssl@3 curl git
-    )
-    BREW_CASKS=(claude-code codex)
-
-    for formula in "${BREW_FORMULAS[@]}"; do
-        step "brew install ${formula}"
-        if "${BREW_BIN}" list --formula "$formula" &>/dev/null; then
-            info "(already installed)"
-        else
-            run_silent "${BREW_BIN}" install "$formula" && ok || warn "Failed: ${formula}"
+fi'
+    for rcfile in "${HOME}/.bashrc" "${HOME}/.profile" "${HOME}/.zshrc"; do
+        [[ ! -f "$rcfile" ]] && continue
+        if ! grep -q "linuxbrew" "$rcfile" 2>/dev/null; then
+            print_step "Add brew PATH to $(basename "$rcfile")"
+            echo "${BREW_SHELLENV}" >> "$rcfile" && print_ok || print_warn "Could not update ${rcfile}"
         fi
     done
 
-    for cask in "${BREW_CASKS[@]}"; do
-        step "brew install --cask ${cask}"
-        if "${BREW_BIN}" list --cask "$cask" &>/dev/null; then
-            info "(already installed)"
+    # ── Install formulas ───────────────────────────────────────────────────────
+    print_section "Homebrew formulas"
+    while IFS= read -r formula; do
+        [[ -z "$formula" ]] && continue
+        print_step "brew install ${formula}"
+        if brew_formula_installed "$formula"; then
+            print_info "(already installed — $(brew_formula_version "$formula"))"
         else
-            run_silent "${BREW_BIN}" install --cask "$cask" && ok || warn "Failed cask: ${cask}"
+            if run_silent "${BREW_BIN}" install "$formula"; then
+                print_ok; record_ok
+            else
+                print_warn "Failed: ${formula}"; record_warn
+            fi
         fi
-    done
+    done < <(parse_config_names "${CONFIG_DIR}/brew-formulas.list")
+
+    # ── Install casks ──────────────────────────────────────────────────────────
+    print_section "Homebrew casks"
+    while IFS= read -r cask; do
+        [[ -z "$cask" ]] && continue
+        print_step "brew install --cask ${cask}"
+        if brew_cask_installed "$cask"; then
+            print_info "(already installed — $(brew_cask_version "$cask"))"
+        else
+            if run_silent "${BREW_BIN}" install --cask "$cask"; then
+                print_ok; record_ok
+            else
+                print_warn "Failed cask: ${cask}"; record_warn
+            fi
+        fi
+    done < <(parse_config_names "${CONFIG_DIR}/brew-casks.list")
 fi
 
-# ── 7. Snap packages ──────────────────────────────────────────────────────────
-if [[ $SKIP_SNAPS -eq 0 ]]; then
-    header "6. Snap Packages"
+# =============================================================================
+# STEP 5 — Snap packages
+# =============================================================================
+if [[ $OPT_SNAPS -eq 1 && $HAS_SNAP -eq 1 ]]; then
+    print_header "Step 5/7 — Snap Packages"
 
-    SNAPS=(
-        "firefox"
-        "thunderbird"
-        "keepassxc"
-        "htop"
-    )
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        pkg=$(echo "$line" | awk '{print $1}')
+        flags=$(echo "$line" | awk '{$1=""; print $0}' | xargs)
 
-    for snap_pkg in "${SNAPS[@]}"; do
-        step "snap install ${snap_pkg}"
-        if snap list "$snap_pkg" &>/dev/null; then
-            info "(already installed)"
+        print_step "snap install ${pkg} ${flags}"
+        if snap_installed "$pkg"; then
+            print_info "(already installed — $(snap_version "$pkg"))"
         else
-            s snap install "$snap_pkg" && ok || warn "Failed snap: ${snap_pkg}"
+            # shellcheck disable=SC2086
+            if sudo_silent snap install "$pkg" ${flags}; then
+                print_ok; record_ok
+            else
+                print_warn "Failed snap: ${pkg}"; record_warn
+            fi
         fi
-    done
+    done < <(parse_config_lines "${CONFIG_DIR}/snap-packages.list")
 fi
 
-# ── 8. PATH and shell configuration ───────────────────────────────────────────
-header "7. Shell Path Configuration"
+# =============================================================================
+# STEP 6 — npm global packages
+# =============================================================================
+if [[ $OPT_NPM -eq 1 && -n "${NPM_BIN:-}" ]]; then
+    print_header "Step 6/7 — npm Global Packages"
 
-SCRIPTS_PATH_CONFIG="
-# Ubuntu_Aktualizacje scripts
-export PATH=\"${SCRIPT_DIR}:\$PATH\""
+    NPM_PKGS=()
+    while IFS= read -r pkg; do
+        [[ -z "$pkg" ]] && continue
+        NPM_PKGS+=("$pkg")
+    done < <(parse_config_names "${CONFIG_DIR}/npm-globals.list")
 
-for rcfile in ~/.bashrc ~/.zshrc; do
-    [[ -f "$rcfile" ]] || continue
-    if ! grep -q "Ubuntu_Aktualizacje" "$rcfile" 2>/dev/null; then
-        step "Add scripts to PATH in ${rcfile}"
-        echo "${SCRIPTS_PATH_CONFIG}" >> "$rcfile" && ok || warn "Failed"
+    if [[ ${#NPM_PKGS[@]} -eq 0 ]]; then
+        print_info "No npm global packages configured in config/npm-globals.list"
     else
-        info "Already in ${rcfile}"
+        for pkg in "${NPM_PKGS[@]}"; do
+            print_step "npm install -g ${pkg}"
+            if npm_pkg_installed "$pkg"; then
+                print_info "(already installed — $(npm_pkg_version "$pkg"))"
+            else
+                if run_silent "${NPM_BIN}" install -g "$pkg"; then
+                    print_ok; record_ok
+                else
+                    print_warn "Failed npm: ${pkg}"; record_warn
+                fi
+            fi
+        done
+    fi
+fi
+
+# =============================================================================
+# STEP 7 — Shell PATH & permissions
+# =============================================================================
+print_header "Step 7/7 — Shell Configuration"
+
+SCRIPTS_PATH='
+# Ubuntu_Aktualizacje — update scripts
+if [[ -d "'"${SCRIPT_DIR}"'" ]]; then
+    export PATH="'"${SCRIPT_DIR}"':$PATH"
+fi'
+
+for rcfile in "${HOME}/.bashrc" "${HOME}/.zshrc"; do
+    [[ ! -f "$rcfile" ]] && continue
+    if ! grep -q "Ubuntu_Aktualizacje" "$rcfile" 2>/dev/null; then
+        print_step "Add project PATH to $(basename "$rcfile")"
+        echo "${SCRIPTS_PATH}" >> "$rcfile" && print_ok || print_warn "failed"
     fi
 done
 
-# ── 9. Docker post-install (no sudo) ─────────────────────────────────────────
-header "8. Docker Post-Install"
+print_step "Make scripts executable"
+find "${SCRIPT_DIR}" -name "*.sh" -exec chmod +x {} \; && print_ok || print_warn "chmod failed"
 
-step "Add ${USER} to docker group"
-if groups "${USER}" 2>/dev/null | grep -q docker; then
-    info "Already in docker group"
+# =============================================================================
+# GENERATE INVENTORY
+# =============================================================================
+print_header "Generating APPS.md inventory"
+print_step "Running update-inventory.sh"
+if bash "${SCRIPT_DIR}/scripts/update-inventory.sh"; then
+    print_ok; record_ok
 else
-    s usermod -aG docker "${USER}" && ok || warn "Failed"
-    warn "Log out and back in (or run: newgrp docker) for docker to work without sudo"
+    print_warn "Inventory generation had issues"; record_warn
 fi
 
-# ── 10. Make scripts executable ───────────────────────────────────────────────
-header "9. Script Permissions"
+# =============================================================================
+# FINAL REPORT
+# =============================================================================
+print_summary "Setup complete"
+echo
+echo -e "${BOLD}${GREEN}╔═══════════════════════════════════════════════════════╗${RESET}"
+echo -e "${BOLD}${GREEN}║   Ubuntu_Aktualizacje — Setup complete!               ║${RESET}"
+echo -e "${BOLD}${GREEN}╚═══════════════════════════════════════════════════════╝${RESET}"
+echo
 
-step "chmod +x all scripts"
-chmod +x "${SCRIPT_DIR}/update-all.sh" \
-         "${SCRIPT_DIR}/scripts/"*.sh && ok || warn "chmod failed"
+[[ ${#MISSING_PKGS[@]} -gt 0 ]] && {
+    print_warn "Packages that need manual attention:"
+    for p in "${MISSING_PKGS[@]}"; do print_info "  • ${p}"; done
+    echo
+}
 
-# ── 11. Run initial update + inventory ───────────────────────────────────────
-header "10. Initial Update & Inventory"
+print_info "Apply PATH now         :  source ~/.bashrc"
+print_info "Run full update        :  ./update-all.sh"
+print_info "Update APT only        :  ./scripts/update-apt.sh"
+print_info "Check installed state  :  ./setup.sh --check"
+print_info "Log                    :  ${LOG_FILE}"
+echo
 
-if [[ $NON_INTERACTIVE -eq 0 ]]; then
-    echo -e "${YELLOW}  Run full update now? (recommended) [y/N]:${RESET} "
-    read -r RUN_UPDATE
-else
-    RUN_UPDATE="y"
+if [[ $OPT_NONINTERACTIVE -eq 0 ]] && [[ -f /var/run/reboot-required ]]; then
+    print_warn "REBOOT REQUIRED — kernel or driver update pending"
 fi
-
-if [[ "${RUN_UPDATE,,}" == "y" ]]; then
-    step "Running update-all.sh"
-    bash "${SCRIPT_DIR}/update-all.sh" && ok || warn "Some updates failed — check logs"
-else
-    step "Generate initial APPS.md"
-    source "${SCRIPT_DIR}/lib/common.sh"
-    bash "${SCRIPT_DIR}/scripts/update-inventory.sh" && ok || warn "Inventory failed"
-fi
-
-# ── Done ──────────────────────────────────────────────────────────────────────
-echo
-echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════════╗${RESET}"
-echo -e "${BOLD}${GREEN}║   Setup complete!                                ║${RESET}"
-echo -e "${BOLD}${GREEN}╚══════════════════════════════════════════════════╝${RESET}"
-echo
-info "To apply PATH changes, run:  source ~/.bashrc"
-info "To update all apps:          ./update-all.sh"
-info "To update only APT:          ./scripts/update-apt.sh"
-info "Log:                         ${SETUP_LOG}"
-[[ $INSTALL_NVIDIA -eq 0 ]] && \
-    info "Note: NVIDIA driver was NOT installed. Re-run with --nvidia flag if needed."
-echo

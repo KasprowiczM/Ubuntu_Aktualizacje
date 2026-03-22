@@ -1,15 +1,26 @@
-# Logs — keep directory, ignore log files
+# =============================================================================
+# .gitignore — Ubuntu_Aktualizacje
+# =============================================================================
+
+# ── Machine-specific inventory (generated per-machine, never committed) ───────
+APPS.md
+
+# ── Runtime logs ──────────────────────────────────────────────────────────────
 logs/*.log
 
-# Editor / IDE
+# ── Config backups created by --discover mode ─────────────────────────────────
+config/*.bak_*
+
+# ── Editor / IDE ──────────────────────────────────────────────────────────────
 .vscode/
 *.swp
 *.swo
 *~
+.idea/
 
-# OS
+# ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 
-# Claude Code internal settings (not project-relevant)
+# ── Claude Code internal settings (machine-local) ─────────────────────────────
 .claude/

@@ -1,0 +1,20 @@
+# =============================================================================
+# config/npm-globals.list — npm global packages to install and keep updated
+#
+# These are installed via: npm install -g <package>
+# Uses the Homebrew-managed Node.js npm (not the system apt npm).
+#
+# Format: <package-name>[@version]  [# description]
+# Specify @latest to always install the latest version.
+# Lines starting with # are comments. Blank lines are ignored.
+#
+# Examples:
+#   typescript          # TypeScript compiler
+#   yarn                # Yarn package manager
+#   pnpm                # pnpm package manager
+#   @anthropic-ai/sdk   # Anthropic SDK (for testing)
+# =============================================================================
+
+# Currently no additional global npm packages beyond npm itself.
+# npm itself is managed by Homebrew via the `node` formula.
+# Add packages here as needed.

@@ -1,0 +1,10 @@
+# =============================================================================
+# config/brew-casks.list — Homebrew casks to install and keep updated
+#
+# Format: <cask-name>  [# description]
+# Lines starting with # are comments. Blank lines are ignored.
+# =============================================================================
+
+# ── AI Coding Assistants ──────────────────────────────────────────────────────
+claude-code                 # Anthropic Claude Code CLI (official)
+codex                       # OpenAI Codex CLI

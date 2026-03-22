@@ -1,264 +1,352 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/update-inventory.sh — Regenerate APPS.md with current package versions
+# scripts/update-inventory.sh — Regenerate APPS.md with current package state
 #
-# Run after all update scripts to capture the post-update state.
+# This script is machine-agnostic: it scans what is actually installed on
+# THIS machine using lib/detect.sh, not hardcoded lists.
+# Called automatically after each update script and by setup.sh.
 # =============================================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
+source "${SCRIPT_DIR}/lib/detect.sh"
 
 APPS_MD="${SCRIPT_DIR}/APPS.md"
-BREW="${HOMEBREW_PREFIX:-/home/linuxbrew/.linuxbrew}/bin/brew"
 NOW="$(date '+%Y-%m-%d %H:%M:%S')"
 
-print_header "Updating APPS.md Inventory"
+# Only print header if called directly (not as sub-step from another script)
+[[ "${INVENTORY_SILENT:-0}" != "1" ]] && print_header "Updating APPS.md Inventory"
+print_step "Scanning installed packages"
 
-print_step "Generating inventory"
-
-# Helper: get apt package version
-apt_ver() { dpkg -l "$1" 2>/dev/null | awk '/^ii/{print $3}' | head -1; }
-
-# Helper: get brew formula version
-brew_ver() { "${BREW}" list --versions "$1" 2>/dev/null | awk '{print $2}'; }
-
-# Helper: get snap version
-snap_ver() { snap list "$1" 2>/dev/null | awk 'NR==2{print $2}'; }
+# Detect everything
+detect_os
+detect_hardware
+detect_gpu
+detect_package_managers
+detect_docker
 
 # ── Build APPS.md ─────────────────────────────────────────────────────────────
 {
-cat << HEREDOC
+
+# ━━━ Header ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+cat <<MD
 # APPS.md — Software Inventory
 
 > **Host:** $(hostname)
-> **OS:** $(lsb_release -ds 2>/dev/null)
-> **Kernel:** $(uname -r)
+> **OS:** ${OS_PRETTY}
+> **Kernel:** ${KERNEL_VER}
+> **Architecture:** ${ARCH}
 > **Last updated:** ${NOW}
-> **Hardware:** $(sudo dmidecode -s system-manufacturer 2>/dev/null || echo "Dell Inc.") $(sudo dmidecode -s system-product-name 2>/dev/null || echo "Precision 5520")
-> **GPU:** $(lspci 2>/dev/null | grep -i nvidia | head -1 | sed 's/.*: //' || echo "NVIDIA Quadro M1200 Mobile")
+> **Hardware:** ${HW_VENDOR} ${HW_MODEL} (${HW_CHASSIS})
+> **CPU:** ${CPU_MODEL}
+> **RAM:** ${RAM_GB} GB
 
 ---
 
 ## Table of Contents
 
-1. [APT — OS & Core Packages](#apt--os--core-packages)
-2. [APT — Third-Party Applications](#apt--third-party-applications)
-3. [Snap Packages](#snap-packages)
-4. [Homebrew Formulas](#homebrew-formulas)
-5. [Homebrew Casks](#homebrew-casks)
-6. [npm Global Packages](#npm-global-packages)
-7. [Drivers & Firmware](#drivers--firmware)
-8. [Manually Installed / /opt](#manually-installed--opt)
+1. [APT Packages](#apt-packages)
+2. [Snap Packages](#snap-packages)
+3. [Homebrew Formulas](#homebrew-formulas)
+4. [Homebrew Casks](#homebrew-casks)
+5. [npm Global Packages](#npm-global-packages)
+6. [Drivers & Firmware](#drivers--firmware)
+7. [Flatpak](#flatpak)
+8. [APT Sources](#apt-sources)
 
 ---
 
-## APT — OS & Core Packages
+## APT Packages
 
-| Package | Version | Source |
-|---------|---------|--------|
-HEREDOC
+> Total manually installed: $(apt-mark showmanual 2>/dev/null | wc -l) packages
 
-# OS meta packages
-for pkg in ubuntu-desktop ubuntu-desktop-minimal ubuntu-standard ubuntu-minimal; do
-    ver=$(apt_ver "$pkg"); [[ -n "$ver" ]] && echo "| \`$pkg\` | $ver | Ubuntu |"
-done
-
-cat << 'HEREDOC'
-
-## APT — Third-Party Applications
-
-| Application | Package | Version | Source/Repo |
-|-------------|---------|---------|-------------|
-HEREDOC
-
-declare -A APT_APPS=(
-    ["Brave Browser"]="brave-browser|brave-browser-release.sources"
-    ["Google Chrome"]="google-chrome-stable|google-chrome.list"
-    ["VS Code"]="code|vscode.sources"
-    ["Docker CE"]="docker-ce|docker.sources"
-    ["Docker CLI"]="docker-ce-cli|docker.sources"
-    ["Docker Compose Plugin"]="docker-compose-plugin|docker.sources"
-    ["Docker Buildx Plugin"]="docker-buildx-plugin|docker.sources"
-    ["containerd.io"]="containerd.io|docker.sources"
-    ["NVIDIA Container Toolkit"]="nvidia-container-toolkit|nvidia-container-toolkit.list"
-    ["MegaSync"]="megasync|meganz.list"
-    ["Proton Mail"]="proton-mail|protonvpn-stable.sources"
-    ["ProtonVPN (GTK)"]="proton-vpn-gtk-app|protonvpn-stable.sources"
-    ["ProtonVPN Daemon"]="proton-vpn-daemon|protonvpn-stable.sources"
-    ["Grub Customizer"]="grub-customizer|PPA danielrichter2007"
-    ["Remote Desktop Manager"]="remotedesktopmanager|devolutions.net"
-    ["Rclone"]="rclone|ubuntu-repo"
-    ["Node.js (system)"]="nodejs|ubuntu-repo"
-    ["npm (system)"]="npm|ubuntu-repo"
-    ["NVIDIA Driver 580"]="nvidia-driver-580|ubuntu-repo"
-    ["Git"]="git|ubuntu-repo"
-    ["curl"]="curl|ubuntu-repo"
-    ["wget"]="wget|ubuntu-repo"
-    ["build-essential"]="build-essential|ubuntu-repo"
-    ["BleachBit"]="bleachbit|ubuntu-repo"
-    ["Midnight Commander"]="mc|ubuntu-repo"
-    ["Remmina"]="remmina|ubuntu-repo"
-)
-for app in "${!APT_APPS[@]}"; do
-    IFS='|' read -r pkg repo <<< "${APT_APPS[$app]}"
-    ver=$(apt_ver "$pkg")
-    [[ -n "$ver" ]] && echo "| $app | \`$pkg\` | $ver | $repo |"
-done | sort
-
-cat << 'HEREDOC'
-
-## Snap Packages
-
-| Application | Version | Revision | Channel | Publisher |
-|-------------|---------|----------|---------|-----------|
-HEREDOC
-
-snap list 2>/dev/null | tail -n +2 | awk '{print $1, $2, $3, $4, $5}' | \
-while IFS=' ' read -r name ver rev chan pub; do
-    case "$name" in
-        bare|core*|gnome-*|gtk-common*|kf5-*|mesa-*|snapd|snapd-desktop-*)
-            echo "| \`$name\` *(runtime)* | $ver | $rev | $chan | $pub |" ;;
-        *)
-            echo "| **$name** | $ver | $rev | $chan | $pub |" ;;
-    esac
-done
-
-cat << 'HEREDOC'
-
-## Homebrew Formulas
-
-> Linuxbrew prefix: `/home/linuxbrew/.linuxbrew`
-> Node.js/npm managed by brew — **use brew versions, not system apt ones**.
-
-| Formula | Version | Description |
-|---------|---------|-------------|
-HEREDOC
-
-"${BREW}" list --formula --versions 2>/dev/null | sort | while IFS=' ' read -r name ver; do
-    desc=$("${BREW}" info "$name" 2>/dev/null | sed -n '2p' | sed 's/^: //' || echo "")
-    echo "| \`$name\` | $ver | $desc |"
-done
-
-cat << 'HEREDOC'
-
-## Homebrew Casks
-
-| Application | Version | Description |
-|-------------|---------|-------------|
-HEREDOC
-
-"${BREW}" list --cask 2>/dev/null | while read -r cask; do
-    ver=$(ls "/home/linuxbrew/.linuxbrew/Caskroom/${cask}/" 2>/dev/null | tail -1)
-    desc=$("${BREW}" info --cask "$cask" 2>/dev/null | head -1 | sed 's/==> //' || echo "")
-    echo "| **$cask** | $ver | $desc |"
-done
-
-cat << 'HEREDOC'
-
-## npm Global Packages
-
-> Using Homebrew Node.js: `/home/linuxbrew/.linuxbrew/bin/node`
+### OS Core
 
 | Package | Version |
 |---------|---------|
-HEREDOC
+MD
 
-BREW_NPM="/home/linuxbrew/.linuxbrew/bin/npm"
-if [[ -x "${BREW_NPM}" ]]; then
-    "${BREW_NPM}" list -g --depth=0 2>/dev/null | tail -n +2 | while IFS= read -r l; do
-        pkg=$(echo "$l" | awk '{print $2}' | tr -d '├─└─ ')
-        echo "| \`$pkg\` | (see brew node) |"
-    done
-else
-    echo "| *npm not available* | — |"
+for pkg in ubuntu-desktop ubuntu-desktop-minimal ubuntu-standard ubuntu-minimal; do
+    ver=$(apt_pkg_version "$pkg")
+    [[ -n "$ver" ]] && echo "| \`$pkg\` | $ver |"
+done
+
+# ━━━ APT: packages from config ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+cat <<'MD'
+
+### Configured Applications
+
+> Packages listed in `config/apt-packages.list`
+
+| Application | Package | Version | Status |
+|-------------|---------|---------|--------|
+MD
+
+CONFIG_APT="${SCRIPT_DIR}/config/apt-packages.list"
+if [[ -f "$CONFIG_APT" ]]; then
+    # Build a display name from package name (capitalize, replace - with space)
+    while IFS= read -r pkg; do
+        [[ -z "$pkg" ]] && continue
+        ver=$(apt_pkg_version "$pkg")
+        # Read display label from config comment
+        label=$(grep "^${pkg}" "$CONFIG_APT" 2>/dev/null | sed 's/#.*//' | awk '{$1=""; print $0}' | xargs || echo "")
+        [[ -z "$label" ]] && label=$(echo "$pkg" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2); print}')
+        if [[ -n "$ver" ]]; then
+            echo "| $label | \`$pkg\` | $ver | ✔ installed |"
+        else
+            echo "| $label | \`$pkg\` | — | ✘ missing |"
+        fi
+    done < <(parse_config_names "$CONFIG_APT")
 fi
 
-cat << 'HEREDOC'
+# ━━━ Snap Packages ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+cat <<'MD'
+
+---
+
+## Snap Packages
+
+### User Applications
+
+| Application | Version | Revision | Channel | Publisher |
+|-------------|---------|----------|---------|-----------|
+MD
+
+scan_snaps_user | while IFS='|' read -r name ver rev chan pub; do
+    echo "| **$name** | $ver | $rev | $chan | $pub |"
+done
+
+cat <<'MD'
+
+### Runtime / Base Snaps
+
+| Snap | Version | Revision |
+|------|---------|----------|
+MD
+
+snap list 2>/dev/null | tail -n +2 | while read -r name ver rev chan pub notes; do
+    case "$name" in
+        bare|core|core[0-9]*|gnome-*|gtk-common*|kf5-*|mesa-*|snapd|snapd-*)
+            echo "| \`$name\` | $ver | $rev |" ;;
+    esac
+done
+
+# ━━━ Homebrew ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+cat <<MD
+
+---
+
+## Homebrew Formulas
+
+> Prefix: \`${BREW_PREFIX:-not installed}\`
+> Node.js from brew is the active version — **not** the system apt nodejs.
+
+MD
+
+if [[ $HAS_BREW -eq 1 ]]; then
+    echo "### Configured Formulas"
+    echo ""
+    echo "| Formula | Version | In Config |"
+    echo "|---------|---------|-----------|"
+
+    CONFIG_FORM="${SCRIPT_DIR}/config/brew-formulas.list"
+    # First: configured formulas
+    if [[ -f "$CONFIG_FORM" ]]; then
+        while IFS= read -r f; do
+            [[ -z "$f" ]] && continue
+            ver=$(brew_formula_version "$f")
+            [[ -n "$ver" ]] && echo "| \`$f\` | $ver | ✔ |" || echo "| \`$f\` | ✘ missing | ✔ |"
+        done < <(parse_config_names "$CONFIG_FORM")
+    fi
+
+    echo ""
+    echo "### All Installed Formulas"
+    echo ""
+    echo "| Formula | Version |"
+    echo "|---------|---------|"
+    scan_brew_formulas | sort | while read -r name ver; do
+        echo "| \`$name\` | $ver |"
+    done
+else
+    echo "_Homebrew not installed on this machine._"
+fi
+
+# ━━━ Homebrew Casks ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+cat <<'MD'
+
+---
+
+## Homebrew Casks
+
+| Application | Version | In Config |
+|-------------|---------|-----------|
+MD
+
+if [[ $HAS_BREW -eq 1 ]]; then
+    CONFIG_CASKS="${SCRIPT_DIR}/config/brew-casks.list"
+    # Configured casks first
+    if [[ -f "$CONFIG_CASKS" ]]; then
+        while IFS= read -r cask; do
+            [[ -z "$cask" ]] && continue
+            ver=$(brew_cask_version "$cask")
+            [[ -n "$ver" ]] && echo "| **$cask** | $ver | ✔ |" || echo "| **$cask** | ✘ missing | ✔ |"
+        done < <(parse_config_names "$CONFIG_CASKS")
+    fi
+    # Any other casks not in config
+    "${BREW_BIN}" list --cask 2>/dev/null | while read -r cask; do
+        in_config=$(grep -c "^${cask}" "${CONFIG_CASKS:-/dev/null}" 2>/dev/null || echo 0)
+        if [[ "$in_config" -eq 0 ]]; then
+            ver=$(brew_cask_version "$cask")
+            echo "| $cask | $ver | (not in config) |"
+        fi
+    done
+else
+    echo "_Homebrew not installed on this machine._"
+fi
+
+# ━━━ npm ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+cat <<MD
+
+---
+
+## npm Global Packages
+
+> npm binary: \`${NPM_BIN:-not found}\`
+> Node.js: \`$( [[ -n "${NPM_BIN:-}" ]] && "$(dirname "${NPM_BIN}")/node" --version 2>/dev/null || echo "N/A")\`
+
+| Package | Version | In Config |
+|---------|---------|-----------|
+MD
+
+CONFIG_NPM="${SCRIPT_DIR}/config/npm-globals.list"
+if [[ -n "${NPM_BIN:-}" ]]; then
+    # All installed globals
+    declare -A NPM_IN_CONFIG=()
+    [[ -f "$CONFIG_NPM" ]] && while IFS= read -r p; do
+        [[ -z "$p" ]] && continue; NPM_IN_CONFIG["$p"]=1
+    done < <(parse_config_names "$CONFIG_NPM")
+
+    scan_npm_globals | while IFS='|' read -r name ver; do
+        flag="${NPM_IN_CONFIG[$name]:-0}"
+        mark=$([[ "$flag" == "1" ]] && echo "✔" || echo "—")
+        echo "| \`$name\` | $ver | $mark |"
+    done
+
+    # Config items not installed
+    for pkg in "${!NPM_IN_CONFIG[@]}"; do
+        installed=$(scan_npm_globals | grep "^${pkg}|" || true)
+        [[ -z "$installed" ]] && echo "| \`$pkg\` | ✘ missing | ✔ |"
+    done
+else
+    echo "_npm not available on this machine._"
+fi
+
+# ━━━ Drivers & Firmware ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+cat <<'MD'
+
+---
 
 ## Drivers & Firmware
 
-### NVIDIA
+### GPU Drivers
 
-| Component | Version / Status |
-|-----------|-----------------|
-HEREDOC
+| Component | Details |
+|-----------|---------|
+MD
 
-nvidia_drv=$(apt_ver "nvidia-driver-580")
-nvidia_ct=$(apt_ver "nvidia-container-toolkit")
-nvidia_smi_out=$(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2>/dev/null | head -1 || echo "not loaded (reboot required)")
-echo "| NVIDIA Driver 580 (apt) | $nvidia_drv |"
-echo "| NVIDIA Container Toolkit | $nvidia_ct |"
-echo "| nvidia-smi GPU | $nvidia_smi_out |"
+echo "| GPU detected | $(echo "$GPU_INFO" | head -1 | sed 's/.*: //') |"
+echo "| NVIDIA present | $([[ $HAS_NVIDIA -eq 1 ]] && echo 'Yes' || echo 'No') |"
+
+# All installed nvidia packages
+dpkg -l 'nvidia-*' 2>/dev/null | awk '/^ii/{print $2, $3}' | while read -r pkg ver; do
+    echo "| \`$pkg\` | $ver |"
+done
+
+dpkg -l 'linux-modules-nvidia*' 2>/dev/null | awk '/^ii/{print $2, $3}' | while read -r pkg ver; do
+    echo "| \`$pkg\` *(kernel modules)* | $ver |"
+done
+
+nv_smi=$(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2>/dev/null | head -1 || echo "not loaded — reboot may be needed")
+echo "| nvidia-smi | $nv_smi |"
 echo "| Running kernel | $(uname -r) |"
 
-cat << 'HEREDOC'
+cat <<'MD'
 
 ### Firmware (fwupd)
 
 | Device | Current Version |
 |--------|----------------|
-HEREDOC
+MD
 
-fwupdmgr get-devices 2>/dev/null | awk '
-/├─|└─/ { device=$0; gsub(/^[│├└─ ]+/, "", device); gsub(/:$/, "", device) }
-/Current version:/ { ver=$NF; print "| " device " | " ver " |" }
-' | head -10
+scan_firmware_devices | while IFS='|' read -r dev ver; do
+    echo "| $dev | $ver |"
+done
 
-cat << 'HEREDOC'
+cat <<'MD'
 
-### Dell BIOS
+### System Firmware
 
 | Property | Value |
 |----------|-------|
-HEREDOC
+MD
 
 echo "| BIOS Version | $(sudo dmidecode -s bios-version 2>/dev/null || echo 'N/A') |"
-echo "| BIOS Release Date | $(sudo dmidecode -s bios-release-date 2>/dev/null || echo 'N/A') |"
-echo "| System | $(sudo dmidecode -s system-product-name 2>/dev/null || echo 'Dell Precision 5520') |"
+echo "| BIOS Date | $(sudo dmidecode -s bios-release-date 2>/dev/null || echo 'N/A') |"
+echo "| System | $(sudo dmidecode -s system-product-name 2>/dev/null || echo 'N/A') |"
 
-cat << 'HEREDOC'
-
-## Manually Installed / /opt
-
-| Application | Location | Version |
-|-------------|----------|---------|
-HEREDOC
-
-# /opt apps
-[[ -d "/opt/brave.com/brave" ]] && echo "| Brave Browser | \`/opt/brave.com/brave\` | $(brave-browser --version 2>/dev/null | awk '{print $NF}' || echo 'see apt') |"
-[[ -d "/opt/google/chrome" ]] && echo "| Google Chrome | \`/opt/google/chrome\` | $(google-chrome --version 2>/dev/null | awk '{print $NF}' || echo 'see apt') |"
-[[ -d "/opt/megasync" ]] && echo "| MegaSync | \`/opt/megasync\` | $(megasync --version 2>/dev/null || echo 'see apt') |"
-[[ -x "/usr/local/bin/docker" ]] && echo "| Docker (symlink) | \`/usr/local/bin/docker\` | $(docker --version 2>/dev/null | awk '{print $3}' | tr -d ',') |"
-[[ -x "/home/linuxbrew/.linuxbrew/bin/claude" ]] && echo "| Claude Code CLI | \`/home/linuxbrew/.linuxbrew/bin/claude\` | $(claude --version 2>/dev/null | head -1 || echo 'see brew cask') |"
-
-cat << 'HEREDOC'
+# ━━━ Flatpak ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+cat <<'MD'
 
 ---
 
-## APT Sources (Third-Party Repos)
+## Flatpak
 
-| Repo/PPA | File |
-|----------|------|
-| Brave Browser | `/etc/apt/sources.list.d/brave-browser-release.sources` |
-| Google Chrome | `/etc/apt/sources.list.d/google-chrome.list` |
-| VS Code | `/etc/apt/sources.list.d/vscode.sources` |
-| Docker CE | `/etc/apt/sources.list.d/docker.sources` |
-| NVIDIA Container Toolkit | `/etc/apt/sources.list.d/nvidia-container-toolkit.list` |
-| MegaSync | `/etc/apt/sources.list.d/meganz.list` |
-| ProtonVPN | `/etc/apt/sources.list.d/protonvpn-stable.sources` |
-| Grub Customizer PPA | `/etc/apt/sources.list.d/danielrichter2007-ubuntu-grub-customizer-noble.sources` |
+MD
+
+if [[ $HAS_FLATPAK -eq 1 ]]; then
+    fp_list=$(scan_flatpaks)
+    if [[ -n "$fp_list" ]]; then
+        echo "| Application | ID | Version | Branch |"
+        echo "|-------------|-----|---------|--------|"
+        echo "$fp_list" | while IFS=$'\t' read -r name id ver branch; do
+            echo "| $name | \`$id\` | $ver | $branch |"
+        done
+    else
+        echo "_No Flatpak applications installed._"
+    fi
+else
+    echo "_Flatpak not installed on this machine._"
+fi
+
+# ━━━ APT Sources ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+cat <<'MD'
+
+---
+
+## APT Sources
+
+| Source File | Content |
+|-------------|---------|
+MD
+
+for f in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+    [[ -f "$f" ]] || continue
+    content=$(grep -v '^#' "$f" 2>/dev/null | grep -v '^$' | head -2 | tr '\n' ' ' | cut -c1-80)
+    [[ -n "$content" ]] && echo "| \`$(basename "$f")\` | $content |"
+done
+
+cat <<'MD'
 
 ---
 
 *Auto-generated by `scripts/update-inventory.sh` — do not edit manually.*
-HEREDOC
+MD
 
 } > "${APPS_MD}"
 
 print_ok
 record_ok
-print_info "Written to: ${APPS_MD}"
-print_info "Size: $(wc -l < "${APPS_MD}") lines"
+print_info "Written: ${APPS_MD} ($(wc -l < "${APPS_MD}") lines)"
 
-print_summary "Inventory Update Summary"
+print_summary "Inventory Summary"
