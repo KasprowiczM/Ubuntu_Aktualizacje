@@ -107,6 +107,29 @@ sudo_silent() {
     run_silent sudo "$@"
 }
 
+# ── Run a command as the invoking (non-root) user ─────────────────────────────
+# When the master script is run via "sudo ./update-all.sh", sub-scripts inherit
+# EUID=0.  Tools like brew and npm refuse to run as root, so we drop back to
+# SUDO_USER for those commands.  Falls through to a normal run when not root.
+REAL_USER="${SUDO_USER:-${USER}}"
+_real_user_home() { getent passwd "${REAL_USER}" | cut -d: -f6; }
+
+run_as_user() {
+    if [[ $EUID -eq 0 && -n "${SUDO_USER:-}" ]]; then
+        sudo -u "${SUDO_USER}" HOME="$(_real_user_home)" "$@"
+    else
+        "$@"
+    fi
+}
+
+run_silent_as_user() {
+    if [[ $EUID -eq 0 && -n "${SUDO_USER:-}" ]]; then
+        run_silent sudo -u "${SUDO_USER}" HOME="$(_real_user_home)" "$@"
+    else
+        run_silent "$@"
+    fi
+}
+
 # ── Require root or sudo ───────────────────────────────────────────────────────
 require_sudo() {
     if [[ $EUID -eq 0 ]]; then return 0; fi

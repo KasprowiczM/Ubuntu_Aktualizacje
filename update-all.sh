@@ -35,21 +35,28 @@ NO_DRIVERS=0
 DRY_RUN=0
 NO_NOTIFY=0
 ONLY=""
+UPGRADE_NVIDIA=0   # default: hold NVIDIA during apt, skip NVIDIA apt in drivers
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --no-drivers)   NO_DRIVERS=1 ;;
+        --nvidia)       UPGRADE_NVIDIA=1 ;;
         --dry-run)      DRY_RUN=1 ;;
         --no-notify)    NO_NOTIFY=1 ;;
         --only)         shift; ONLY="$1" ;;
         -h|--help)
-            echo "Usage: $0 [--no-drivers] [--dry-run] [--no-notify] [--only <group>]"
+            echo "Usage: $0 [--no-drivers] [--nvidia] [--dry-run] [--no-notify] [--only <group>]"
             echo "Groups: apt | snap | brew | npm | pip | flatpak | drivers | inventory"
+            echo ""
+            echo "  --nvidia    Upgrade NVIDIA driver/DKMS via apt (default: held to avoid"
+            echo "              DKMS build failures on unsupported/mainline kernels)"
             exit 0 ;;
         *) echo "Unknown option: $1"; exit 1 ;;
     esac
     shift
 done
+
+export UPGRADE_NVIDIA
 
 # ── Detect optional package managers (skip groups if not installed) ───────────
 detect_package_managers

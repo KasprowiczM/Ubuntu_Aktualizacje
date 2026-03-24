@@ -31,7 +31,7 @@ fi
 print_section "Updating Homebrew"
 
 print_step "brew update"
-if run_silent "${BREW_BIN}" update; then
+if run_silent_as_user "${BREW_BIN}" update; then
     print_ok; record_ok
 else
     print_warn "brew update returned non-zero (network issue?)"
@@ -41,8 +41,8 @@ fi
 # ── 2. Show outdated ──────────────────────────────────────────────────────────
 print_section "Outdated packages"
 
-outdated_f=$("${BREW_BIN}" outdated --formula 2>/dev/null || true)
-outdated_c=$("${BREW_BIN}" outdated --cask   2>/dev/null || true)
+outdated_f=$(run_as_user "${BREW_BIN}" outdated --formula 2>/dev/null || true)
+outdated_c=$(run_as_user "${BREW_BIN}" outdated --cask   2>/dev/null || true)
 
 if [[ -z "$outdated_f" && -z "$outdated_c" ]]; then
     print_info "Everything is up to date"
@@ -55,7 +55,7 @@ fi
 print_section "Upgrading formulas"
 
 print_step "brew upgrade --formula"
-if run_silent "${BREW_BIN}" upgrade --formula; then
+if run_silent_as_user "${BREW_BIN}" upgrade --formula; then
     print_ok; record_ok
 else
     print_warn "Some formulas failed to upgrade"
@@ -75,7 +75,7 @@ if [[ -f "$CONFIG_CASKS" ]]; then
             continue
         fi
         current_ver=$(brew_cask_version "$cask")
-        if run_silent "${BREW_BIN}" upgrade --cask "$cask"; then
+        if run_silent_as_user "${BREW_BIN}" upgrade --cask "$cask"; then
             new_ver=$(brew_cask_version "$cask")
             [[ "$new_ver" != "$current_ver" ]] && print_ok "${current_ver} → ${new_ver}" || print_ok "already latest"
             record_ok
@@ -90,13 +90,13 @@ fi
 print_section "Cleanup"
 
 print_step "brew cleanup (keep last 7 days)"
-run_silent "${BREW_BIN}" cleanup --prune=7 && print_ok || { print_warn "cleanup non-zero"; record_warn; }
+run_silent_as_user "${BREW_BIN}" cleanup --prune=7 && print_ok || { print_warn "cleanup non-zero"; record_warn; }
 
 # ── 6. Brew doctor ────────────────────────────────────────────────────────────
 print_section "Health check"
 
 print_step "brew doctor"
-doc=$("${BREW_BIN}" doctor 2>&1 || true)
+doc=$(run_as_user "${BREW_BIN}" doctor 2>&1 || true)
 echo "$doc" >> "${LOG_FILE}"
 if echo "$doc" | grep -q "Your system is ready to brew"; then
     print_ok; record_ok

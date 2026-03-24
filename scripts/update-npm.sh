@@ -51,7 +51,7 @@ GLOBAL_COUNT="${#INSTALLED_GLOBALS[@]}"
 # ── 2. Check for outdated globals ─────────────────────────────────────────────
 print_section "Checking for outdated packages"
 
-outdated_json=$("${NPM_BIN}" outdated -g --json 2>/dev/null) || true
+outdated_json=$(run_as_user "${NPM_BIN}" outdated -g --json 2>/dev/null) || true
 echo "$outdated_json" >> "${LOG_FILE}"
 
 outdated_count=$(echo "$outdated_json" | python3 -c "
@@ -80,10 +80,9 @@ print_section "Updating installed global packages"
 
 if [[ "$GLOBAL_COUNT" -gt 0 ]]; then
     for name in "${!INSTALLED_GLOBALS[@]}"; do
-        [[ "$name" == "npm" ]] && continue  # npm managed by brew
         old_ver="${INSTALLED_GLOBALS[$name]}"
-        print_step "npm update -g ${name}"
-        if run_silent "${NPM_BIN}" update -g "$name"; then
+        print_step "npm install -g ${name}@latest"
+        if run_silent_as_user "${NPM_BIN}" install -g "${name}@latest"; then
             new_ver=$(npm_pkg_version "$name")
             [[ "$new_ver" != "$old_ver" ]] && print_ok "${old_ver} → ${new_ver}" || print_ok "already latest"
             record_ok
@@ -114,7 +113,7 @@ if [[ -f "$CONFIG_NPM" ]]; then
             if npm_pkg_installed "$pkg"; then
                 print_info "(already installed — $(npm_pkg_version "$pkg"))"
             else
-                if run_silent "${NPM_BIN}" install -g "$pkg"; then
+                if run_silent_as_user "${NPM_BIN}" install -g "$pkg"; then
                     print_ok; record_ok
                 else
                     print_warn "Failed: ${pkg}"; record_warn
@@ -126,13 +125,13 @@ fi
 
 # ── 5. Final state ────────────────────────────────────────────────────────────
 print_section "Final global package state"
-"${NPM_BIN}" list -g --depth=0 2>/dev/null | tail -n +2 | while IFS= read -r l; do
+run_as_user "${NPM_BIN}" list -g --depth=0 2>/dev/null | tail -n +2 | while IFS= read -r l; do
     print_info "${l}"
 done
 
 # ── 6. npm audit ──────────────────────────────────────────────────────────────
 print_section "Security audit (global)"
-audit_out=$("${NPM_BIN}" audit --global 2>/dev/null || true)
+audit_out=$(run_as_user "${NPM_BIN}" audit --global 2>/dev/null || true)
 if echo "$audit_out" | grep -q "found 0 vulnerabilities"; then
     print_info "No vulnerabilities found"
 elif [[ -n "$audit_out" ]]; then

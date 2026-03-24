@@ -83,12 +83,15 @@ Ubuntu_Aktualizacje/
 ### Options
 ```bash
 ./update-all.sh --no-drivers     # Skip driver & firmware updates
+./update-all.sh --nvidia         # Enable NVIDIA driver apt upgrade (default: held)
 ./update-all.sh --dry-run        # Preview what would run
 ./update-all.sh --no-notify      # Suppress desktop notification
 ./update-all.sh --only apt       # Run only one group
 ```
 
 **Groups for `--only`:** `apt` | `snap` | `brew` | `npm` | `pip` | `flatpak` | `drivers` | `inventory`
+
+> **Tip:** The script can be run directly (`./update-all.sh`) or via `sudo` — brew and npm commands automatically drop back to your user account when invoked as root.
 
 ### Run individual scripts
 ```bash
@@ -115,7 +118,7 @@ Ubuntu_Aktualizacje/
 | **npm** | `update-npm.sh` | All global npm packages via brew Node.js; installs from config; runs `npm audit` |
 | **pip** | `update-pip.sh` | pip user packages + pipx isolated tools; upgrades all outdated |
 | **Flatpak** | `update-flatpak.sh` | All Flatpak apps; cleans unused runtimes |
-| **Drivers** | `update-drivers.sh` | NVIDIA 580 (apt), NVIDIA Container Toolkit, ubuntu-drivers recommendations (info only), Dell/Intel/GPU firmware (fwupd) |
+| **Drivers** | `update-drivers.sh` | NVIDIA status check always; NVIDIA apt upgrade only when `--nvidia` passed; Dell/Intel/GPU firmware (fwupd) |
 | **Inventory** | `update-inventory.sh` | Regenerates `APPS.md` with full current state |
 
 ---
@@ -268,7 +271,19 @@ The timer runs `update-all.sh --no-drivers` to avoid unattended firmware updates
 
 ## NVIDIA / DKMS
 
-When running a mainline kernel (e.g. 6.19.x), NVIDIA modules may need rebuilding:
+### Default behavior
+
+By default (`--nvidia` **not** passed), NVIDIA packages are **held** during `apt upgrade` / `dist-upgrade` / `autoremove`. This prevents DKMS build failures on mainline kernels (e.g. 6.19.x) that lack official NVIDIA headers.
+
+```bash
+# Normal run — NVIDIA held, no DKMS attempts:
+./update-all.sh
+
+# Explicitly upgrade NVIDIA driver via apt:
+./update-all.sh --nvidia
+```
+
+### DKMS rebuild (mainline kernels)
 
 ```bash
 # Check DKMS status:
@@ -314,9 +329,9 @@ On every push to `main` (when `config/`, `scripts/`, or `lib/` changes), the wor
 ## Hardware Notes (Dell Precision 5520)
 
 - **GPU:** NVIDIA Quadro M1200 Mobile + Intel HD 630
-- **Driver:** NVIDIA 580 via Ubuntu HWE repository
+- **Driver:** NVIDIA 570 (570.211.01) via Ubuntu HWE repository — `nvidia-smi` working
 - **Firmware:** Dell BIOS, Intel CPU microcode via `fwupd`
-- **Note:** `nvidia-smi` requires reboot after kernel updates (DKMS rebuild needed for mainline kernels)
+- **Note:** On mainline kernels (6.19.x+), DKMS rebuild required after kernel updates — use `scripts/rebuild-dkms.sh`
 
 ---
 
@@ -326,8 +341,16 @@ On every push to `main` (when `config/`, `scripts/`, or `lib/` changes), the wor
 # APT broken after adding repos:
 sudo apt-get update --fix-missing && sudo apt-get install -f
 
+# NVIDIA DKMS fails during apt (mainline kernel):
+./update-all.sh               # default: NVIDIA held, safe
+./update-all.sh --nvidia      # attempt NVIDIA upgrade explicitly
+
 # Homebrew issues:
 brew doctor && brew cleanup
+
+# brew / npm fail with "Running Homebrew as root":
+# Fixed — scripts automatically drop to $SUDO_USER for brew/npm commands.
+# If running scripts directly (not via sudo), no change needed.
 
 # Snap refresh fails (snap-store must close):
 sudo snap refresh --ignore-running

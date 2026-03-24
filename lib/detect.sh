@@ -77,7 +77,13 @@ detect_package_managers() {
             HAS_BREW=1
             BREW_BIN="$brew_candidate"
             BREW_PREFIX=$(dirname "$(dirname "$brew_candidate")")
-            eval "$("$brew_candidate" shellenv 2>/dev/null)" || true
+            # brew shellenv refuses to run as root — drop to SUDO_USER if needed
+            if [[ $EUID -eq 0 && -n "${SUDO_USER:-}" ]]; then
+                _brew_home=$(getent passwd "${SUDO_USER}" | cut -d: -f6)
+                eval "$(sudo -u "${SUDO_USER}" HOME="${_brew_home}" "$brew_candidate" shellenv 2>/dev/null)" || true
+            else
+                eval "$("$brew_candidate" shellenv 2>/dev/null)" || true
+            fi
             break
         fi
     done
@@ -158,12 +164,12 @@ snap_version() {
 
 scan_brew_formulas() {
     [[ -z "${BREW_BIN:-}" ]] && return
-    "${BREW_BIN}" list --formula --versions 2>/dev/null
+    run_as_user "${BREW_BIN}" list --formula --versions 2>/dev/null
 }
 
 scan_brew_casks() {
     [[ -z "${BREW_BIN:-}" ]] && return
-    "${BREW_BIN}" list --cask 2>/dev/null | while read -r cask; do
+    run_as_user "${BREW_BIN}" list --cask 2>/dev/null | while read -r cask; do
         ver=$(ls "${BREW_PREFIX}/Caskroom/${cask}/" 2>/dev/null | sort -V | tail -1)
         echo "${cask}|${ver}"
     done
@@ -171,17 +177,17 @@ scan_brew_casks() {
 
 brew_formula_installed() {
     [[ -z "${BREW_BIN:-}" ]] && return 1
-    "${BREW_BIN}" list --formula "$1" &>/dev/null
+    run_as_user "${BREW_BIN}" list --formula "$1" &>/dev/null
 }
 
 brew_cask_installed() {
     [[ -z "${BREW_BIN:-}" ]] && return 1
-    "${BREW_BIN}" list --cask "$1" &>/dev/null
+    run_as_user "${BREW_BIN}" list --cask "$1" &>/dev/null
 }
 
 brew_formula_version() {
     [[ -z "${BREW_BIN:-}" ]] && return
-    "${BREW_BIN}" list --versions "$1" 2>/dev/null | awk '{print $2}'
+    run_as_user "${BREW_BIN}" list --versions "$1" 2>/dev/null | awk '{print $2}'
 }
 
 brew_cask_version() {
@@ -193,7 +199,7 @@ brew_cask_version() {
 
 scan_npm_globals() {
     [[ -z "${NPM_BIN:-}" ]] && return
-    "${NPM_BIN}" list -g --depth=0 --json 2>/dev/null | \
+    run_as_user "${NPM_BIN}" list -g --depth=0 --json 2>/dev/null | \
         python3 -c "
 import sys, json
 try:
@@ -203,19 +209,19 @@ try:
         print(f\"{name}|{info.get('version','?')}\")
 except: pass
 " 2>/dev/null || \
-    "${NPM_BIN}" list -g --depth=0 2>/dev/null | tail -n +2 | \
+    run_as_user "${NPM_BIN}" list -g --depth=0 2>/dev/null | tail -n +2 | \
         sed 's/[├└─ ]*//' | awk '{print $1}' | \
         awk -F@ '{name=$0; ver=$NF; sub(/@[^@]*$/,"",name); print name "|" ver}'
 }
 
 npm_pkg_installed() {
     [[ -z "${NPM_BIN:-}" ]] && return 1
-    "${NPM_BIN}" list -g --depth=0 "$1" 2>/dev/null | grep -q "$1"
+    run_as_user "${NPM_BIN}" list -g --depth=0 "$1" 2>/dev/null | grep -q "$1"
 }
 
 npm_pkg_version() {
     [[ -z "${NPM_BIN:-}" ]] && return
-    "${NPM_BIN}" list -g --depth=0 "$1" 2>/dev/null | grep "$1" | \
+    run_as_user "${NPM_BIN}" list -g --depth=0 "$1" 2>/dev/null | grep "$1" | \
         grep -oP '[\d]+\.[\d]+\.[\d]+.*' | head -1
 }
 

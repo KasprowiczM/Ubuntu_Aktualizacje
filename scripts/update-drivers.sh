@@ -3,7 +3,7 @@
 # scripts/update-drivers.sh — Hardware drivers and firmware updates
 #
 # Covers:
-#   • NVIDIA driver (580 series) via apt
+#   • NVIDIA driver (570 series) via apt
 #   • NVIDIA Container Toolkit via apt
 #   • Firmware via fwupd (Dell BIOS, Intel CPU microcode, GPU vBIOS)
 #   • ubuntu-drivers (detects/recommends/applies driver updates)
@@ -18,43 +18,51 @@ print_header "Drivers & Firmware Updates"
 
 require_sudo
 
+UPGRADE_NVIDIA="${UPGRADE_NVIDIA:-0}"
+
 # ── 1. NVIDIA driver via APT ──────────────────────────────────────────────────
 print_section "NVIDIA Driver (APT)"
 
-print_step "Refresh APT sources"
-run_silent sudo apt-get update -q
-print_ok
-
-print_step "Upgrade nvidia-driver-580 and NVIDIA packages"
-if sudo_silent apt-get install -y -q \
-    --only-upgrade \
-    -o Dpkg::Options::="--force-confdef" \
-    -o Dpkg::Options::="--force-confold" \
-    nvidia-driver-580 \
-    nvidia-container-toolkit \
-    nvidia-container-runtime \
-    2>/dev/null; then
-    print_ok
-    record_ok
+if [[ "${UPGRADE_NVIDIA}" -eq 0 ]]; then
+    print_info "NVIDIA APT upgrade skipped (pass --nvidia to update-all.sh to enable)"
+    print_info "Tip: mainline kernels require DKMS rebuild — run scripts/rebuild-dkms.sh"
 else
-    print_warn "NVIDIA APT upgrade returned non-zero (may be no update available)"
-    record_warn
+    print_step "Refresh APT sources"
+    run_silent sudo apt-get update -q
+    print_ok
+
+    print_step "Upgrade nvidia-driver-570 and NVIDIA packages"
+    if sudo_silent apt-get install -y -q \
+        --only-upgrade \
+        -o Dpkg::Options::="--force-confdef" \
+        -o Dpkg::Options::="--force-confold" \
+        nvidia-driver-570 \
+        nvidia-container-toolkit \
+        nvidia-container-runtime \
+        2>/dev/null; then
+        print_ok
+        record_ok
+    else
+        print_warn "NVIDIA APT upgrade returned non-zero (may be no update available)"
+        print_info "If DKMS failed: sudo apt-mark hold nvidia-dkms-* then rebuild headers"
+        record_warn
+    fi
 fi
 
-# Show installed NVIDIA driver version
-nvidia_ver=$(dpkg -l nvidia-driver-580 2>/dev/null | awk '/^ii/{print $3}')
-[[ -n "$nvidia_ver" ]] && print_info "Installed NVIDIA driver: ${nvidia_ver}"
+# Show installed NVIDIA driver version (always)
+nvidia_ver=$(dpkg -l 'nvidia-driver-*' 2>/dev/null | awk '/^[ih]i/{print $2, $3}' | head -3)
+[[ -n "$nvidia_ver" ]] && echo "$nvidia_ver" | while read -r p v; do print_info "Installed: ${p} ${v}"; done
 
-# Check nvidia-smi
+# Check nvidia-smi (always — shows whether modules are loaded)
 print_step "nvidia-smi check"
 if nvidia-smi &>/dev/null; then
     gpu_info=$(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2>/dev/null | head -1)
     print_ok "${gpu_info}"
     record_ok
 else
-    print_warn "nvidia-smi not responding — may need reboot to load new kernel modules"
+    print_warn "nvidia-smi not responding — may need reboot or DKMS rebuild"
     print_info "Running kernel: $(uname -r)"
-    print_info "NVIDIA modules available for: $(dpkg -l 'linux-modules-nvidia-580-*' 2>/dev/null | awk '/^ii/{print $2}' | sed 's/linux-modules-nvidia-580-//' | paste -sd', ')"
+    print_info "Fix: ./scripts/rebuild-dkms.sh (then reboot)"
     record_warn
 fi
 
