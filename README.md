@@ -341,6 +341,10 @@ On every push to `main` (when `config/`, `scripts/`, or `lib/` changes), the wor
 # APT broken after adding repos:
 sudo apt-get update --fix-missing && sudo apt-get install -f
 
+# APT "configured multiple times" warnings (MEGA duplicate source):
+sudo rm /etc/apt/sources.list.d/meganz.list   # keep megaio.sources
+# update-apt.sh will detect and print the fix instruction automatically
+
 # NVIDIA DKMS fails during apt (mainline kernel):
 ./update-all.sh               # default: NVIDIA held, safe
 ./update-all.sh --nvidia      # attempt NVIDIA upgrade explicitly
@@ -351,6 +355,15 @@ brew doctor && brew cleanup
 # brew / npm fail with "Running Homebrew as root":
 # Fixed — scripts automatically drop to $SUDO_USER for brew/npm commands.
 # If running scripts directly (not via sudo), no change needed.
+
+# Brew cleanup WARN "Permission denied" on old keg (e.g. pipx/1.10.1):
+# Root-owned __pycache__ files left by a past root brew install.
+# Fixed — update-brew.sh now chowns Cellar files back to $SUDO_USER before cleanup.
+# Manual fix: sudo chown -R mk /home/linuxbrew/.linuxbrew/Cellar
+
+# Inventory (APPS.md) not generated / log ends at "[STEP] Scanning installed packages":
+# Homebrew 4.x exits 1 when called directly as root inside update-inventory.sh.
+# Fixed — all brew calls in inventory now use run_as_user.
 
 # Snap refresh fails (snap-store must close):
 sudo snap refresh --ignore-running

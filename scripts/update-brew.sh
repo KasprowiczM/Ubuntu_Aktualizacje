@@ -89,6 +89,17 @@ fi
 # ── 5. Cleanup ────────────────────────────────────────────────────────────────
 print_section "Cleanup"
 
+# Fix root-owned files in brew Cellar before cleanup.
+# When update-all.sh is run via "sudo ./update-all.sh", brew formula installs
+# that implicitly invoke Python can leave __pycache__ files owned by root.
+# brew cleanup (running as SUDO_USER via run_silent_as_user) cannot delete
+# root-owned files, so old kegs persist indefinitely and produce a WARN on
+# every run.  Chown them back first while we still have root.
+if [[ $EUID -eq 0 && -n "${SUDO_USER:-}" && -n "${BREW_PREFIX:-}" ]]; then
+    find "${BREW_PREFIX}/Cellar" -not -user "${SUDO_USER}" -print0 2>/dev/null | \
+        xargs -0r chown "${SUDO_USER}" 2>/dev/null || true
+fi
+
 print_step "brew cleanup (keep last 7 days)"
 run_silent_as_user "${BREW_BIN}" cleanup --prune=7 && print_ok || { print_warn "cleanup non-zero"; record_warn; }
 

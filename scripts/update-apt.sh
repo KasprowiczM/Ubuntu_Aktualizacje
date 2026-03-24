@@ -55,8 +55,17 @@ fi
 print_section "Refreshing package lists"
 
 print_step "apt-get update"
-if sudo_silent apt-get update -q; then
+_apt_out=$(sudo apt-get update -q 2>&1) && _apt_rc=0 || _apt_rc=$?
+_log_raw "RUN " "sudo apt-get update -q"
+[[ -n "${_apt_out}" ]] && echo "${_apt_out}" >> "${LOG_FILE}"
+if [[ $_apt_rc -eq 0 ]]; then
     print_ok; record_ok
+    # Detect duplicate APT source files (causes repeated harmless warnings)
+    if echo "${_apt_out}" | grep -q "configured multiple times"; then
+        _dup=$(echo "${_apt_out}" | grep -oP '/etc/apt/sources\.list\.d/\S+' | sort -u | paste -sd' and ')
+        print_warn "Duplicate APT source files: ${_dup}"
+        print_info "Fix: sudo rm /etc/apt/sources.list.d/meganz.list  (keep megaio.sources)"
+    fi
 else
     print_warn "apt-get update had errors — some repos may be unavailable"
     record_warn

@@ -47,7 +47,11 @@ fi
 if [[ -n "$PIP3" ]]; then
     print_section "Updating pip itself"
     print_step "pip install --upgrade pip"
-    if $PIP3 install --quiet --upgrade pip 2>/dev/null; then
+    # Brew's Python is PEP-668 externally managed — pip cannot self-upgrade.
+    # The pip bundled with brew is upgraded automatically by `brew upgrade python@...`.
+    if [[ "${PY3}" == "${BREW_PREFIX:-/home/linuxbrew/.linuxbrew}"* ]]; then
+        print_ok "managed by brew — upgrade via: brew upgrade python@3.14"
+    elif $PIP3 install --quiet --upgrade pip 2>/dev/null; then
         print_ok; record_ok
     else
         print_warn "pip self-upgrade failed (may be externally managed)"; record_warn

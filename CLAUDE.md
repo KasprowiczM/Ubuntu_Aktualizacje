@@ -60,9 +60,12 @@ setup.sh                ← first-run bootstrap / migration
 
 - **Kernel 6.17.0-19-generic** is a standard Ubuntu kernel. NVIDIA 570 DKMS loads correctly. If ever switching to a mainline kernel (6.19.x+), DKMS will need a rebuild — use `scripts/rebuild-dkms.sh`.
 - **`nvidia-driver-570`** (570.211.01) is installed and `nvidia-smi` works (Quadro M1200, driver 570.211.01). Default run holds NVIDIA packages via `apt-mark hold` to prevent unintended upgrades.
-- **Brew runs under user `mk`**, not root. `SUDO_USER=mk` when running via `sudo ./update-all.sh`. All brew/npm calls use `run_as_user()` / `run_silent_as_user()` to drop back.
+- **Brew runs under user `mk`**, not root. `SUDO_USER=mk` when running via `sudo ./update-all.sh`. All brew/npm/pip calls use `run_as_user()` / `run_silent_as_user()` to drop back.
 - **npm** is provided by brew node (v25.8.1), not system apt. `NPM_BIN` is set in `detect_package_managers()`.
-- **MEGA duplicate APT source**: both `megaio.sources` and `meganz.list` exist in `/etc/apt/sources.list.d/`. `apt-get update` prints harmless warnings but succeeds (exit 0). To fix: `sudo rm /etc/apt/sources.list.d/meganz.list` (keep the `.sources` file which is the newer format).
+- **pip self-upgrade is skipped** when using brew Python — brew manages pip via `brew upgrade python@3.14`. The script detects this and skips the step without a WARN.
+- **MEGA duplicate APT source**: both `megaio.sources` and `meganz.list` exist in `/etc/apt/sources.list.d/`. `apt-get update` prints harmless warnings; the script now detects and surfaces them with fix instructions. To fix permanently: `sudo rm /etc/apt/sources.list.d/meganz.list` (keep `megaio.sources` — newer format).
+- **Brew Cellar permissions**: if brew formulas were ever upgraded as root, Python `__pycache__` files may end up owned by root in `/home/linuxbrew/.linuxbrew/Cellar/`. `brew cleanup` (running as mk) cannot delete them, causing a recurring WARN. `update-brew.sh` now chowns those files back to `mk` before each cleanup.
+- **Inventory script** (`update-inventory.sh`) uses `set -euo pipefail`. All brew commands inside the `{ } > APPS.md` block MUST use `run_as_user`; calling `${BREW_BIN}` directly as root causes Homebrew 4.x to exit 1, which silently kills the script mid-block (nothing logged to APPS.md or LOG_FILE after the `[STEP]` line).
 
 ---
 
@@ -121,7 +124,8 @@ Written to `./logs/` (gitignored). Format:
 - Don't commit `APPS.md` — it's machine-specific and gitignored
 - Don't commit `.env.local` — it contains the GitHub PAT
 - Don't add `ubuntu-drivers autoinstall` — it selects the "recommended" driver (535) which downgrades the explicitly-managed driver-570 and can fail DKMS on mainline kernels
-- Don't run brew/npm as root — always use `run_as_user()` / `run_silent_as_user()`
+- Don't run brew/npm/pip as root — always use `run_as_user()` / `run_silent_as_user()`
+- Don't call `"${BREW_BIN}"` directly inside `update-inventory.sh`'s `{ } > APPS.md` block — Homebrew 4.x exits 1 as root, silently killing the script via `set -euo pipefail`. Use `run_as_user "${BREW_BIN}"` instead.
 
 ---
 
