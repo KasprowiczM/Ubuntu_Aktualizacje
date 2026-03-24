@@ -263,11 +263,11 @@ echo "| NVIDIA present | $([[ $HAS_NVIDIA -eq 1 ]] && echo 'Yes' || echo 'No') |
 # All installed nvidia packages
 dpkg -l 'nvidia-*' 2>/dev/null | awk '/^ii/{print $2, $3}' | while read -r pkg ver; do
     echo "| \`$pkg\` | $ver |"
-done
+done || true
 
 dpkg -l 'linux-modules-nvidia*' 2>/dev/null | awk '/^ii/{print $2, $3}' | while read -r pkg ver; do
     echo "| \`$pkg\` *(kernel modules)* | $ver |"
-done
+done || true
 
 nv_smi=$(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2>/dev/null | head -1 || echo "not loaded — reboot may be needed")
 echo "| nvidia-smi | $nv_smi |"
@@ -334,7 +334,7 @@ MD
 
 for f in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
     [[ -f "$f" ]] || continue
-    content=$(grep -v '^#' "$f" 2>/dev/null | grep -v '^$' | head -2 | tr '\n' ' ' | cut -c1-80)
+    content=$(grep -v '^#' "$f" 2>/dev/null | grep -v '^$' | head -2 | tr '\n' ' ' | cut -c1-80 || true)
     [[ -n "$content" ]] && echo "| \`$(basename "$f")\` | $content |"
 done
 
