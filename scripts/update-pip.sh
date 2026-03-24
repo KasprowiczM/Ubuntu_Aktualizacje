@@ -142,9 +142,9 @@ else
 
     # List all
     print_section "Installed pipx packages"
-    pipx list 2>/dev/null | grep "package " | while IFS= read -r l; do
+    while IFS= read -r l; do
         print_info "$l"
-    done
+    done < <(pipx list 2>/dev/null | grep "package " || true)
 fi
 
 print_summary "Python Update Summary"

@@ -118,7 +118,7 @@ scan_apt_external() {
 
 # Returns version of an installed apt package (empty if not installed)
 apt_pkg_version() {
-    dpkg -l "$1" 2>/dev/null | awk '/^ii/{print $3}' | head -1
+    dpkg -l "$1" 2>/dev/null | awk '/^ii/{print $3}' | head -1 || true
 }
 
 # Returns true if apt package is installed
