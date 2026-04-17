@@ -140,6 +140,7 @@ run_script() {
 if [[ $DRY_RUN -eq 0 ]]; then
     echo -e "${YELLOW}  Authenticating sudo (needed for APT/drivers)...${RESET}"
     sudo -v || { echo -e "${RED}  sudo failed — aborting${RESET}"; exit 1; }
+    export UPDATE_ALL_SUDO_READY=1
     (while true; do sudo -n true; sleep 50; done) &
     SUDO_KEEP_PID=$!
     trap 'kill "${SUDO_KEEP_PID}" 2>/dev/null; true' INT TERM EXIT

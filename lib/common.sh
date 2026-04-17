@@ -133,6 +133,10 @@ run_silent_as_user() {
 # ── Require root or sudo ───────────────────────────────────────────────────────
 require_sudo() {
     if [[ $EUID -eq 0 ]]; then return 0; fi
+    if [[ "${UPDATE_ALL_SUDO_READY:-0}" == "1" ]]; then
+        sudo -n true 2>/dev/null || { print_error "sudo session not available"; exit 1; }
+        return 0
+    fi
     if ! sudo -n true 2>/dev/null; then
         echo -e "${YELLOW}  Sudo password required for privileged operations:${RESET}"
         sudo -v || { print_error "sudo authentication failed"; exit 1; }

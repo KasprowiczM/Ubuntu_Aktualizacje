@@ -14,14 +14,26 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 source "${SCRIPT_DIR}/lib/detect.sh"
+source "${SCRIPT_DIR}/lib/repos.sh"
 
 CONFIG_APT="${SCRIPT_DIR}/config/apt-packages.list"
+CONFIG_REPOS="${SCRIPT_DIR}/config/apt-repos.list"
 
 print_header "APT — System & Application Updates"
 
 require_sudo
 
 UPGRADE_NVIDIA="${UPGRADE_NVIDIA:-0}"
+
+# ── Helper: ensure configured third-party repos exist on every run ───────────
+_ensure_configured_repos() {
+    [[ ! -f "$CONFIG_REPOS" ]] && return 0
+    print_section "Ensuring configured APT repositories"
+    while IFS= read -r repo_id; do
+        [[ -z "$repo_id" ]] && continue
+        setup_repo "$repo_id" || true
+    done < <(parse_config_names "$CONFIG_REPOS")
+}
 
 # ── Helper: hold / unhold all installed nvidia-* packages ────────────────────
 _nvidia_hold() {
@@ -52,6 +64,8 @@ if [[ "${UPGRADE_NVIDIA}" -eq 0 ]]; then
 fi
 
 # ── 1. Refresh all apt sources ────────────────────────────────────────────────
+_ensure_configured_repos
+
 print_section "Refreshing package lists"
 
 print_step "apt-get update"
@@ -67,8 +81,11 @@ if [[ $_apt_rc -eq 0 ]]; then
         print_info "Fix: sudo rm /etc/apt/sources.list.d/meganz.list  (keep megaio.sources)"
     fi
 else
-    print_warn "apt-get update had errors — some repos may be unavailable"
-    record_warn
+    print_error "apt-get update failed — cannot guarantee package freshness"
+    record_err
+    print_info "Check repo configuration and network, then rerun update-all.sh"
+    print_summary "APT Update Summary"
+    exit 1
 fi
 
 # ── 2. Safe upgrade (keep existing config files) ─────────────────────────────
@@ -84,7 +101,9 @@ APT_OPTS=(
 print_step "apt-get upgrade"
 if sudo_silent apt-get upgrade "${APT_OPTS[@]}"; then
     print_ok; record_ok
+    _upgrade_rc=0
 else
+    _upgrade_rc=1
     if grep -qiE "nvidia-dkms|dkms.*nvidia" "${LOG_FILE}" 2>/dev/null; then
         print_warn "upgrade had NVIDIA DKMS build failure — run with --nvidia flag to attempt repair"
     else
@@ -96,13 +115,20 @@ fi
 print_step "apt-get dist-upgrade (metapackages & kernel)"
 if sudo_silent apt-get dist-upgrade "${APT_OPTS[@]}"; then
     print_ok; record_ok
+    _dist_rc=0
 else
+    _dist_rc=1
     if grep -qiE "nvidia-dkms|dkms.*nvidia" "${LOG_FILE}" 2>/dev/null; then
         print_warn "dist-upgrade had NVIDIA DKMS failure — run with --nvidia to attempt repair"
     else
         print_warn "dist-upgrade returned non-zero"
     fi
     record_warn
+fi
+
+if [[ "${_upgrade_rc:-0}" -ne 0 && "${_dist_rc:-0}" -ne 0 ]]; then
+    print_error "Both apt-get upgrade and dist-upgrade failed"
+    record_err
 fi
 
 # ── 3. Cleanup ────────────────────────────────────────────────────────────────
@@ -128,7 +154,61 @@ if [[ "${UPGRADE_NVIDIA}" -eq 0 ]]; then
     _nvidia_hold unhold
 fi
 
-# ── 4. Version report (from config) ──────────────────────────────────────────
+# ── 4. Feed/candidate health for key desktop apps ────────────────────────────
+print_section "Desktop app feed health"
+for pkg in code antigravity; do
+    if ! apt_installed "$pkg"; then
+        continue
+    fi
+    inst_ver=$(apt_pkg_version "$pkg")
+    cand_ver=$(apt_pkg_candidate "$pkg")
+    src_line=$(apt_pkg_source_line "$pkg")
+
+    if [[ -z "$src_line" ]]; then
+        if [[ -n "$cand_ver" && "$cand_ver" != "(none)" ]]; then
+            print_info "${pkg}: up to date (${inst_ver})"
+            continue
+        fi
+        print_warn "${pkg}: installed (${inst_ver}) but no active APT feed detected"
+        print_info "  run setup.sh or verify ${CONFIG_REPOS} and source files in /etc/apt/sources.list.d/"
+        record_warn
+        continue
+    fi
+
+    if [[ -n "$cand_ver" && "$cand_ver" != "(none)" && "$cand_ver" != "$inst_ver" ]]; then
+        print_info "${pkg}: update available ${inst_ver} → ${cand_ver}"
+    else
+        print_info "${pkg}: up to date (${inst_ver})"
+    fi
+done
+
+# ── 5. Targeted verify/retry for key desktop apps ────────────────────────────
+print_section "Targeted desktop app verification"
+for pkg in code antigravity; do
+    apt_installed "$pkg" || continue
+    inst_ver=$(apt_pkg_version "$pkg")
+    cand_ver=$(apt_pkg_candidate "$pkg")
+    if [[ -z "$cand_ver" || "$cand_ver" == "(none)" || "$cand_ver" == "$inst_ver" ]]; then
+        continue
+    fi
+
+    print_step "apt-get install --only-upgrade ${pkg} (${inst_ver} → ${cand_ver})"
+    if sudo_silent apt-get install -y -q --only-upgrade "$pkg"; then
+        new_ver=$(apt_pkg_version "$pkg")
+        if [[ "$new_ver" == "$cand_ver" ]]; then
+            print_ok "${inst_ver} → ${new_ver}"
+            record_ok
+        else
+            print_warn "${pkg}: expected ${cand_ver}, got ${new_ver}"
+            record_warn
+        fi
+    else
+        print_warn "${pkg}: targeted upgrade failed"
+        record_warn
+    fi
+done
+
+# ── 6. Version report (from config) ──────────────────────────────────────────
 print_section "Key package versions (from config/apt-packages.list)"
 
 if [[ -f "$CONFIG_APT" ]]; then
@@ -146,7 +226,7 @@ else
     print_warn "Config file not found: ${CONFIG_APT}"
 fi
 
-# ── 5. Reboot check ───────────────────────────────────────────────────────────
+# ── 7. Reboot check ───────────────────────────────────────────────────────────
 if [[ -f /var/run/reboot-required ]]; then
     echo
     print_warn "*** REBOOT REQUIRED ***"
@@ -155,6 +235,10 @@ if [[ -f /var/run/reboot-required ]]; then
 fi
 
 print_summary "APT Update Summary"
+
+if [[ "${SUMMARY_ERR:-0}" -gt 0 ]]; then
+    exit 1
+fi
 
 # ── Update inventory (skipped when called from update-all.sh) ─────────────────
 if [[ "${INVENTORY_SILENT:-0}" != "1" ]]; then

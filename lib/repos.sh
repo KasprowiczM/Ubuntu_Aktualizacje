@@ -33,6 +33,8 @@ _add_signed_repo() {
         print_info "${name}: repo file already exists — skipping"
         return 0
     fi
+    sudo install -d -m 0755 "$(dirname "$key_dest")" "$(dirname "$list_file")" \
+        >> "${LOG_FILE:-/dev/null}" 2>&1 || true
     print_step "Add ${name} repo"
     if curl -fsSL "$key_url" 2>/dev/null | sudo gpg --batch --yes --dearmor -o "$key_dest" >> "${LOG_FILE:-/dev/null}" 2>&1; then
         echo "$repo_line" | sudo tee "$list_file" >> "${LOG_FILE:-/dev/null}"
@@ -129,11 +131,31 @@ _setup_repo_nvidia_container_toolkit() {
 
 _setup_repo_megasync() {
     local os_ver; os_ver=$(grep '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
+    local keyfile="/etc/apt/keyrings/meganz-archive-keyring.gpg"
+    local sourcesfile="/etc/apt/sources.list.d/megaio.sources"
+    local legacy_list="/etc/apt/sources.list.d/meganz.list"
+
     _add_signed_repo "MegaSync" \
         "https://mega.nz/linux/repo/xUbuntu_${os_ver}/Release.key" \
-        "/usr/share/keyrings/meganz-archive-keyring.gpg" \
-        "/etc/apt/sources.list.d/meganz.list" \
-        "deb [arch=amd64 signed-by=/usr/share/keyrings/meganz-archive-keyring.gpg] https://mega.nz/linux/repo/xUbuntu_${os_ver}/ ./"
+        "${keyfile}" \
+        "${sourcesfile}" \
+        "Types: deb
+URIs: https://mega.nz/linux/repo/xUbuntu_${os_ver}/
+Suites: ./
+Signed-By: ${keyfile}"
+
+    # Legacy meganz.list duplicates megaio.sources and can break apt with
+    # "Conflicting values set for option Signed-By". Keep only megaio.sources.
+    if [[ -f "${legacy_list}" ]]; then
+        print_step "Remove legacy MegaSync list (${legacy_list})"
+        if sudo rm -f "${legacy_list}" >> "${LOG_FILE:-/dev/null}" 2>&1; then
+            print_ok
+            record_ok
+        else
+            print_warn "Could not remove ${legacy_list} — apt may still fail"
+            record_warn
+        fi
+    fi
 }
 
 # ── ProtonVPN ─────────────────────────────────────────────────────────────────
@@ -149,6 +171,33 @@ Suites: stable
 Components: main
 Architectures: amd64
 Signed-By: /usr/share/keyrings/protonvpn-stable-keyring.gpg"
+}
+
+# ── Antigravity Desktop ───────────────────────────────────────────────────────
+
+_setup_repo_antigravity() {
+    local keyfile="/etc/apt/keyrings/antigravity-repo-key.gpg"
+    local listfile="/etc/apt/sources.list.d/antigravity.list"
+    if [[ -f "$listfile" ]]; then
+        print_info "Antigravity: repo already exists — skipping"; return 0
+    fi
+
+    # Keep setup deterministic and safe: only generate source file if key exists.
+    # If key is missing, leave clear manual instructions rather than guessing key URL.
+    if [[ ! -f "$keyfile" ]]; then
+        print_warn "Antigravity: key not found at ${keyfile}"
+        print_info "Create key file first, then rerun setup:"
+        print_info "  sudo install -d -m 0755 /etc/apt/keyrings"
+        print_info "  sudo tee ${listfile} >/dev/null <<'EOF'"
+        print_info "  deb [arch=amd64 signed-by=${keyfile}] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main"
+        print_info "  EOF"
+        return 1
+    fi
+
+    print_step "Add Antigravity repo"
+    echo "deb [arch=amd64 signed-by=${keyfile}] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main" | \
+        sudo tee "$listfile" >> "${LOG_FILE:-/dev/null}"
+    print_ok; record_ok
 }
 
 # ── Grub Customizer PPA ───────────────────────────────────────────────────────

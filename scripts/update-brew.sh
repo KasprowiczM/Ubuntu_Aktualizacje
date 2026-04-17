@@ -62,28 +62,15 @@ else
     record_warn
 fi
 
-# ── 4. Upgrade casks (from config) ───────────────────────────────────────────
+# ── 4. Upgrade all installed casks ────────────────────────────────────────────
 print_section "Upgrading casks"
 
-if [[ -f "$CONFIG_CASKS" ]]; then
-    while IFS= read -r cask; do
-        [[ -z "$cask" ]] && continue
-        print_step "brew upgrade --cask ${cask}"
-        if ! brew_cask_installed "$cask"; then
-            print_warn "Not installed: ${cask} (run setup.sh)"
-            record_warn
-            continue
-        fi
-        current_ver=$(brew_cask_version "$cask")
-        if run_silent_as_user "${BREW_BIN}" upgrade --cask "$cask"; then
-            new_ver=$(brew_cask_version "$cask")
-            [[ "$new_ver" != "$current_ver" ]] && print_ok "${current_ver} → ${new_ver}" || print_ok "already latest"
-            record_ok
-        else
-            print_warn "cask ${cask} upgrade failed"
-            record_warn
-        fi
-    done < <(parse_config_names "$CONFIG_CASKS")
+print_step "brew upgrade --cask --greedy"
+if run_silent_as_user "${BREW_BIN}" upgrade --cask --greedy; then
+    print_ok; record_ok
+else
+    print_warn "Some casks failed to upgrade"
+    record_warn
 fi
 
 # ── 5. Cleanup ────────────────────────────────────────────────────────────────
@@ -101,7 +88,30 @@ if [[ $EUID -eq 0 && -n "${SUDO_USER:-}" && -n "${BREW_PREFIX:-}" ]]; then
 fi
 
 print_step "brew cleanup (keep last 7 days)"
-run_silent_as_user "${BREW_BIN}" cleanup --prune=7 && print_ok || { print_warn "cleanup non-zero"; record_warn; }
+if run_silent_as_user "${BREW_BIN}" cleanup --prune=7; then
+    print_ok
+    record_ok
+else
+    _retried_cleanup=0
+    if [[ $EUID -eq 0 && -n "${SUDO_USER:-}" && -n "${BREW_PREFIX:-}" ]]; then
+        if grep -qi "Could not cleanup old kegs! Fix your permissions on:" "${LOG_FILE}" 2>/dev/null; then
+            _retried_cleanup=1
+            print_info "Retrying brew cleanup after fixing Cellar ownership"
+            chown -R "${SUDO_USER}:${SUDO_USER}" "${BREW_PREFIX}/Cellar" >> "${LOG_FILE}" 2>&1 || true
+            if run_silent_as_user "${BREW_BIN}" cleanup --prune=7; then
+                print_ok "done (after ownership repair)"
+                record_ok
+            else
+                print_warn "cleanup non-zero (after retry)"
+                record_warn
+            fi
+        fi
+    fi
+    if [[ "${_retried_cleanup}" -eq 0 ]]; then
+        print_warn "cleanup non-zero"
+        record_warn
+    fi
+fi
 
 # ── 6. Brew doctor ────────────────────────────────────────────────────────────
 print_section "Health check"
@@ -144,6 +154,12 @@ if [[ -f "$CONFIG_CASKS" ]]; then
         fi
     done < <(parse_config_names "$CONFIG_CASKS")
 fi
+
+print_section "Installed casks (including not in config)"
+run_as_user "${BREW_BIN}" list --cask 2>/dev/null | while read -r c; do
+    [[ -z "$c" ]] && continue
+    print_info "${c}: $(brew_cask_version "$c")"
+done
 
 print_summary "Homebrew Update Summary"
 

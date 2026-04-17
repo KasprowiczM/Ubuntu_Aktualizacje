@@ -4,7 +4,6 @@
 #
 # Covers:
 #   • NVIDIA driver (570 series) via apt
-#   • NVIDIA Container Toolkit via apt
 #   • Firmware via fwupd (Dell BIOS, Intel CPU microcode, GPU vBIOS)
 #   • ubuntu-drivers (detects/recommends/applies driver updates)
 #   • Kernel modules check
@@ -28,24 +27,38 @@ if [[ "${UPGRADE_NVIDIA}" -eq 0 ]]; then
     print_info "Tip: mainline kernels require DKMS rebuild — run scripts/rebuild-dkms.sh"
 else
     print_step "Refresh APT sources"
-    run_silent sudo apt-get update -q
-    print_ok
-
-    print_step "Upgrade nvidia-driver-570 and NVIDIA packages"
-    if sudo_silent apt-get install -y -q \
-        --only-upgrade \
-        -o Dpkg::Options::="--force-confdef" \
-        -o Dpkg::Options::="--force-confold" \
-        nvidia-driver-570 \
-        nvidia-container-toolkit \
-        nvidia-container-runtime \
-        2>/dev/null; then
+    if sudo_silent apt-get update -q; then
         print_ok
-        record_ok
     else
-        print_warn "NVIDIA APT upgrade returned non-zero (may be no update available)"
-        print_info "If DKMS failed: sudo apt-mark hold nvidia-dkms-* then rebuild headers"
+        print_error "apt-get update failed — cannot continue NVIDIA upgrade"
+        print_info "Fix APT sources first (e.g., conflicting Signed-By), then rerun with --nvidia"
+        record_err
+    fi
+
+    if [[ "${SUMMARY_ERR:-0}" -gt 0 ]]; then
+        print_warn "Skipping NVIDIA package upgrade because apt-get update failed"
         record_warn
+    else
+        # Detect which nvidia-driver-* package is installed (e.g. nvidia-driver-570)
+        _nv_pkg=$(dpkg -l 'nvidia-driver-*' 2>/dev/null | awk '/^ii/{print $2}' | head -1)
+        if [[ -z "$_nv_pkg" ]]; then
+            print_warn "No nvidia-driver-* package found via dpkg — skipping APT upgrade"
+            record_warn
+        else
+            print_step "Upgrade ${_nv_pkg}"
+            if sudo_silent apt-get install -y -q \
+                --only-upgrade \
+                -o Dpkg::Options::="--force-confdef" \
+                -o Dpkg::Options::="--force-confold" \
+                "${_nv_pkg}" 2>/dev/null; then
+                print_ok
+                record_ok
+            else
+                print_warn "NVIDIA APT upgrade returned non-zero (may be no update available)"
+                print_info "If DKMS failed: sudo apt-mark hold nvidia-dkms-* then rebuild headers"
+                record_warn
+            fi
+        fi
     fi
 fi
 
@@ -73,9 +86,21 @@ fi
 print_section "Driver recommendations"
 
 if has_cmd ubuntu-drivers; then
-    ubuntu-drivers devices 2>/dev/null | grep -E "(modalias|driver|recommended)" | while IFS= read -r l; do
-        print_info "${l}"
-    done
+    if _drivers_raw=$(ubuntu-drivers devices 2>/dev/null); then
+        _drivers_lines=$(printf "%s\n" "${_drivers_raw}" | grep -E "(modalias|driver|recommended)" || true)
+        if [[ -n "${_drivers_lines}" ]]; then
+            while IFS= read -r l; do
+                [[ -z "${l}" ]] && continue
+                print_info "${l}"
+            done <<< "${_drivers_lines}"
+        else
+            print_warn "ubuntu-drivers returned no parsed recommendations"
+            record_warn
+        fi
+    else
+        print_warn "ubuntu-drivers devices returned non-zero"
+        record_warn
+    fi
 else
     print_warn "ubuntu-drivers not installed — skipping"
     record_warn
