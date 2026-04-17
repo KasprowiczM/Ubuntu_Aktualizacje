@@ -18,9 +18,9 @@ bash lib/git-push.sh push main         # push do GitHub
 ```
 
 ## Hierarchia Modeli
-- **Sonnet (domyślny)** — orkiestrator do codziennej pracy; effort `medium`, thinking ograniczone.
-- **Advisor (Opus)** — wyłącznie analiza/architektura/audyt; NIE pisze ani nie edytuje kodu. Uruchom: `claude --model opus` lub `/subagent advisor`.
-- **Worker (Haiku)** — tanie szybkie zadania (boilerplate, testy, docs). Uruchom: `/subagent worker-haiku`.
+- **Sonnet (domyślny)** — orkiestrator do codziennej pracy; effort `medium`, thinking ograniczone (v4.6).
+- **Advisor (Opus)** — wyłącznie analiza/architektura/audyt; NIE pisze ani nie edytuje kodu (v4.7). Uruchom: `claude --model opus` lub `/subagent advisor`.
+- **Worker (Haiku)** — tanie szybkie zadania (boilerplate, testy, docs) (v4.6). Uruchom: `/subagent worker-haiku`.
 
 ## PLANNING RULE (NIEZMIENIALNA)
 Nie wprowadzaj żadnych zmian w kodzie, dopóki nie poznasz kodu i wymagań na tyle, aby mieć co najmniej 95% pewności, co trzeba zbudować. W trybie planowania eksploruj kod, zadawaj pytania i kilkukrotnie weryfikuj założenia.

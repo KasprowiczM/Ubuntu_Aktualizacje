@@ -15,9 +15,9 @@ bash -n update-all.sh && bash -n scripts/*.sh && bash -n lib/*.sh
 ```
 
 ## Hierarchia Modeli
-- **Sonnet (domyślny orkiestrator)** — codzienne zadania, effort medium, thinking ≤10k tokenów.
-- **Advisor (Opus)** — analiza/architektura/audyt; bez pisania kodu. `/subagent advisor`
-- **Worker (Haiku)** — boilerplate, testy, komentarze. `/subagent worker-haiku`
+- **Sonnet (domyślny orkiestrator)** — codzienne zadania, effort medium, thinking ≤10k tokenów (v4.6).
+- **Advisor (Opus)** — analiza/architektura/audyt; bez pisania kodu (v4.7). `/subagent advisor`
+- **Worker (Haiku)** — boilerplate, testy, komentarze (v4.6). `/subagent worker-haiku`
 
 ## PLANNING RULE (NIEZMIENIALNA)
 Nie wprowadzaj żadnych zmian w kodzie, dopóki nie poznasz kodu i wymagań na tyle, aby mieć co najmniej 95% pewności, co trzeba zbudować. Zawsze zadawaj pytania doprecyzowujące i kilkukrotnie weryfikuj swoje założenia, zanim przejdziesz z trybu planowania do implementacji. Ta zasada dotyczy wszystkich profili.

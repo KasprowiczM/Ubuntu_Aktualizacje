@@ -1,18 +1,24 @@
 # CODEX.md
 
-Codex w tym repo działa jako orkiestrator planujący pracę i delegujący do advisor/worker.
+Codex w tym repo działa jako główny orchestrator planujący pracę, delegujący ją do advisor/worker i integrujący wynik końcowy.
 
-## Profile (zaktualizowane)
-- `default` → Sonnet 4.x + medium effort (codzienna praca)
-- `orchestrator` → Sonnet 4.x + high effort (planowanie złożonych zadań)
-- `advisor` → Opus 4.x + high effort + read-only (architektura/audyt, BEZ pisania kodu)
-- `worker-fast` → Haiku 4.x + low effort (boilerplate, testy, formatowanie)
+## Profile
+- `default` -> `gpt-5.3-codex` + `medium` (domyślny worker dla codziennej pracy)
+- `orchestrator` -> `gpt-5.3-codex` + `high` (planowanie i delegowanie)
+- `advisor` -> `gpt-5.4` + `high` + `read-only` (architektura/audyt, bez edycji)
+- `worker-fast` -> `gpt-5.4-mini` + `medium` (szybkie, proste zmiany)
+- `worker-tests` -> `gpt-5.4-mini` + `medium` (testy i dokumentacja)
 
-## PLANNING RULE
-Zasada 95% pewności obowiązuje z @AGENTS.md.
+## Runtime
+- Project config i agenci są w `.codex.local/`.
+- Uruchamiaj CLI/app z `CODEX_HOME=.codex.local`, aby profile i limity były spójne.
+
+## Rules
+- Zasada 95% pewności obowiązuje z @AGENTS.md.
+- Kompresuj historię roboczą zanim kontekst przekroczy ~60%.
 
 ## Referencje
-- @AGENTS.md — główny indeks reguł roboczych
-- @CLAUDE.md — kontekst projektu i komendy
-- @docs/agents/workflow.md — szczegółowy workflow i delegowanie
-- @docs/agents/architecture.md — architektura i quirks systemu
+- @AGENTS.md - główny indeks reguł roboczych
+- @CLAUDE.md - kontekst projektu i zasady domenowe
+- @docs/agents/workflow.md - szczegółowy workflow orchestrator/advisor/workers
+- @docs/agents/architecture.md - architektura i quirks systemu
