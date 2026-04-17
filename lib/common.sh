@@ -133,13 +133,17 @@ run_silent_as_user() {
 # ── Require root or sudo ───────────────────────────────────────────────────────
 require_sudo() {
     if [[ $EUID -eq 0 ]]; then return 0; fi
-    if [[ "${UPDATE_ALL_SUDO_READY:-0}" == "1" ]]; then
-        sudo -n true 2>/dev/null || { print_error "sudo session not available"; exit 1; }
-        return 0
-    fi
     if ! sudo -n true 2>/dev/null; then
-        echo -e "${YELLOW}  Sudo password required for privileged operations:${RESET}"
+        if [[ "${UPDATE_ALL_SUDO_READY:-0}" == "1" ]]; then
+            print_info "Sudo cache expired — re-authentication required"
+        else
+            echo -e "${YELLOW}  Sudo password required for privileged operations:${RESET}"
+        fi
         sudo -v || { print_error "sudo authentication failed"; exit 1; }
+    fi
+    # Master script already keeps sudo alive for the whole run.
+    if [[ "${UPDATE_ALL_SUDO_READY:-0}" == "1" ]]; then
+        return 0
     fi
     # Keep sudo alive during the script
     (while true; do sudo -n true; sleep 50; done) &
