@@ -248,6 +248,84 @@ if [[ "$MODE" == "discover" || "$MODE" == "update-config" ]]; then
         }
     fi
 
+    # ── Discover pip user packages ────────────────────────────────────────────
+    if has_cmd python3; then
+        print_section "Scanning pip user packages"
+        PIP_OUT="${CONFIG_DIR}/pip-packages.list"
+        _confirm_overwrite "$PIP_OUT" && {
+            _backup_config "$PIP_OUT"
+            {
+                echo "# pip user packages — discovered on $(hostname) at $(date '+%Y-%m-%d')"
+                echo "# Only --user scope is captured."
+                echo ""
+                python3 -m pip list --user --format=json 2>/dev/null | python3 -c '
+import sys, json
+try:
+    rows = json.load(sys.stdin)
+except Exception:
+    rows = []
+for row in sorted(rows, key=lambda x: x.get("name","").lower()):
+    name = row.get("name","")
+    ver = row.get("version","")
+    if name:
+        print(f"{name}  # {ver}")
+' || true
+            } > "$PIP_OUT"
+            print_ok "Written: ${PIP_OUT}"
+            record_ok
+        }
+    fi
+
+    # ── Discover pipx apps ────────────────────────────────────────────────────
+    if [[ $HAS_PIPX -eq 1 ]]; then
+        print_section "Scanning pipx packages"
+        PIPX_OUT="${CONFIG_DIR}/pipx-packages.list"
+        _confirm_overwrite "$PIPX_OUT" && {
+            _backup_config "$PIPX_OUT"
+            {
+                echo "# pipx packages — discovered on $(hostname) at $(date '+%Y-%m-%d')"
+                echo ""
+                run_as_user pipx list --json 2>/dev/null | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    d = {}
+venvs = d.get("venvs", {})
+for name in sorted(venvs.keys()):
+    info = venvs.get(name, {})
+    meta = info.get("metadata", {})
+    main = meta.get("main_package", {}) if isinstance(meta, dict) else {}
+    ver = main.get("package_version", "") if isinstance(main, dict) else ""
+    if name:
+        print(f"{name}  # {ver}".rstrip())
+' || true
+            } > "$PIPX_OUT"
+            print_ok "Written: ${PIPX_OUT}"
+            record_ok
+        }
+    fi
+
+    # ── Discover Flatpak apps ─────────────────────────────────────────────────
+    if [[ $HAS_FLATPAK -eq 1 ]]; then
+        print_section "Scanning Flatpak applications"
+        FLATPAK_OUT="${CONFIG_DIR}/flatpak-packages.list"
+        _confirm_overwrite "$FLATPAK_OUT" && {
+            _backup_config "$FLATPAK_OUT"
+            {
+                echo "# Flatpak applications — discovered on $(hostname) at $(date '+%Y-%m-%d')"
+                echo ""
+                flatpak list --app --columns=application,name,version 2>/dev/null | \
+                    while IFS=$'\t' read -r app_id name ver; do
+                        [[ -z "$app_id" ]] && continue
+                        echo "${app_id}  # ${name:-unknown} ${ver:-}"
+                    done
+            } > "$FLATPAK_OUT"
+            print_ok "Written: ${FLATPAK_OUT}"
+            record_ok
+        }
+    fi
+
     print_summary "Discovery complete"
     echo
     print_info "Config files updated in: ${CONFIG_DIR}/"
@@ -267,7 +345,7 @@ if [[ "$MODE" == "check" ]]; then
         while IFS= read -r pkg; do
             [[ -z "$pkg" ]] && continue
             if apt_installed "$pkg"; then
-                present+=("$pkg ($(apt_pkg_version "$pkg")"))")
+                present+=("$pkg ($(apt_pkg_version "$pkg"))")
             else
                 missing+=("$pkg")
             fi

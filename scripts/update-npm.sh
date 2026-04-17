@@ -17,6 +17,14 @@ source "${SCRIPT_DIR}/lib/common.sh"
 source "${SCRIPT_DIR}/lib/detect.sh"
 
 CONFIG_NPM="${SCRIPT_DIR}/config/npm-globals.list"
+MIGRATE_BREW_AI_CLIS="${MIGRATE_BREW_AI_CLIS:-1}"
+
+# Keep these CLIs on the earliest generally-available channel.
+PRIORITY_AI_CLI_PKGS=(
+    "@anthropic-ai/claude-code"
+    "@google/gemini-cli"
+    "@openai/codex"
+)
 
 print_header "npm — Global Package Updates"
 
@@ -33,6 +41,41 @@ NPM_VER=$("${NPM_BIN}" --version 2>/dev/null || echo "unknown")
 
 print_info "npm  : ${NPM_BIN} (v${NPM_VER})"
 print_info "node : $(dirname "${NPM_BIN}")/node (${NODE_VER})"
+
+# ── 0. One-time migration: brew-managed AI CLIs → npm ────────────────────────
+print_section "Manager migration (brew -> npm) for AI CLIs"
+if [[ "${MIGRATE_BREW_AI_CLIS}" == "1" && "${HAS_BREW:-0}" -eq 1 ]]; then
+    _brew_remove_if_present() {
+        local kind="$1"
+        local name="$2"
+        local check_arg uninstall_arg
+        if [[ "$kind" == "cask" ]]; then
+            check_arg="--cask"
+            uninstall_arg="--cask"
+        else
+            check_arg="--formula"
+            uninstall_arg="--formula"
+        fi
+
+        if run_as_user "${BREW_BIN}" list "${check_arg}" "$name" >/dev/null 2>&1; then
+            print_step "brew uninstall ${uninstall_arg} ${name}"
+            if run_silent_as_user "${BREW_BIN}" uninstall "${uninstall_arg}" "$name"; then
+                print_ok; record_ok
+            else
+                print_warn "Failed to uninstall brew ${kind}: ${name}"
+                record_warn
+            fi
+        fi
+    }
+
+    _brew_remove_if_present cask "claude-code"
+    _brew_remove_if_present cask "claude-code@latest"
+    _brew_remove_if_present formula "gemini-cli"
+    _brew_remove_if_present cask "codex"
+    _brew_remove_if_present formula "codex"
+else
+    print_info "Migration disabled (MIGRATE_BREW_AI_CLIS=${MIGRATE_BREW_AI_CLIS}) or brew not installed"
+fi
 
 # ── 1. Audit currently installed globals ─────────────────────────────────────
 print_section "Currently installed global packages"
@@ -52,7 +95,7 @@ GLOBAL_COUNT="${#INSTALLED_GLOBALS[@]}"
 print_section "Checking for outdated packages"
 
 outdated_json=$(run_as_user "${NPM_BIN}" outdated -g --json 2>/dev/null) || true
-echo "$outdated_json" >> "${LOG_FILE}"
+[[ -n "$outdated_json" && "$outdated_json" != "{}" ]] && echo "$outdated_json" >> "${LOG_FILE}"
 
 outdated_count=$(echo "$outdated_json" | python3 -c "
 import sys, json
@@ -75,22 +118,17 @@ except: pass
 " 2>/dev/null | while IFS= read -r l; do print_info "$l"; done
 fi
 
-# ── 3. Update all installed global packages ───────────────────────────────────
+# ── 3. Update all installed global packages (single pass) ────────────────────
 print_section "Updating installed global packages"
 
 if [[ "$GLOBAL_COUNT" -gt 0 ]]; then
-    for name in "${!INSTALLED_GLOBALS[@]}"; do
-        old_ver="${INSTALLED_GLOBALS[$name]}"
-        print_step "npm install -g ${name}@latest"
-        if run_silent_as_user "${NPM_BIN}" install -g "${name}@latest"; then
-            new_ver=$(npm_pkg_version "$name")
-            [[ "$new_ver" != "$old_ver" ]] && print_ok "${old_ver} → ${new_ver}" || print_ok "already latest"
-            record_ok
-        else
-            print_warn "Failed to update ${name}"
-            record_warn
-        fi
-    done
+    print_step "npm update -g"
+    if run_silent_as_user "${NPM_BIN}" update -g; then
+        print_ok; record_ok
+    else
+        print_warn "npm update -g returned non-zero"
+        record_warn
+    fi
 else
     print_info "No packages to update"
 fi
@@ -123,13 +161,25 @@ if [[ -f "$CONFIG_NPM" ]]; then
     fi
 fi
 
-# ── 5. Final state ────────────────────────────────────────────────────────────
+# ── 5. Force latest for priority AI CLIs ──────────────────────────────────────
+print_section "Forcing latest versions for priority AI CLIs"
+for pkg in "${PRIORITY_AI_CLI_PKGS[@]}"; do
+    print_step "npm install -g ${pkg}@latest"
+    if run_silent_as_user "${NPM_BIN}" install -g "${pkg}@latest"; then
+        print_ok; record_ok
+    else
+        print_warn "Failed to install/update ${pkg}@latest"
+        record_warn
+    fi
+done
+
+# ── 6. Final state ────────────────────────────────────────────────────────────
 print_section "Final global package state"
 run_as_user "${NPM_BIN}" list -g --depth=0 2>/dev/null | tail -n +2 | while IFS= read -r l; do
     print_info "${l}"
 done
 
-# ── 6. npm audit ──────────────────────────────────────────────────────────────
+# ── 7. npm audit ──────────────────────────────────────────────────────────────
 print_section "Security audit (global)"
 audit_out=$(run_as_user "${NPM_BIN}" audit --global 2>/dev/null || true)
 if echo "$audit_out" | grep -q "found 0 vulnerabilities"; then

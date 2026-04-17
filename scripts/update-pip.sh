@@ -20,14 +20,16 @@ print_header "Python — pip & pipx Package Updates"
 
 detect_package_managers
 
+# Resolve full path to pipx (must run as user, not root)
+PIPX_BIN=$(command -v pipx 2>/dev/null || true)
+
 # ── Resolve Python / pip ──────────────────────────────────────────────────────
 PY3=""
 PIP3=""
 
-# Prefer brew Python
+# Prefer brew Python (check brew prefix first, then generic symlink, then system)
 for candidate in \
     "${BREW_PREFIX:-/home/linuxbrew/.linuxbrew}/bin/python3" \
-    "${BREW_PREFIX:-/home/linuxbrew/.linuxbrew}/bin/python3.14" \
     "/usr/bin/python3"; do
     if [[ -x "$candidate" ]]; then
         PY3="$candidate"
@@ -50,7 +52,8 @@ if [[ -n "$PIP3" ]]; then
     # Brew's Python is PEP-668 externally managed — pip cannot self-upgrade.
     # The pip bundled with brew is upgraded automatically by `brew upgrade python@...`.
     if [[ "${PY3}" == "${BREW_PREFIX:-/home/linuxbrew/.linuxbrew}"* ]]; then
-        print_ok "managed by brew — upgrade via: brew upgrade python@3.14"
+        _py_minor=$("$PY3" --version 2>/dev/null | grep -oP '\d+\.\d+' | head -1)
+        print_ok "managed by brew — upgrade via: brew upgrade python@${_py_minor}"
     elif $PIP3 install --quiet --upgrade pip 2>/dev/null; then
         print_ok; record_ok
     else
@@ -79,10 +82,18 @@ if [[ -n "$PIP3" ]]; then
     # ── 3. pip: install missing from config ───────────────────────────────────
     print_section "Installing configured pip packages"
     if [[ -f "$CONFIG_PIP" ]]; then
+        pip_user_names="$($PIP3 list --user --format=json 2>/dev/null | python3 -c '
+import sys, json
+try:
+    for row in json.load(sys.stdin):
+        print(row.get("name","").lower())
+except Exception:
+    pass
+' || true)"
         while IFS= read -r pkg; do
             [[ -z "$pkg" ]] && continue
             base_pkg="${pkg%%==*}"  # strip version specifier for check
-            if $PIP3 show --user "$base_pkg" &>/dev/null 2>&1; then
+            if echo "$pip_user_names" | grep -qi "^${base_pkg}$"; then
                 print_info "${pkg}: already installed"
             else
                 print_step "pip install --user ${pkg}"
@@ -97,25 +108,28 @@ if [[ -n "$PIP3" ]]; then
 
     # ── 4. pip: current user packages ────────────────────────────────────────
     print_section "Installed pip user packages"
-    $PIP3 list --user 2>/dev/null | tail -n +3 | while IFS= read -r l; do
+    while IFS= read -r l; do
         print_info "$l"
-    done | head -30
+    done < <($PIP3 list --user 2>/dev/null | tail -n +3 | head -30)
 fi
 
 # ── 5. pipx section ───────────────────────────────────────────────────────────
 print_section "pipx packages"
 
-if ! has_cmd pipx; then
+if [[ -z "${PIPX_BIN}" ]]; then
     print_warn "pipx not installed"
     print_info "Install with: ${PIP3:-pip3} install --user pipx  OR  brew install pipx"
     record_warn
 else
-    PIPX_VER=$(pipx --version 2>/dev/null)
+    PIPX_VER=$(run_as_user "${PIPX_BIN}" --version 2>/dev/null)
     print_info "pipx: ${PIPX_VER}"
 
-    # Upgrade all
+    # Upgrade all — must run as user to avoid root-owned pycache in brew Cellar
     print_step "pipx upgrade-all"
-    if pipx upgrade-all 2>&1 | tee -a "${LOG_FILE}" | grep -qE "(upgraded|already at latest)"; then
+    pipx_out=$(run_as_user "${PIPX_BIN}" upgrade-all 2>&1)
+    echo "$pipx_out" >> "${LOG_FILE}"
+    echo "$pipx_out"
+    if echo "$pipx_out" | grep -qE "(upgraded|already at latest)"; then
         print_ok; record_ok
     else
         print_ok "done"; record_ok
@@ -128,10 +142,10 @@ else
             [[ -z "$pkg" ]] && continue
             base_pkg="${pkg%%==*}"
             print_step "pipx install ${pkg}"
-            if pipx list 2>/dev/null | grep -q "$base_pkg"; then
+            if run_as_user "${PIPX_BIN}" list 2>/dev/null | grep -q "$base_pkg"; then
                 print_info "(already installed)"
             else
-                if pipx install "$pkg" >> "${LOG_FILE}" 2>&1; then
+                if run_as_user "${PIPX_BIN}" install "$pkg" >> "${LOG_FILE}" 2>&1; then
                     print_ok; record_ok
                 else
                     print_warn "Failed: ${pkg}"; record_warn
@@ -144,7 +158,7 @@ else
     print_section "Installed pipx packages"
     while IFS= read -r l; do
         print_info "$l"
-    done < <(pipx list 2>/dev/null | grep "package " || true)
+    done < <(run_as_user "${PIPX_BIN}" list 2>/dev/null | grep "package " || true)
 fi
 
 print_summary "Python Update Summary"

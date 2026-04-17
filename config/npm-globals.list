@@ -15,6 +15,7 @@
 #   @anthropic-ai/sdk   # Anthropic SDK (for testing)
 # =============================================================================
 
-# Currently no additional global npm packages beyond npm itself.
-# npm itself is managed by Homebrew via the `node` formula.
-# Add packages here as needed.
+# ── AI coding CLIs (fastest update channel) ───────────────────────────────────
+@anthropic-ai/claude-code   # Claude Code CLI
+@google/gemini-cli          # Gemini CLI
+@openai/codex               # OpenAI Codex CLI

@@ -6,5 +6,4 @@
 # =============================================================================
 
 # ── AI Coding Assistants ──────────────────────────────────────────────────────
-claude-code                 # Anthropic Claude Code CLI (official)
-codex                       # OpenAI Codex CLI
+# Claude Code and Codex CLI are managed via npm for fastest release pickup.

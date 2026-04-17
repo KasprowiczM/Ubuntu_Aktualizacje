@@ -13,6 +13,7 @@ google-chrome-stable        # Google Chrome (from google-chrome.list)
 
 # ── Development Tools ─────────────────────────────────────────────────────────
 code                        # VS Code (from vscode.sources)
+antigravity                 # Antigravity desktop app (from antigravity repo)
 git                         # Git version control
 build-essential             # gcc, make, etc.
 curl                        # HTTP client
@@ -28,7 +29,8 @@ docker-buildx-plugin        # Docker Buildx
 docker-compose-plugin       # Docker Compose v2
 
 # ── NVIDIA (GPU/ML) ───────────────────────────────────────────────────────────
-nvidia-container-toolkit    # NVIDIA Container Toolkit (from nvidia-container-toolkit.list)
+# nvidia-container-toolkit  # Optional: NVIDIA Container Toolkit for Docker GPU access
+#                           # Install manually: sudo apt install nvidia-container-toolkit
 # nvidia-driver-580         # Uncomment if NVIDIA GPU present (managed via update-drivers.sh)
 
 # ── Cloud & Sync ──────────────────────────────────────────────────────────────

@@ -10,7 +10,7 @@
 # =============================================================================
 
 # ── AI / LLM CLI Tools ────────────────────────────────────────────────────────
-gemini-cli                  # Google Gemini AI CLI
+# Gemini CLI is managed via npm (@google/gemini-cli) for fastest releases.
 opencode                    # OpenCode AI coding agent
 qwen-code                   # Qwen AI coding tool
 

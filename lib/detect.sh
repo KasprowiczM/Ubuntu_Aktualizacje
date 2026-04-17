@@ -121,6 +121,24 @@ apt_pkg_version() {
     dpkg -l "$1" 2>/dev/null | awk '/^ii/{print $3}' | head -1 || true
 }
 
+# Returns apt candidate version (empty if package not known)
+apt_pkg_candidate() {
+    apt-cache policy "$1" 2>/dev/null | awk '/Candidate:/{print $2; exit}' || true
+}
+
+# Returns first non-status policy source line for an installed package
+# Example: "500 https://packages.microsoft.com/repos/vscode stable/main amd64 Packages"
+apt_pkg_source_line() {
+    apt-cache policy "$1" 2>/dev/null | awk '
+        /^[[:space:]]+[0-9]+[[:space:]]+/ {
+            if ($2 ~ /^https?:\/\//) {
+                print $0
+                exit
+            }
+        }
+    ' | sed 's/^[[:space:]]*//' || true
+}
+
 # Returns true if apt package is installed
 apt_installed() {
     dpkg -l "$1" 2>/dev/null | grep -q '^ii'
@@ -131,6 +149,21 @@ scan_apt_with_sources() {
     dpkg -l 2>/dev/null | awk '/^ii/{print $2}' | while read -r pkg; do
         src=$(apt-cache policy "$pkg" 2>/dev/null | grep '^\s*\*\*\*' -A1 | tail -1 | awk '{print $2, $3}' || echo "")
         echo "${pkg}|${src}"
+    done
+}
+
+# Returns manual-installed packages with external apt source metadata:
+# pkg|installed_version|candidate_version|source_line
+# Includes only packages whose policy exposes an HTTP(S) source line.
+scan_apt_third_party_manual() {
+    apt-mark showmanual 2>/dev/null | sort | while read -r pkg; do
+        [[ -z "$pkg" ]] && continue
+        apt_installed "$pkg" || continue
+        src_line=$(apt_pkg_source_line "$pkg")
+        [[ -z "$src_line" ]] && continue
+        inst_ver=$(apt_pkg_version "$pkg")
+        cand_ver=$(apt_pkg_candidate "$pkg")
+        echo "${pkg}|${inst_ver}|${cand_ver}|${src_line}"
     done
 }
 

@@ -100,6 +100,59 @@ if [[ -f "$CONFIG_APT" ]]; then
     done < <(parse_config_names "$CONFIG_APT")
 fi
 
+cat <<'MD'
+
+### Third-Party APT Applications (Auto-detected)
+
+> Manual-installed packages with active non-default HTTP(S) APT feed.
+
+| Package | Installed | Candidate | Feed |
+|---------|-----------|-----------|------|
+MD
+
+third_party_count=0
+third_party_rows="$(scan_apt_third_party_manual || true)"
+if [[ -n "$third_party_rows" ]]; then
+    third_party_count=$(echo "$third_party_rows" | wc -l | awk '{print $1}')
+fi
+echo "$third_party_rows" | while IFS='|' read -r pkg inst cand src; do
+    [[ -z "$pkg" ]] && continue
+    [[ -z "$cand" || "$cand" == "(none)" ]] && cand="N/A"
+    src_short=$(echo "$src" | awk '{print $2}')
+    echo "| \`$pkg\` | $inst | $cand | $src_short |"
+done
+
+if [[ "$third_party_count" -eq 0 ]]; then
+    echo "| _none detected_ | — | — | — |"
+fi
+
+cat <<'MD'
+
+### Tracked Desktop Package Feed Health
+
+| Package | Installed | Candidate | Feed Status |
+|---------|-----------|-----------|-------------|
+MD
+
+for tracked_pkg in code antigravity; do
+    if apt_installed "$tracked_pkg"; then
+        inst=$(apt_pkg_version "$tracked_pkg")
+        cand=$(apt_pkg_candidate "$tracked_pkg")
+        [[ -z "$cand" || "$cand" == "(none)" ]] && cand="N/A"
+        src=$(apt_pkg_source_line "$tracked_pkg")
+        if [[ -z "$src" ]]; then
+            echo "| \`$tracked_pkg\` | $inst | $cand | ⚠ no active feed in apt policy |"
+        else
+            src_short=$(echo "$src" | awk '{print $2}')
+            echo "| \`$tracked_pkg\` | $inst | $cand | $src_short |"
+        fi
+    fi
+done
+
+if ! apt_installed code && ! apt_installed antigravity; then
+    echo "| _none tracked installed_ | — | — | — |"
+fi
+
 # ━━━ Snap Packages ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 cat <<'MD'
 
@@ -334,7 +387,7 @@ MD
 
 for f in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
     [[ -f "$f" ]] || continue
-    content=$(grep -v '^#' "$f" 2>/dev/null | grep -v '^$' | head -2 | tr '\n' ' ' | cut -c1-80 || true)
+    content=$(grep -v '^#' "$f" 2>/dev/null | grep -v '^$' | head -3 | tr '\n' ' ' | sed 's/|/\\|/g' | cut -c1-220 || true)
     [[ -n "$content" ]] && echo "| \`$(basename "$f")\` | $content |"
 done
 
