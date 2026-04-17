@@ -17,10 +17,14 @@ bash -n update-all.sh && bash -n scripts/*.sh && bash -n lib/*.sh  # walidacja s
 bash lib/git-push.sh push main         # push do GitHub
 ```
 
-## Hierarchia Modeli
-- **Sonnet (domyślny)** — orkiestrator do codziennej pracy; effort `medium`, thinking ograniczone (v4.6).
-- **Advisor (Opus)** — wyłącznie analiza/architektura/audyt; NIE pisze ani nie edytuje kodu (v4.7). Uruchom: `claude --model opus` lub `/subagent advisor`.
-- **Worker (Haiku)** — tanie szybkie zadania (boilerplate, testy, docs) (v4.6). Uruchom: `/subagent worker-haiku`.
+## Profile Agentów
+- `default` — `gpt-5.3-codex`, `medium`
+- `orchestrator` — `gpt-5.3-codex`, `high`
+- `advisor` — `gpt-5.4`, `high`, `read-only`
+- `worker-fast` — `gpt-5.4-mini`, `medium`
+- `worker-tests` — `gpt-5.4-mini`, `medium`
+
+Konfiguracja profili jest projektowa: `.codex.local/config.toml` i `.codex.local/agents/*.toml`.
 
 ## PLANNING RULE (NIEZMIENIALNA)
 Nie wprowadzaj żadnych zmian w kodzie, dopóki nie poznasz kodu i wymagań na tyle, aby mieć co najmniej 95% pewności, co trzeba zbudować. W trybie planowania eksploruj kod, zadawaj pytania i kilkukrotnie weryfikuj założenia.

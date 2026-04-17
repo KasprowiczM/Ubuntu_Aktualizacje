@@ -1,18 +1,38 @@
-# Workflow i Profiling
+# Workflow Agentów
 
-Ten projekt wykorzystuje centralną architekturę i orkiestrację opartą o narzędzia Gemini i Antigravity, z jasno zarysowanymi regułami co do ról modeli (Progressive Disclosure).
+## Źródło konfiguracji
+Profile agentów są zdefiniowane lokalnie w:
+- `.codex.local/config.toml`
+- `.codex.local/agents/*.toml`
 
-## Profile Systemowe
-- **Domyślny (low-Pro)** -> `gemini-3.1-pro` + `standard reasoning`: Podstawowy profil codzienny używany przez terminal dla prostych operacji i modyfikacji.
-- **Orchestrator** -> `gemini-3.1-pro` + `high reasoning`: Ośrodek centralny planujący prace, analizujący problem z lotu ptaka, oraz ten, który dzieli i deleguje mniejsze taski na niższe instancje.
-- **Advisor** -> `gemini-3.1-pro` + `high reasoning` + `read-only`: Typowy architekt w trybie audytu. W tym trybie włączone są restrykcje chroniące przed manipulacją środowiskiem. Nie odpisuje on kodem; opiniuje go na podstawie listowania repozytorium.
-- **Flash-Worker** -> `gemini-3-flash`: Szybki agent do masowych poleceń i edycji trywialnych fragmentów kodu na niższych warstwach, np. wyliczanie typów czy masowe testy.
+Uruchamiaj sesję z:
 
-## Workflow i Runtime
-- Operuj poprzez przełączanie pomiędzy profilami zdefiniowanymi w `.gemini/settings.json`.
-- Wykorzystuj podsumowania (pseudo compression) w obrębie limitu ok. 60% kontekstu. Jeżeli projekt staje się bardzo zawiły w pojedynczej rozmowie roboczej, przekazuj aktualny stan wiedzy i wnioski do `docs/agents/handoff.md`, usuwając resztę historii.
-- Wszystkie procesy decyzyjne oraz workflow opierają się na `PLANNING RULE` (patrz plik główny) — wymagana jest min. 95% pewność przed wejściem z planowania w edycję.
+```bash
+CODEX_HOME=.codex.local codex ...
+```
 
-## Review i Raportowanie Ryzyk
-- Orchestrator zawsze musi sprawdzać rezultaty operacji (nawet od Flash Workera) analizując ewentualne ostrzeżenia z wykonania procesów.
-- Audyt zmian polegać powinien na weryfikacji powiązań pomiędzy komponentami i upewnieniu się, że logika uprawnień skryptów, jak te dot. GPU, pozostała zgodna ze stylem (np. użycie helperów `run_as_user`).
+## Profile używane w projekcie
+- `default` (`gpt-5.3-codex`, `medium`): codzienne zadania implementacyjne.
+- `orchestrator` (`gpt-5.3-codex`, `high`): planowanie i integracja wyników.
+- `advisor` (`gpt-5.4`, `high`, `read-only`): audyt architektury/ryzyk, bez edycji.
+- `worker-fast` (`gpt-5.4-mini`, `medium`): szybkie, ograniczone zmiany kodu.
+- `worker-tests` (`gpt-5.4-mini`, `medium`): testy i aktualizacje dokumentacji.
+
+## Zalecany przebieg pracy
+1. Orchestrator analizuje zadanie i wyznacza krytyczną ścieżkę.
+2. Zadania analityczne deleguj do `advisor`.
+3. Zadania mechaniczne/testowe deleguj do workerów.
+4. Zmiany i walidację końcową scala orchestrator.
+
+## Zasady operacyjne
+- Obowiązuje `PLANNING RULE` (95% pewności przed implementacją).
+- Przy dużej sesji streszczaj kontekst przy ~60% i zapisuj stan do `docs/agents/handoff.md`.
+- Priorytet walidacji po zmianach:
+  - `bash -n update-all.sh && bash -n scripts/*.sh && bash -n lib/*.sh`
+  - `./update-all.sh --dry-run`
+  - opcjonalnie `./update-all.sh --only <group>` dla modyfikowanej grupy.
+
+## Kryteria jakości review
+- najpierw błędy funkcjonalne/regresje,
+- potem ryzyka bezpieczeństwa (sudo, sekrety, destrukcyjne komendy),
+- na końcu spójność z architekturą (`config/*.list` jako SoT, user-context dla brew/npm/pipx).

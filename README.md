@@ -1,118 +1,165 @@
-# 🚀 Ubuntu_Aktualizacje
+# Ubuntu_Aktualizacje
 
-**Automated System Maintenance & Inventory Suite for Ubuntu 24.04**
+Automated Ubuntu 24.04 maintenance for this machine (Dell Precision 5520), with one master command, consistent logs, and machine-local inventory generation.
 
 [![Validate Config](https://github.com/KasprowiczM/Ubuntu_Aktualizacje/actions/workflows/validate.yml/badge.svg)](https://github.com/KasprowiczM/Ubuntu_Aktualizacje/actions/workflows/validate.yml)
-[![AI-Orchestrated](https://img.shields.io/badge/AI-Orchestrated-blueviolet?style=flat-square)](#-ai-orchestration--agents)
-[![Maintainer: mk](https://img.shields.io/badge/Maintainer-mk-blue?style=flat-square)](https://github.com/KasprowiczM)
 
----
+## Overview
 
-## 💎 Overview
+This project is a Bash-based update suite focused on predictable, auditable updates across:
+- APT
+- Snap
+- Homebrew
+- npm
+- pip / pipx
+- Flatpak
+- NVIDIA drivers and `fwupd`
 
-`Ubuntu_Aktualizacje` is a professional-grade, single-command update engine designed for **Ubuntu 24.04 (Dell Precision 5520)**. It orchestrates multiple package managers, hardware drivers, and system firmware updates with extreme reliability and full traceability.
+Core behavior:
+- one entrypoint: `./update-all.sh`
+- one master log per run: `logs/master_YYYYMMDD_HHMMSS.log`
+- inventory refresh at the end of master run: `APPS.md` (gitignored)
+- package configuration in `config/*.list` (single source of truth)
 
-### ✨ Key Features
-- **Unified Orchestration**: One command to rule APT, Snap, Homebrew, npm, pip/pipx, Flatpak, and NVIDIA.
-- **AI-Native Workflow**: Deeply integrated with **Claude Code**, **Gemini CLI**, and **Codex** with pre-configured expert agents.
-- **Live Inventory**: Automatically regenerates `APPS.md` (ignored) after every run to track machine-specific state.
-- **Safety First**: Uses `set -euo pipefail`, dry-run support, and intelligent sudo-handling (dropping to user for brew/npm).
-- **Weekly Automation**: Built-in systemd timers for unattended weekly maintenance (excluding critical drivers).
+Technical details and agent docs:
+- [AGENTS.md](AGENTS.md)
+- [CLAUDE.md](CLAUDE.md)
+- [CODEX.md](CODEX.md)
+- [docs/agents/architecture.md](docs/agents/architecture.md)
+- [docs/agents/workflow.md](docs/agents/workflow.md)
 
----
+## Quick Start
 
-## 🤖 AI Orchestration & Agents
+Run full update:
 
-This repository is optimized for **AI-driven development**. It features a robust model hierarchy to balance performance, cost, and safety.
-
-### 🎭 Model Hierarchy & Roles
-| Role | Profile | Claude Model | Gemini Model | Task Profile |
-|:---:|:---:|:---:|:---:|:---|
-| **Orchestrator** | `default` | **Sonnet 4.6** | **3.1 Pro** | Planning, complex refactors, and daily work. |
-| **Advisor** | `advisor` | **Opus 4.7** | **3.1 Pro** | **Read-only** architecture review & security audits. |
-| **Worker** | `worker-fast`| **Haiku 4.6** | **3.0 Flash** | Boilerplate, tests, docs, and simple fixes. |
-
-> [!IMPORTANT]
-> **PLANNING RULE**: Agents follow a strict rule—no code changes until 95% confidence is reached.
-> All agent rules are organized via **Progressive Disclosure**:
-> - [AGENTS.md](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/AGENTS.md) — Central indexing of AI rules.
-> - [CLAUDE.md](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/CLAUDE.md) — Claude-specific workflow.
-> - [docs/agents/workflow.md](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/docs/agents/workflow.md) — Detailed profiling & delegation rules.
-
----
-
-## 📦 What Gets Updated?
-
-| Scope | Package Manager | Includes |
-|:---|:---|:---|
-| **System** | **APT** | OS updates, Chrome, VSCode, Docker, NVIDIA, Brave, Rclone. |
-| **User Space** | **Homebrew** | CLI tools (gemini, claude, etc.), Node.js, GCC, Ripgrep. |
-| **Sandboxed** | **Snap / Flatpak**| Firefox, Thunderbird, KeePassXC, htop, desktop apps. |
-| **Languages** | **npm / pip / pipx**| Global node packages, Python user libraries, isolated tools. |
-| **Hardware** | **NVIDIA / fwupd** | GPU drivers (safe-held), Dell BIOS/Firmware updates. |
-
----
-
-## ⚡ Quick Start
-
-### 1. Execute Full Update
 ```bash
 ./update-all.sh
 ```
 
-### 2. Available Options
-| Flag | Description |
-|:---|:---|
-| `--dry-run` | Preview all actions without modifying the system. |
-| `--nvidia` | Explicitly allow NVIDIA driver upgrade via APT (default is **held**). |
-| `--only <group>`| Run one group (e.g., `apt`, `brew`, `npm`, `inventory`). |
-| `--no-drivers` | Skip NVIDIA status checks and firmware updates. |
-| `--no-notify` | Disable desktop notifications upon completion. |
+Common options:
 
----
-
-## 🛠️ Project Structure & Architecture
-
-Detailed architecture can be found in [docs/agents/architecture.md](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/docs/agents/architecture.md).
-
-- **`config/*.list`**: The **Single Source of Truth**. Add packages here.
-- **`scripts/update-*.sh`**: Modular, idempotent update scripts.
-- **`lib/*.sh`**: Reusable Bash library for colors, detection, and git integration.
-- **`setup.sh`**: Universal bootstrap for new machines (`--discover`, `--check`, `--rollback`).
-
----
-
-## 🚢 Deployment & CI
-
-### Migration to New Machine
 ```bash
-# 1. Discover current state
-./setup.sh --discover
-
-# 2. Commit config files
-bash lib/git-push.sh commit "Capture state" main
-
-# 3. On new machine
-./setup.sh
+./update-all.sh --dry-run
+./update-all.sh --only apt
+./update-all.sh --no-drivers
+./update-all.sh --nvidia
+./update-all.sh --no-notify
 ```
 
-### CI Pipeline
-Every push triggers [validate.yml](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/.github/workflows/validate.yml) which performs:
-1. **Config Validation** (syntax check of `.list` files).
-2. **Shell Audit** (`bash -n` on all scripts).
-3. **Secret Scan** (ensures PAT tokens are not committed).
-4. **Consistency Check** (verifies presence of critical files).
+`--only` groups:
+- `apt`
+- `snap`
+- `brew`
+- `npm`
+- `pip`
+- `flatpak`
+- `drivers`
+- `inventory`
 
----
+Validation after changes:
 
-## 📖 Troubleshooting
+```bash
+bash -n update-all.sh && bash -n scripts/*.sh && bash -n lib/*.sh
+```
 
-- **DKMS failures**: Run `./scripts/rebuild-dkms.sh` after kernel updates.
-- **APT multiple sources**: `update-apt.sh` auto-detects MEGA sync duplicates.
-- **Brew permissions**: Scripts automatically fix root-owned `__pycache__` in the Cellar.
-- **Inventory issues**: Run `./scripts/update-inventory.sh` manually to force refresh.
+## What Gets Updated
 
----
+| Group | Script | What it does |
+|---|---|---|
+| APT | `scripts/update-apt.sh` | Ensures configured third-party repos, updates package lists, runs `upgrade` + `dist-upgrade`, cleanup, key package report. Holds NVIDIA packages by default unless `--nvidia`. |
+| Snap | `scripts/update-snap.sh` | Runs `snap refresh`, retries with `--ignore-running` when needed, reports configured snaps, removes disabled revisions. |
+| Homebrew | `scripts/update-brew.sh` | `brew update`, upgrades formulas/casks, cleanup, `brew doctor`, and configured package report. Runs brew as invoking user (not root). |
+| npm | `scripts/update-npm.sh` | Updates installed global packages, installs missing from config, and enforces latest versions for priority AI CLIs. |
+| pip/pipx | `scripts/update-pip.sh` | Updates `pip` user packages and `pipx` apps, installs missing from config. |
+| Flatpak | `scripts/update-flatpak.sh` | Updates metadata and apps, installs missing configured apps, removes unused runtimes. |
+| Drivers/Firmware | `scripts/update-drivers.sh` | NVIDIA status checks and optional NVIDIA APT upgrade (`--nvidia`), `ubuntu-drivers` recommendations, `fwupd` checks, kernel/reboot status. |
+| Inventory | `scripts/update-inventory.sh` | Rebuilds `APPS.md` from detected system state (APT/Snap/Brew/npm/Drivers/Firmware/Flatpak/Sources). |
 
-*Maintained by mk · Dell Precision 5520 · Ubuntu 24.04 LTS*
-*AI Orchestration enabled via [AGENTS.md](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/AGENTS.md)*
+## Architecture
+
+Project layout:
+
+- `update-all.sh` — master orchestrator
+- `scripts/update-*.sh` — per-manager update units
+- `lib/common.sh` — logging, summary counters, sudo helpers, user-context helpers
+- `lib/detect.sh` — manager/package/system detection + config parsing helpers
+- `lib/repos.sh` — idempotent APT repo setup by repo ID
+- `config/*.list` — package/repo configuration
+- `setup.sh` — bootstrap, discovery, drift check, and rollback for config files
+- `systemd/` — weekly timer installation assets
+
+Important runtime rules:
+- `INVENTORY_SILENT=1` is set by master run to avoid repeated `APPS.md` regeneration by sub-scripts.
+- Master script authenticates sudo once at start and keeps sudo credentials alive during run.
+- Homebrew/npm/pipx operations use non-root user context via helper wrappers.
+- MEGA repository is maintained as `megaio.sources`; legacy `meganz.list` is removed automatically if present.
+
+## Migration
+
+`setup.sh` modes:
+
+```bash
+./setup.sh                  # migrate/install from config
+./setup.sh --discover       # scan machine -> rewrite config/*.list
+./setup.sh --update-config  # merge-style discovery update
+./setup.sh --check          # show config vs installed drift
+./setup.sh --rollback       # restore latest config backups
+```
+
+Useful flags:
+
+```bash
+./setup.sh --nvidia
+./setup.sh --no-brew --no-snaps --no-npm
+./setup.sh --non-interactive
+```
+
+Automated weekly run (systemd):
+
+```bash
+./systemd/install-timer.sh
+./systemd/install-timer.sh --status
+./systemd/install-timer.sh --remove
+```
+
+Timer runs `update-all.sh --no-drivers` on schedule.
+
+## Git & GitHub
+
+Manual workflow:
+
+```bash
+git status
+git add <files>
+git commit -m "message"
+git push origin main
+```
+
+Helper workflow (token from `.env.local`):
+
+```bash
+bash lib/git-push.sh status
+bash lib/git-push.sh push main
+bash lib/git-push.sh commit "Update configs" main
+```
+
+CI validation (`.github/workflows/validate.yml`) checks:
+- config syntax in `config/*.list`
+- shell syntax (`bash -n`)
+- required files presence
+- `APPS.md` is gitignored
+- basic secret/token pattern scan
+
+## Troubleshooting
+
+- `apt-get update` fails on MEGA source conflict:
+  - keep `/etc/apt/sources.list.d/megaio.sources`
+  - remove legacy `/etc/apt/sources.list.d/meganz.list`
+  - current scripts do this automatically during APT repo ensure step
+- NVIDIA DKMS issues after kernel changes:
+  - run `./scripts/rebuild-dkms.sh`
+  - use `./update-all.sh --nvidia` only when you intend to upgrade NVIDIA packages
+- Homebrew cleanup permission warnings:
+  - script auto-repairs ownership under `${BREW_PREFIX}/Cellar` and retries cleanup
+- inventory refresh only:
+  - run `./scripts/update-inventory.sh`
