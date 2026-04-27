@@ -9,7 +9,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/tests/test_dev_sync_safety.py",
       "source_location": "L1",
       "id": "home_mk_dev_env_ubuntu_aktualizacje_tests_test_dev_sync_safety_py",
-      "community": 3,
+      "community": 4,
       "norm_label": "test_dev_sync_safety.py"
     },
     {
@@ -18,7 +18,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/tests/test_dev_sync_safety.py",
       "source_location": "L24",
       "id": "test_dev_sync_safety_nulllogger",
-      "community": 3,
+      "community": 4,
       "norm_label": "nulllogger"
     },
     {
@@ -27,7 +27,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/tests/test_dev_sync_safety.py",
       "source_location": "L25",
       "id": "test_dev_sync_safety_nulllogger_log",
-      "community": 3,
+      "community": 4,
       "norm_label": ".log()"
     },
     {
@@ -36,7 +36,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/tests/test_dev_sync_safety.py",
       "source_location": "L29",
       "id": "test_dev_sync_safety_devsyncpathsafetytests",
-      "community": 3,
+      "community": 4,
       "norm_label": "devsyncpathsafetytests"
     },
     {
@@ -45,7 +45,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/tests/test_dev_sync_safety.py",
       "source_location": "L30",
       "id": "test_dev_sync_safety_devsyncpathsafetytests_test_safe_relpath_rejects_escape_paths",
-      "community": 3,
+      "community": 4,
       "norm_label": ".test_safe_relpath_rejects_escape_paths()"
     },
     {
@@ -54,7 +54,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/tests/test_dev_sync_safety.py",
       "source_location": "L45",
       "id": "test_dev_sync_safety_devsyncpathsafetytests_test_safe_relpath_keeps_normal_project_paths",
-      "community": 3,
+      "community": 4,
       "norm_label": ".test_safe_relpath_keeps_normal_project_paths()"
     },
     {
@@ -63,7 +63,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/tests/test_dev_sync_safety.py",
       "source_location": "L49",
       "id": "test_dev_sync_safety_devsyncpathsafetytests_test_read_manifest_rejects_unsafe_relpaths",
-      "community": 3,
+      "community": 4,
       "norm_label": ".test_read_manifest_rejects_unsafe_relpaths()"
     },
     {
@@ -72,7 +72,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/tests/test_dev_sync_safety.py",
       "source_location": "L59",
       "id": "test_dev_sync_safety_devsyncpathsafetytests_test_quarantine_plan_rebuilds_source_from_safe_relpath",
-      "community": 3,
+      "community": 4,
       "norm_label": ".test_quarantine_plan_rebuilds_source_from_safe_relpath()"
     },
     {
@@ -153,7 +153,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L128",
       "id": "dev_sync_core_devsyncerror",
-      "community": 3,
+      "community": 4,
       "norm_label": "devsyncerror"
     },
     {
@@ -162,7 +162,7 @@
       "source_file": "",
       "source_location": "",
       "id": "runtimeerror",
-      "community": 3,
+      "community": 4,
       "norm_label": "runtimeerror"
     },
     {
@@ -171,7 +171,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L132",
       "id": "dev_sync_core_configreviewrequired",
-      "community": 1,
+      "community": 2,
       "norm_label": "configreviewrequired"
     },
     {
@@ -180,7 +180,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L137",
       "id": "dev_sync_core_devsyncconfig",
-      "community": 1,
+      "community": 2,
       "norm_label": "devsyncconfig"
     },
     {
@@ -189,7 +189,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L148",
       "id": "dev_sync_core_devsyncconfig_post_init",
-      "community": 1,
+      "community": 2,
       "norm_label": ".__post_init__()"
     },
     {
@@ -198,7 +198,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L156",
       "id": "dev_sync_core_runoptions",
-      "community": 2,
+      "community": 1,
       "norm_label": "runoptions"
     },
     {
@@ -234,7 +234,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L194",
       "id": "dev_sync_core_classification",
-      "community": 0,
+      "community": 3,
       "norm_label": "classification"
     },
     {
@@ -252,7 +252,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L222",
       "id": "dev_sync_core_logger",
-      "community": 2,
+      "community": 1,
       "norm_label": "logger"
     },
     {
@@ -261,7 +261,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L223",
       "id": "dev_sync_core_logger_init",
-      "community": 2,
+      "community": 1,
       "norm_label": ".__init__()"
     },
     {
@@ -270,7 +270,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L233",
       "id": "dev_sync_core_logger_close",
-      "community": 2,
+      "community": 1,
       "norm_label": ".close()"
     },
     {
@@ -279,7 +279,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L236",
       "id": "dev_sync_core_logger_log",
-      "community": 2,
+      "community": 5,
       "norm_label": ".log()"
     },
     {
@@ -288,7 +288,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L243",
       "id": "dev_sync_core_logger_verbose",
-      "community": 2,
+      "community": 4,
       "norm_label": ".verbose()"
     },
     {
@@ -297,7 +297,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L248",
       "id": "dev_sync_core_repo_root_from_script",
-      "community": 1,
+      "community": 2,
       "norm_label": "repo_root_from_script()"
     },
     {
@@ -306,7 +306,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L252",
       "id": "dev_sync_core_normalize_relpath",
-      "community": 4,
+      "community": 3,
       "norm_label": "normalize_relpath()"
     },
     {
@@ -315,7 +315,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L261",
       "id": "dev_sync_core_safe_relpath",
-      "community": 3,
+      "community": 4,
       "norm_label": "safe_relpath()"
     },
     {
@@ -324,7 +324,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L277",
       "id": "dev_sync_core_re_drive_path",
-      "community": 3,
+      "community": 0,
       "norm_label": "re_drive_path()"
     },
     {
@@ -333,7 +333,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L281",
       "id": "dev_sync_core_resolve_under",
-      "community": 3,
+      "community": 4,
       "norm_label": "resolve_under()"
     },
     {
@@ -342,7 +342,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L292",
       "id": "dev_sync_core_path_matches_pattern",
-      "community": 0,
+      "community": 3,
       "norm_label": "path_matches_pattern()"
     },
     {
@@ -351,7 +351,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L325",
       "id": "dev_sync_core_matches_any",
-      "community": 0,
+      "community": 3,
       "norm_label": "matches_any()"
     },
     {
@@ -360,7 +360,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L329",
       "id": "dev_sync_core_should_keep_path",
-      "community": 4,
+      "community": 3,
       "norm_label": "should_keep_path()"
     },
     {
@@ -369,7 +369,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L346",
       "id": "dev_sync_core_should_include_candidate",
-      "community": 2,
+      "community": 1,
       "norm_label": "should_include_candidate()"
     },
     {
@@ -378,7 +378,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L354",
       "id": "dev_sync_core_directory_exclude_patterns",
-      "community": 0,
+      "community": 3,
       "norm_label": "directory_exclude_patterns()"
     },
     {
@@ -387,7 +387,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L360",
       "id": "dev_sync_core_path_is_under_roots",
-      "community": 4,
+      "community": 3,
       "norm_label": "path_is_under_roots()"
     },
     {
@@ -396,7 +396,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L369",
       "id": "dev_sync_core_read_json",
-      "community": 3,
+      "community": 4,
       "norm_label": "read_json()"
     },
     {
@@ -405,7 +405,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L374",
       "id": "dev_sync_core_write_json",
-      "community": 0,
+      "community": 4,
       "norm_label": "write_json()"
     },
     {
@@ -414,7 +414,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L378",
       "id": "dev_sync_core_ordered_unique",
-      "community": 1,
+      "community": 0,
       "norm_label": "_ordered_unique()"
     },
     {
@@ -450,7 +450,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L415",
       "id": "dev_sync_core_detect_proton_drive_path",
-      "community": 1,
+      "community": 0,
       "norm_label": "detect_proton_drive_path()"
     },
     {
@@ -468,7 +468,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L438",
       "id": "dev_sync_core_suggested_project_root",
-      "community": 1,
+      "community": 0,
       "norm_label": "suggested_project_root()"
     },
     {
@@ -477,7 +477,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L448",
       "id": "dev_sync_core_config_defaults",
-      "community": 1,
+      "community": 0,
       "norm_label": "config_defaults()"
     },
     {
@@ -486,7 +486,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L463",
       "id": "dev_sync_core_config_path",
-      "community": 1,
+      "community": 2,
       "norm_label": "config_path()"
     },
     {
@@ -495,7 +495,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L467",
       "id": "dev_sync_core_read_extra_excludes",
-      "community": 1,
+      "community": 0,
       "norm_label": "read_extra_excludes()"
     },
     {
@@ -504,7 +504,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L479",
       "id": "dev_sync_core_create_default_config",
-      "community": 1,
+      "community": 2,
       "norm_label": "create_default_config()"
     },
     {
@@ -513,7 +513,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L485",
       "id": "dev_sync_core_load_config",
-      "community": 1,
+      "community": 2,
       "norm_label": "load_config()"
     },
     {
@@ -522,7 +522,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L530",
       "id": "dev_sync_core_print_config_hint",
-      "community": 1,
+      "community": 2,
       "norm_label": "print_config_hint()"
     },
     {
@@ -531,7 +531,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L538",
       "id": "dev_sync_core_run_command",
-      "community": 2,
+      "community": 1,
       "norm_label": "run_command()"
     },
     {
@@ -549,7 +549,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L567",
       "id": "dev_sync_core_git_output_z",
-      "community": 0,
+      "community": 3,
       "norm_label": "git_output_z()"
     },
     {
@@ -567,7 +567,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L593",
       "id": "dev_sync_core_tracked_files",
-      "community": 0,
+      "community": 3,
       "norm_label": "tracked_files()"
     },
     {
@@ -585,7 +585,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L607",
       "id": "dev_sync_core_ignored_files",
-      "community": 0,
+      "community": 3,
       "norm_label": "ignored_files()"
     },
     {
@@ -603,7 +603,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L623",
       "id": "dev_sync_core_lexists",
-      "community": 4,
+      "community": 3,
       "norm_label": "lexists()"
     },
     {
@@ -612,7 +612,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L627",
       "id": "dev_sync_core_walk_files",
-      "community": 0,
+      "community": 3,
       "norm_label": "walk_files()"
     },
     {
@@ -621,7 +621,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L662",
       "id": "dev_sync_core_expand_entries_to_files",
-      "community": 0,
+      "community": 3,
       "norm_label": "expand_entries_to_files()"
     },
     {
@@ -630,7 +630,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L690",
       "id": "dev_sync_core_classify_repo",
-      "community": 0,
+      "community": 3,
       "norm_label": "classify_repo()"
     },
     {
@@ -639,7 +639,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L721",
       "id": "dev_sync_core_proton_candidates",
-      "community": 0,
+      "community": 3,
       "norm_label": "proton_candidates()"
     },
     {
@@ -648,7 +648,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L725",
       "id": "dev_sync_core_local_working_tree_files",
-      "community": 0,
+      "community": 3,
       "norm_label": "local_working_tree_files()"
     },
     {
@@ -657,7 +657,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L729",
       "id": "dev_sync_core_scan_overlay_files",
-      "community": 2,
+      "community": 1,
       "norm_label": "scan_overlay_files()"
     },
     {
@@ -666,7 +666,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L737",
       "id": "dev_sync_core_list_files_in_directory",
-      "community": 4,
+      "community": 0,
       "norm_label": "list_files_in_directory()"
     },
     {
@@ -675,7 +675,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L743",
       "id": "dev_sync_core_cloudprovider",
-      "community": 5,
+      "community": 6,
       "norm_label": "cloudprovider"
     },
     {
@@ -684,7 +684,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L744",
       "id": "dev_sync_core_cloudprovider_init",
-      "community": 5,
+      "community": 6,
       "norm_label": ".__init__()"
     },
     {
@@ -693,7 +693,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L748",
       "id": "dev_sync_core_cloudprovider_detect_path",
-      "community": 5,
+      "community": 6,
       "norm_label": ".detect_path()"
     },
     {
@@ -702,7 +702,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L751",
       "id": "dev_sync_core_cloudprovider_is_available",
-      "community": 5,
+      "community": 6,
       "norm_label": ".is_available()"
     },
     {
@@ -711,7 +711,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L754",
       "id": "dev_sync_core_cloudprovider_validate",
-      "community": 5,
+      "community": 6,
       "norm_label": ".validate()"
     },
     {
@@ -720,7 +720,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L757",
       "id": "dev_sync_core_cloudprovider_is_local_filesystem",
-      "community": 5,
+      "community": 6,
       "norm_label": ".is_local_filesystem()"
     },
     {
@@ -729,7 +729,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L760",
       "id": "dev_sync_core_cloudprovider_get_project_folder",
-      "community": 5,
+      "community": 6,
       "norm_label": ".get_project_folder()"
     },
     {
@@ -738,7 +738,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L763",
       "id": "dev_sync_core_cloudprovider_sync_to",
-      "community": 5,
+      "community": 6,
       "norm_label": ".sync_to()"
     },
     {
@@ -747,7 +747,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L766",
       "id": "dev_sync_core_cloudprovider_sync_from",
-      "community": 5,
+      "community": 6,
       "norm_label": ".sync_from()"
     },
     {
@@ -756,7 +756,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L770",
       "id": "dev_sync_core_localfilesystemprovider",
-      "community": 5,
+      "community": 1,
       "norm_label": "localfilesystemprovider"
     },
     {
@@ -765,7 +765,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L771",
       "id": "dev_sync_core_localfilesystemprovider_detect_path",
-      "community": 5,
+      "community": 1,
       "norm_label": ".detect_path()"
     },
     {
@@ -774,7 +774,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L782",
       "id": "dev_sync_core_localfilesystemprovider_get_provider_path",
-      "community": 5,
+      "community": 1,
       "norm_label": ".get_provider_path()"
     },
     {
@@ -783,7 +783,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L787",
       "id": "dev_sync_core_localfilesystemprovider_get_project_folder",
-      "community": 5,
+      "community": 1,
       "norm_label": ".get_project_folder()"
     },
     {
@@ -792,7 +792,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L795",
       "id": "dev_sync_core_localfilesystemprovider_is_available",
-      "community": 5,
+      "community": 1,
       "norm_label": ".is_available()"
     },
     {
@@ -801,7 +801,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L805",
       "id": "dev_sync_core_localfilesystemprovider_is_local_filesystem",
-      "community": 2,
+      "community": 1,
       "norm_label": ".is_local_filesystem()"
     },
     {
@@ -810,7 +810,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L808",
       "id": "dev_sync_core_localfilesystemprovider_validate",
-      "community": 5,
+      "community": 1,
       "norm_label": ".validate()"
     },
     {
@@ -819,7 +819,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L818",
       "id": "dev_sync_core_localfilesystemprovider_sync_to",
-      "community": 2,
+      "community": 1,
       "norm_label": ".sync_to()"
     },
     {
@@ -828,7 +828,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L827",
       "id": "dev_sync_core_localfilesystemprovider_sync_from",
-      "community": 2,
+      "community": 1,
       "norm_label": ".sync_from()"
     },
     {
@@ -837,7 +837,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L841",
       "id": "dev_sync_core_rcloneprovider",
-      "community": 2,
+      "community": 1,
       "norm_label": "rcloneprovider"
     },
     {
@@ -846,7 +846,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L842",
       "id": "dev_sync_core_rcloneprovider_detect_path",
-      "community": 5,
+      "community": 1,
       "norm_label": ".detect_path()"
     },
     {
@@ -855,7 +855,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L845",
       "id": "dev_sync_core_rcloneprovider_is_available",
-      "community": 2,
+      "community": 1,
       "norm_label": ".is_available()"
     },
     {
@@ -864,7 +864,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L855",
       "id": "dev_sync_core_rcloneprovider_validate",
-      "community": 2,
+      "community": 1,
       "norm_label": ".validate()"
     },
     {
@@ -873,7 +873,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L865",
       "id": "dev_sync_core_rcloneprovider_remote_root",
-      "community": 2,
+      "community": 1,
       "norm_label": "._remote_root()"
     },
     {
@@ -882,7 +882,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L870",
       "id": "dev_sync_core_rcloneprovider_sync_to",
-      "community": 2,
+      "community": 1,
       "norm_label": ".sync_to()"
     },
     {
@@ -891,7 +891,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L896",
       "id": "dev_sync_core_rcloneprovider_sync_from",
-      "community": 2,
+      "community": 1,
       "norm_label": ".sync_from()"
     },
     {
@@ -900,7 +900,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L915",
       "id": "dev_sync_core_create_provider",
-      "community": 2,
+      "community": 1,
       "norm_label": "create_provider()"
     },
     {
@@ -909,7 +909,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L924",
       "id": "dev_sync_core_validate_no_newline_paths",
-      "community": 3,
+      "community": 4,
       "norm_label": "validate_no_newline_paths()"
     },
     {
@@ -918,7 +918,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L930",
       "id": "dev_sync_core_validate_no_symlink_dest_ancestors",
-      "community": 3,
+      "community": 4,
       "norm_label": "validate_no_symlink_dest_ancestors()"
     },
     {
@@ -927,7 +927,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L942",
       "id": "dev_sync_core_rsync_available",
-      "community": 2,
+      "community": 1,
       "norm_label": "rsync_available()"
     },
     {
@@ -936,95 +936,104 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
       "source_location": "L946",
       "id": "dev_sync_core_rsync_transfer",
-      "community": 3,
+      "community": 4,
       "norm_label": "rsync_transfer()"
     },
     {
       "label": "remove_path()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L979",
+      "source_location": "L983",
       "id": "dev_sync_core_remove_path",
-      "community": 3,
+      "community": 0,
       "norm_label": "remove_path()"
     },
     {
       "label": "copy_relpaths()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L988",
+      "source_location": "L992",
       "id": "dev_sync_core_copy_relpaths",
-      "community": 3,
+      "community": 4,
       "norm_label": "copy_relpaths()"
     },
     {
       "label": "sync_relpaths()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1014",
+      "source_location": "L1018",
       "id": "dev_sync_core_sync_relpaths",
-      "community": 2,
+      "community": 4,
       "norm_label": "sync_relpaths()"
     },
     {
       "label": "manifest_path()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1037",
+      "source_location": "L1041",
       "id": "dev_sync_core_manifest_path",
-      "community": 0,
+      "community": 4,
       "norm_label": "manifest_path()"
     },
     {
       "label": "read_manifest()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1041",
+      "source_location": "L1045",
       "id": "dev_sync_core_read_manifest",
-      "community": 3,
+      "community": 4,
       "norm_label": "read_manifest()"
     },
     {
       "label": "write_manifest()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1052",
+      "source_location": "L1056",
       "id": "dev_sync_core_write_manifest",
-      "community": 0,
+      "community": 4,
       "norm_label": "write_manifest()"
+    },
+    {
+      "label": "write_manifest_via_transfer()",
+      "file_type": "code",
+      "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
+      "source_location": "L1073",
+      "id": "dev_sync_core_write_manifest_via_transfer",
+      "community": 4,
+      "norm_label": "write_manifest_via_transfer()"
     },
     {
       "label": "require_local_provider()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1069",
+      "source_location": "L1091",
       "id": "dev_sync_core_require_local_provider",
-      "community": 6,
+      "community": 5,
       "norm_label": "require_local_provider()"
     },
     {
       "label": "export_candidates()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1076",
+      "source_location": "L1098",
       "id": "dev_sync_core_export_candidates",
-      "community": 2,
+      "community": 1,
       "norm_label": "export_candidates()"
     },
     {
       "label": "import_overlay()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1119",
+      "source_location": "L1156",
       "id": "dev_sync_core_import_overlay",
-      "community": 2,
+      "community": 1,
       "norm_label": "import_overlay()"
     },
     {
       "label": "verify_git_state()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1171",
+      "source_location": "L1208",
       "id": "dev_sync_core_verify_git_state",
       "community": 0,
       "norm_label": "verify_git_state()"
@@ -1033,7 +1042,7 @@
       "label": "content_check_is_sensitive()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1246",
+      "source_location": "L1283",
       "id": "dev_sync_core_content_check_is_sensitive",
       "community": 0,
       "norm_label": "content_check_is_sensitive()"
@@ -1042,7 +1051,7 @@
       "label": "sha256_file()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1266",
+      "source_location": "L1303",
       "id": "dev_sync_core_sha256_file",
       "community": 0,
       "norm_label": "sha256_file()"
@@ -1051,7 +1060,7 @@
       "label": "files_match()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1277",
+      "source_location": "L1314",
       "id": "dev_sync_core_files_match",
       "community": 0,
       "norm_label": "files_match()"
@@ -1060,7 +1069,7 @@
       "label": "compare_overlay_content()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1287",
+      "source_location": "L1324",
       "id": "dev_sync_core_compare_overlay_content",
       "community": 0,
       "norm_label": "compare_overlay_content()"
@@ -1069,25 +1078,25 @@
       "label": "verify_full_state()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1304",
+      "source_location": "L1341",
       "id": "dev_sync_core_verify_full_state",
-      "community": 2,
+      "community": 1,
       "norm_label": "verify_full_state()"
     },
     {
       "label": "log_section()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1394",
+      "source_location": "L1431",
       "id": "dev_sync_core_log_section",
-      "community": 2,
+      "community": 5,
       "norm_label": "log_section()"
     },
     {
       "label": "bool_to_label()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1400",
+      "source_location": "L1437",
       "id": "dev_sync_core_bool_to_label",
       "community": 0,
       "norm_label": "bool_to_label()"
@@ -1096,7 +1105,7 @@
       "label": "build_parser()",
       "file_type": "code",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1404",
+      "source_location": "L1441",
       "id": "dev_sync_core_build_parser",
       "community": 0,
       "norm_label": "build_parser()"
@@ -1107,7 +1116,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_verify_git.py",
       "source_location": "L1",
       "id": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_verify_git_py",
-      "community": 1,
+      "community": 2,
       "norm_label": "dev_sync_verify_git.py"
     },
     {
@@ -1116,7 +1125,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_verify_git.py",
       "source_location": "L9",
       "id": "dev_sync_verify_git_build_parser",
-      "community": 1,
+      "community": 2,
       "norm_label": "build_parser()"
     },
     {
@@ -1125,7 +1134,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_verify_git.py",
       "source_location": "L13",
       "id": "dev_sync_verify_git_main",
-      "community": 1,
+      "community": 2,
       "norm_label": "main()"
     },
     {
@@ -1134,7 +1143,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_proton_status.py",
       "source_location": "L1",
       "id": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_proton_status_py",
-      "community": 6,
+      "community": 5,
       "norm_label": "dev_sync_proton_status.py"
     },
     {
@@ -1143,7 +1152,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_proton_status.py",
       "source_location": "L34",
       "id": "dev_sync_proton_status_fileproviderstatus",
-      "community": 6,
+      "community": 5,
       "norm_label": "fileproviderstatus"
     },
     {
@@ -1152,7 +1161,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_proton_status.py",
       "source_location": "L43",
       "id": "dev_sync_proton_status_build_parser",
-      "community": 6,
+      "community": 5,
       "norm_label": "build_parser()"
     },
     {
@@ -1161,7 +1170,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_proton_status.py",
       "source_location": "L54",
       "id": "dev_sync_proton_status_manifest_files",
-      "community": 6,
+      "community": 5,
       "norm_label": "manifest_files()"
     },
     {
@@ -1170,7 +1179,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_proton_status.py",
       "source_location": "L65",
       "id": "dev_sync_proton_status_expected_paths",
-      "community": 6,
+      "community": 5,
       "norm_label": "expected_paths()"
     },
     {
@@ -1179,7 +1188,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_proton_status.py",
       "source_location": "L84",
       "id": "dev_sync_proton_status_parse_fileprovider_output",
-      "community": 6,
+      "community": 5,
       "norm_label": "parse_fileprovider_output()"
     },
     {
@@ -1188,7 +1197,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_proton_status.py",
       "source_location": "L102",
       "id": "dev_sync_proton_status_evaluate_path",
-      "community": 6,
+      "community": 5,
       "norm_label": "evaluate_path()"
     },
     {
@@ -1197,7 +1206,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_proton_status.py",
       "source_location": "L112",
       "id": "dev_sync_proton_status_status_ready",
-      "community": 6,
+      "community": 5,
       "norm_label": "status_ready()"
     },
     {
@@ -1206,7 +1215,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_proton_status.py",
       "source_location": "L124",
       "id": "dev_sync_proton_status_main",
-      "community": 6,
+      "community": 5,
       "norm_label": "main()"
     },
     {
@@ -1215,7 +1224,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_purge_quarantine.py",
       "source_location": "L1",
       "id": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_purge_quarantine_py",
-      "community": 6,
+      "community": 5,
       "norm_label": "dev_sync_purge_quarantine.py"
     },
     {
@@ -1224,7 +1233,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_purge_quarantine.py",
       "source_location": "L19",
       "id": "dev_sync_purge_quarantine_build_parser",
-      "community": 6,
+      "community": 5,
       "norm_label": "build_parser()"
     },
     {
@@ -1233,7 +1242,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_purge_quarantine.py",
       "source_location": "L26",
       "id": "dev_sync_purge_quarantine_tree_size",
-      "community": 6,
+      "community": 5,
       "norm_label": "tree_size()"
     },
     {
@@ -1242,7 +1251,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_purge_quarantine.py",
       "source_location": "L43",
       "id": "dev_sync_purge_quarantine_main",
-      "community": 6,
+      "community": 5,
       "norm_label": "main()"
     },
     {
@@ -1251,7 +1260,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_import.py",
       "source_location": "L1",
       "id": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_import_py",
-      "community": 1,
+      "community": 2,
       "norm_label": "dev_sync_import.py"
     },
     {
@@ -1260,7 +1269,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_import.py",
       "source_location": "L16",
       "id": "dev_sync_import_build_parser",
-      "community": 1,
+      "community": 2,
       "norm_label": "build_parser()"
     },
     {
@@ -1269,7 +1278,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_import.py",
       "source_location": "L23",
       "id": "dev_sync_import_main",
-      "community": 1,
+      "community": 2,
       "norm_label": "main()"
     },
     {
@@ -1278,7 +1287,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_export.py",
       "source_location": "L1",
       "id": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_export_py",
-      "community": 1,
+      "community": 2,
       "norm_label": "dev_sync_export.py"
     },
     {
@@ -1287,7 +1296,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_export.py",
       "source_location": "L17",
       "id": "dev_sync_export_build_parser",
-      "community": 1,
+      "community": 2,
       "norm_label": "build_parser()"
     },
     {
@@ -1296,7 +1305,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_export.py",
       "source_location": "L24",
       "id": "dev_sync_export_main",
-      "community": 1,
+      "community": 2,
       "norm_label": "main()"
     },
     {
@@ -1305,7 +1314,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_prune_excluded.py",
       "source_location": "L1",
       "id": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_prune_excluded_py",
-      "community": 4,
+      "community": 3,
       "norm_label": "dev_sync_prune_excluded.py"
     },
     {
@@ -1314,7 +1323,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_prune_excluded.py",
       "source_location": "L49",
       "id": "dev_sync_prune_excluded_build_parser",
-      "community": 4,
+      "community": 5,
       "norm_label": "build_parser()"
     },
     {
@@ -1323,7 +1332,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_prune_excluded.py",
       "source_location": "L61",
       "id": "dev_sync_prune_excluded_rel_matches_pattern",
-      "community": 4,
+      "community": 3,
       "norm_label": "rel_matches_pattern()"
     },
     {
@@ -1332,7 +1341,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_prune_excluded.py",
       "source_location": "L78",
       "id": "dev_sync_prune_excluded_is_protected_relpath",
-      "community": 4,
+      "community": 3,
       "norm_label": "is_protected_relpath()"
     },
     {
@@ -1341,7 +1350,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_prune_excluded.py",
       "source_location": "L82",
       "id": "dev_sync_prune_excluded_topmost_relpaths",
-      "community": 4,
+      "community": 3,
       "norm_label": "topmost_relpaths()"
     },
     {
@@ -1350,7 +1359,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_prune_excluded.py",
       "source_location": "L91",
       "id": "dev_sync_prune_excluded_note_candidate",
-      "community": 4,
+      "community": 3,
       "norm_label": "note_candidate()"
     },
     {
@@ -1359,7 +1368,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_prune_excluded.py",
       "source_location": "L97",
       "id": "dev_sync_prune_excluded_collect_prune_candidates",
-      "community": 4,
+      "community": 3,
       "norm_label": "collect_prune_candidates()"
     },
     {
@@ -1368,7 +1377,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_prune_excluded.py",
       "source_location": "L148",
       "id": "dev_sync_prune_excluded_protected_descendants",
-      "community": 4,
+      "community": 3,
       "norm_label": "protected_descendants()"
     },
     {
@@ -1377,7 +1386,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_prune_excluded.py",
       "source_location": "L172",
       "id": "dev_sync_prune_excluded_local_storage_size",
-      "community": 4,
+      "community": 3,
       "norm_label": "local_storage_size()"
     },
     {
@@ -1386,7 +1395,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_prune_excluded.py",
       "source_location": "L195",
       "id": "dev_sync_prune_excluded_build_plan",
-      "community": 4,
+      "community": 3,
       "norm_label": "build_plan()"
     },
     {
@@ -1395,7 +1404,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_prune_excluded.py",
       "source_location": "L237",
       "id": "dev_sync_prune_excluded_write_plan",
-      "community": 4,
+      "community": 5,
       "norm_label": "write_plan()"
     },
     {
@@ -1404,7 +1413,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_prune_excluded.py",
       "source_location": "L247",
       "id": "dev_sync_prune_excluded_print_plan_summary",
-      "community": 4,
+      "community": 5,
       "norm_label": "print_plan_summary()"
     },
     {
@@ -1413,7 +1422,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_prune_excluded.py",
       "source_location": "L264",
       "id": "dev_sync_prune_excluded_quarantine_from_plan",
-      "community": 3,
+      "community": 4,
       "norm_label": "quarantine_from_plan()"
     },
     {
@@ -1422,7 +1431,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_prune_excluded.py",
       "source_location": "L303",
       "id": "dev_sync_prune_excluded_main",
-      "community": 4,
+      "community": 5,
       "norm_label": "main()"
     },
     {
@@ -1440,7 +1449,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_verify_full.py",
       "source_location": "L1",
       "id": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_verify_full_py",
-      "community": 1,
+      "community": 2,
       "norm_label": "dev_sync_verify_full.py"
     },
     {
@@ -1449,7 +1458,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_verify_full.py",
       "source_location": "L16",
       "id": "dev_sync_verify_full_build_parser",
-      "community": 1,
+      "community": 2,
       "norm_label": "build_parser()"
     },
     {
@@ -1458,7 +1467,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_verify_full.py",
       "source_location": "L24",
       "id": "dev_sync_verify_full_print_section",
-      "community": 1,
+      "community": 2,
       "norm_label": "print_section()"
     },
     {
@@ -1467,7 +1476,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_verify_full.py",
       "source_location": "L33",
       "id": "dev_sync_verify_full_main",
-      "community": 1,
+      "community": 2,
       "norm_label": "main()"
     },
     {
@@ -1476,7 +1485,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_restore_preflight.py",
       "source_location": "L1",
       "id": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_restore_preflight_py",
-      "community": 1,
+      "community": 2,
       "norm_label": "dev_sync_restore_preflight.py"
     },
     {
@@ -1485,7 +1494,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_restore_preflight.py",
       "source_location": "L34",
       "id": "dev_sync_restore_preflight_build_parser",
-      "community": 1,
+      "community": 2,
       "norm_label": "build_parser()"
     },
     {
@@ -1494,7 +1503,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_restore_preflight.py",
       "source_location": "L42",
       "id": "dev_sync_restore_preflight_print_section",
-      "community": 1,
+      "community": 2,
       "norm_label": "print_section()"
     },
     {
@@ -1503,7 +1512,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_restore_preflight.py",
       "source_location": "L51",
       "id": "dev_sync_restore_preflight_missing_required_files",
-      "community": 1,
+      "community": 2,
       "norm_label": "missing_required_files()"
     },
     {
@@ -1512,7 +1521,7 @@
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_restore_preflight.py",
       "source_location": "L55",
       "id": "dev_sync_restore_preflight_main",
-      "community": 1,
+      "community": 2,
       "norm_label": "main()"
     }
   ],
@@ -2541,7 +2550,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L979",
+      "source_location": "L983",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_remove_path",
@@ -2553,7 +2562,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L988",
+      "source_location": "L992",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_copy_relpaths",
@@ -2565,7 +2574,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1014",
+      "source_location": "L1018",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_sync_relpaths",
@@ -2577,7 +2586,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1037",
+      "source_location": "L1041",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_manifest_path",
@@ -2589,7 +2598,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1041",
+      "source_location": "L1045",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_read_manifest",
@@ -2601,7 +2610,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1052",
+      "source_location": "L1056",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_write_manifest",
@@ -2613,7 +2622,19 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1069",
+      "source_location": "L1073",
+      "weight": 1.0,
+      "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
+      "_tgt": "dev_sync_core_write_manifest_via_transfer",
+      "source": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
+      "target": "dev_sync_core_write_manifest_via_transfer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
+      "source_location": "L1091",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_require_local_provider",
@@ -2625,7 +2646,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1076",
+      "source_location": "L1098",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_export_candidates",
@@ -2637,7 +2658,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1119",
+      "source_location": "L1156",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_import_overlay",
@@ -2649,7 +2670,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1171",
+      "source_location": "L1208",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_verify_git_state",
@@ -2661,7 +2682,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1246",
+      "source_location": "L1283",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_content_check_is_sensitive",
@@ -2673,7 +2694,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1266",
+      "source_location": "L1303",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_sha256_file",
@@ -2685,7 +2706,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1277",
+      "source_location": "L1314",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_files_match",
@@ -2697,7 +2718,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1287",
+      "source_location": "L1324",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_compare_overlay_content",
@@ -2709,7 +2730,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1304",
+      "source_location": "L1341",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_verify_full_state",
@@ -2721,7 +2742,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1394",
+      "source_location": "L1431",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_log_section",
@@ -2733,7 +2754,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1400",
+      "source_location": "L1437",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_bool_to_label",
@@ -2745,7 +2766,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1404",
+      "source_location": "L1441",
       "weight": 1.0,
       "_src": "home_mk_dev_env_ubuntu_aktualizacje_dev_sync_dev_sync_core_py",
       "_tgt": "dev_sync_core_build_parser",
@@ -2925,7 +2946,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L976",
+      "source_location": "L980",
       "weight": 1.0,
       "_src": "dev_sync_core_rsync_transfer",
       "_tgt": "dev_sync_core_devsyncerror",
@@ -2937,7 +2958,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1011",
+      "source_location": "L1015",
       "weight": 1.0,
       "_src": "dev_sync_core_copy_relpaths",
       "_tgt": "dev_sync_core_devsyncerror",
@@ -2949,7 +2970,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1048",
+      "source_location": "L1052",
       "weight": 1.0,
       "_src": "dev_sync_core_read_manifest",
       "_tgt": "dev_sync_core_devsyncerror",
@@ -2961,7 +2982,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1072",
+      "source_location": "L1094",
       "weight": 1.0,
       "_src": "dev_sync_core_require_local_provider",
       "_tgt": "dev_sync_core_devsyncerror",
@@ -2973,7 +2994,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1088",
+      "source_location": "L1110",
       "weight": 1.0,
       "_src": "dev_sync_core_export_candidates",
       "_tgt": "dev_sync_core_devsyncerror",
@@ -2985,7 +3006,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1131",
+      "source_location": "L1168",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_devsyncerror",
@@ -2997,7 +3018,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1312",
+      "source_location": "L1349",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_devsyncerror",
@@ -3165,7 +3186,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1082",
+      "source_location": "L1104",
       "weight": 1.0,
       "_src": "dev_sync_core_export_candidates",
       "_tgt": "dev_sync_core_runoptions",
@@ -3177,7 +3198,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1125",
+      "source_location": "L1162",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_runoptions",
@@ -3189,7 +3210,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1305",
+      "source_location": "L1342",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_runoptions",
@@ -3249,7 +3270,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1197",
+      "source_location": "L1234",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_git_state",
       "_tgt": "dev_sync_core_gitverificationresult",
@@ -3261,7 +3282,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1114",
+      "source_location": "L1151",
       "weight": 1.0,
       "_src": "dev_sync_core_export_candidates",
       "_tgt": "dev_sync_core_exportresult",
@@ -3273,7 +3294,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1166",
+      "source_location": "L1203",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_importresult",
@@ -3297,7 +3318,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1372",
+      "source_location": "L1409",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_fullverificationresult",
@@ -3393,7 +3414,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1083",
+      "source_location": "L1105",
       "weight": 1.0,
       "_src": "dev_sync_core_export_candidates",
       "_tgt": "dev_sync_core_logger",
@@ -3405,7 +3426,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1126",
+      "source_location": "L1163",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_logger",
@@ -3417,7 +3438,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1306",
+      "source_location": "L1343",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_logger",
@@ -3513,7 +3534,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1116",
+      "source_location": "L1153",
       "weight": 1.0,
       "_src": "dev_sync_core_export_candidates",
       "_tgt": "dev_sync_core_logger_close",
@@ -3525,7 +3546,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1168",
+      "source_location": "L1205",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_logger_close",
@@ -3537,7 +3558,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1391",
+      "source_location": "L1428",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_logger_close",
@@ -3597,7 +3618,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1096",
+      "source_location": "L1118",
       "weight": 1.0,
       "_src": "dev_sync_core_export_candidates",
       "_tgt": "dev_sync_core_logger_log",
@@ -3609,7 +3630,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1146",
+      "source_location": "L1183",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_logger_log",
@@ -3621,7 +3642,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1357",
+      "source_location": "L1394",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_logger_log",
@@ -3633,7 +3654,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1395",
+      "source_location": "L1432",
       "weight": 1.0,
       "_src": "dev_sync_core_log_section",
       "_tgt": "dev_sync_core_logger_log",
@@ -3717,7 +3738,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L965",
+      "source_location": "L969",
       "weight": 1.0,
       "_src": "dev_sync_core_rsync_transfer",
       "_tgt": "dev_sync_core_logger_verbose",
@@ -3729,7 +3750,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L998",
+      "source_location": "L1002",
       "weight": 1.0,
       "_src": "dev_sync_core_copy_relpaths",
       "_tgt": "dev_sync_core_logger_verbose",
@@ -3741,7 +3762,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1025",
+      "source_location": "L1029",
       "weight": 1.0,
       "_src": "dev_sync_core_sync_relpaths",
       "_tgt": "dev_sync_core_logger_verbose",
@@ -3753,12 +3774,24 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1056",
+      "source_location": "L1060",
       "weight": 1.0,
       "_src": "dev_sync_core_write_manifest",
       "_tgt": "dev_sync_core_logger_verbose",
       "source": "dev_sync_core_logger_verbose",
       "target": "dev_sync_core_write_manifest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
+      "source_location": "L1076",
+      "weight": 1.0,
+      "_src": "dev_sync_core_write_manifest_via_transfer",
+      "_tgt": "dev_sync_core_logger_verbose",
+      "source": "dev_sync_core_logger_verbose",
+      "target": "dev_sync_core_write_manifest_via_transfer",
       "confidence_score": 1.0
     },
     {
@@ -3921,7 +3954,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1049",
+      "source_location": "L1053",
       "weight": 1.0,
       "_src": "dev_sync_core_read_manifest",
       "_tgt": "dev_sync_core_normalize_relpath",
@@ -3933,12 +3966,24 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1053",
+      "source_location": "L1057",
       "weight": 1.0,
       "_src": "dev_sync_core_write_manifest",
       "_tgt": "dev_sync_core_normalize_relpath",
       "source": "dev_sync_core_normalize_relpath",
       "target": "dev_sync_core_write_manifest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
+      "source_location": "L1074",
+      "weight": 1.0,
+      "_src": "dev_sync_core_write_manifest_via_transfer",
+      "_tgt": "dev_sync_core_normalize_relpath",
+      "source": "dev_sync_core_normalize_relpath",
+      "target": "dev_sync_core_write_manifest_via_transfer",
       "confidence_score": 1.0
     },
     {
@@ -4041,7 +4086,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L995",
+      "source_location": "L999",
       "weight": 1.0,
       "_src": "dev_sync_core_copy_relpaths",
       "_tgt": "dev_sync_core_safe_relpath",
@@ -4053,7 +4098,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1021",
+      "source_location": "L1025",
       "weight": 1.0,
       "_src": "dev_sync_core_sync_relpaths",
       "_tgt": "dev_sync_core_safe_relpath",
@@ -4065,7 +4110,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1049",
+      "source_location": "L1053",
       "weight": 1.0,
       "_src": "dev_sync_core_read_manifest",
       "_tgt": "dev_sync_core_safe_relpath",
@@ -4077,12 +4122,24 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1053",
+      "source_location": "L1057",
       "weight": 1.0,
       "_src": "dev_sync_core_write_manifest",
       "_tgt": "dev_sync_core_safe_relpath",
       "source": "dev_sync_core_safe_relpath",
       "target": "dev_sync_core_write_manifest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
+      "source_location": "L1074",
+      "weight": 1.0,
+      "_src": "dev_sync_core_write_manifest_via_transfer",
+      "_tgt": "dev_sync_core_safe_relpath",
+      "source": "dev_sync_core_safe_relpath",
+      "target": "dev_sync_core_write_manifest_via_transfer",
       "confidence_score": 1.0
     },
     {
@@ -4233,7 +4290,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1141",
+      "source_location": "L1178",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_should_include_candidate",
@@ -4245,7 +4302,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1331",
+      "source_location": "L1368",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_should_include_candidate",
@@ -4341,7 +4398,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1045",
+      "source_location": "L1049",
       "weight": 1.0,
       "_src": "dev_sync_core_read_manifest",
       "_tgt": "dev_sync_core_read_json",
@@ -4377,12 +4434,24 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1059",
+      "source_location": "L1063",
       "weight": 1.0,
       "_src": "dev_sync_core_write_manifest",
       "_tgt": "dev_sync_core_write_json",
       "source": "dev_sync_core_write_json",
       "target": "dev_sync_core_write_manifest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
+      "source_location": "L1080",
+      "weight": 1.0,
+      "_src": "dev_sync_core_write_manifest_via_transfer",
+      "_tgt": "dev_sync_core_write_json",
+      "source": "dev_sync_core_write_json",
+      "target": "dev_sync_core_write_manifest_via_transfer",
       "confidence_score": 1.0
     },
     {
@@ -4701,7 +4770,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1182",
+      "source_location": "L1219",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_git_state",
       "_tgt": "dev_sync_core_run_command",
@@ -4713,7 +4782,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1323",
+      "source_location": "L1360",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_run_command",
@@ -4797,7 +4866,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1142",
+      "source_location": "L1179",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_tracked_files",
@@ -4857,7 +4926,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1175",
+      "source_location": "L1212",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_git_state",
       "_tgt": "dev_sync_core_dirty_tracked_entries",
@@ -4917,7 +4986,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L980",
+      "source_location": "L984",
       "weight": 1.0,
       "_src": "dev_sync_core_remove_path",
       "_tgt": "dev_sync_core_lexists",
@@ -4929,7 +4998,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1297",
+      "source_location": "L1334",
       "weight": 1.0,
       "_src": "dev_sync_core_compare_overlay_content",
       "_tgt": "dev_sync_core_lexists",
@@ -5073,7 +5142,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1327",
+      "source_location": "L1364",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_classify_repo",
@@ -5097,7 +5166,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1092",
+      "source_location": "L1114",
       "weight": 1.0,
       "_src": "dev_sync_core_export_candidates",
       "_tgt": "dev_sync_core_proton_candidates",
@@ -5133,7 +5202,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1140",
+      "source_location": "L1177",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_scan_overlay_files",
@@ -5145,7 +5214,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1330",
+      "source_location": "L1367",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_scan_overlay_files",
@@ -5481,7 +5550,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1095",
+      "source_location": "L1117",
       "weight": 1.0,
       "_src": "dev_sync_core_export_candidates",
       "_tgt": "dev_sync_core_localfilesystemprovider_get_project_folder",
@@ -5493,7 +5562,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1136",
+      "source_location": "L1173",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_localfilesystemprovider_get_project_folder",
@@ -5505,7 +5574,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1317",
+      "source_location": "L1354",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_localfilesystemprovider_get_project_folder",
@@ -5565,7 +5634,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1094",
+      "source_location": "L1116",
       "weight": 1.0,
       "_src": "dev_sync_core_export_candidates",
       "_tgt": "dev_sync_core_localfilesystemprovider_is_local_filesystem",
@@ -5577,7 +5646,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1135",
+      "source_location": "L1172",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_localfilesystemprovider_is_local_filesystem",
@@ -5589,7 +5658,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1316",
+      "source_location": "L1353",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_localfilesystemprovider_is_local_filesystem",
@@ -5757,7 +5826,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1089",
+      "source_location": "L1111",
       "weight": 1.0,
       "_src": "dev_sync_core_export_candidates",
       "_tgt": "dev_sync_core_rcloneprovider_is_available",
@@ -5769,7 +5838,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1132",
+      "source_location": "L1169",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_rcloneprovider_is_available",
@@ -5781,7 +5850,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1313",
+      "source_location": "L1350",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_rcloneprovider_is_available",
@@ -5805,7 +5874,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1086",
+      "source_location": "L1108",
       "weight": 1.0,
       "_src": "dev_sync_core_export_candidates",
       "_tgt": "dev_sync_core_rcloneprovider_validate",
@@ -5817,7 +5886,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1129",
+      "source_location": "L1166",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_rcloneprovider_validate",
@@ -5829,7 +5898,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1310",
+      "source_location": "L1347",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_rcloneprovider_validate",
@@ -5877,7 +5946,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1323",
+      "source_location": "L1360",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_rcloneprovider_remote_root",
@@ -5889,7 +5958,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1101",
+      "source_location": "L1138",
       "weight": 1.0,
       "_src": "dev_sync_core_export_candidates",
       "_tgt": "dev_sync_core_rcloneprovider_sync_to",
@@ -5925,7 +5994,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1153",
+      "source_location": "L1190",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_rcloneprovider_sync_from",
@@ -5937,7 +6006,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1070",
+      "source_location": "L1092",
       "weight": 1.0,
       "_src": "dev_sync_core_require_local_provider",
       "_tgt": "dev_sync_core_create_provider",
@@ -5949,7 +6018,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1085",
+      "source_location": "L1107",
       "weight": 1.0,
       "_src": "dev_sync_core_export_candidates",
       "_tgt": "dev_sync_core_create_provider",
@@ -5961,7 +6030,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1128",
+      "source_location": "L1165",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_create_provider",
@@ -5973,7 +6042,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1309",
+      "source_location": "L1346",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_create_provider",
@@ -6009,7 +6078,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1001",
+      "source_location": "L1005",
       "weight": 1.0,
       "_src": "dev_sync_core_copy_relpaths",
       "_tgt": "dev_sync_core_validate_no_symlink_dest_ancestors",
@@ -6021,7 +6090,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1029",
+      "source_location": "L1033",
       "weight": 1.0,
       "_src": "dev_sync_core_sync_relpaths",
       "_tgt": "dev_sync_core_validate_no_symlink_dest_ancestors",
@@ -6033,7 +6102,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1030",
+      "source_location": "L1034",
       "weight": 1.0,
       "_src": "dev_sync_core_sync_relpaths",
       "_tgt": "dev_sync_core_rsync_available",
@@ -6045,7 +6114,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1031",
+      "source_location": "L1035",
       "weight": 1.0,
       "_src": "dev_sync_core_sync_relpaths",
       "_tgt": "dev_sync_core_rsync_transfer",
@@ -6057,7 +6126,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1003",
+      "source_location": "L1007",
       "weight": 1.0,
       "_src": "dev_sync_core_copy_relpaths",
       "_tgt": "dev_sync_core_remove_path",
@@ -6069,7 +6138,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1033",
+      "source_location": "L1037",
       "weight": 1.0,
       "_src": "dev_sync_core_sync_relpaths",
       "_tgt": "dev_sync_core_copy_relpaths",
@@ -6081,7 +6150,19 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1097",
+      "source_location": "L1088",
+      "weight": 1.0,
+      "_src": "dev_sync_core_write_manifest_via_transfer",
+      "_tgt": "dev_sync_core_sync_relpaths",
+      "source": "dev_sync_core_sync_relpaths",
+      "target": "dev_sync_core_write_manifest_via_transfer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
+      "source_location": "L1119",
       "weight": 1.0,
       "_src": "dev_sync_core_export_candidates",
       "_tgt": "dev_sync_core_sync_relpaths",
@@ -6093,7 +6174,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1150",
+      "source_location": "L1187",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_sync_relpaths",
@@ -6105,7 +6186,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1042",
+      "source_location": "L1046",
       "weight": 1.0,
       "_src": "dev_sync_core_read_manifest",
       "_tgt": "dev_sync_core_manifest_path",
@@ -6117,7 +6198,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1054",
+      "source_location": "L1058",
       "weight": 1.0,
       "_src": "dev_sync_core_write_manifest",
       "_tgt": "dev_sync_core_manifest_path",
@@ -6129,7 +6210,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1139",
+      "source_location": "L1176",
       "weight": 1.0,
       "_src": "dev_sync_core_import_overlay",
       "_tgt": "dev_sync_core_read_manifest",
@@ -6141,7 +6222,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1329",
+      "source_location": "L1366",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_read_manifest",
@@ -6177,11 +6258,11 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1098",
+      "source_location": "L1121",
       "weight": 1.0,
       "_src": "dev_sync_core_export_candidates",
-      "_tgt": "dev_sync_core_write_manifest",
-      "source": "dev_sync_core_write_manifest",
+      "_tgt": "dev_sync_core_write_manifest_via_transfer",
+      "source": "dev_sync_core_write_manifest_via_transfer",
       "target": "dev_sync_core_export_candidates",
       "confidence_score": 1.0
     },
@@ -6261,7 +6342,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1284",
+      "source_location": "L1321",
       "weight": 1.0,
       "_src": "dev_sync_core_files_match",
       "_tgt": "dev_sync_core_sha256_file",
@@ -6273,7 +6354,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1299",
+      "source_location": "L1336",
       "weight": 1.0,
       "_src": "dev_sync_core_compare_overlay_content",
       "_tgt": "dev_sync_core_files_match",
@@ -6285,7 +6366,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1342",
+      "source_location": "L1379",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_compare_overlay_content",
@@ -6297,7 +6378,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/home/mk/Dev_Env/Ubuntu_Aktualizacje/dev-sync/dev_sync_core.py",
-      "source_location": "L1364",
+      "source_location": "L1401",
       "weight": 1.0,
       "_src": "dev_sync_core_verify_full_state",
       "_tgt": "dev_sync_core_log_section",

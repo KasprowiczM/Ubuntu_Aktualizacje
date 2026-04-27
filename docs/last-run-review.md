@@ -71,3 +71,10 @@ Current expected private overlay:
 - `.env.local`
 - `github`
 - `github.pub`
+
+## Proton Drive Export Note
+
+Local Proton Drive folders can reject permission metadata changes with
+`Read-only file system` while still accepting content writes. The dev-sync
+rsync transport is configured to copy content and directory structure without
+owner/group/permission metadata for this reason.

@@ -40,6 +40,9 @@ bash scripts/verify-state.sh
 - Import never treats Proton/rclone as authoritative for Git-tracked files.
 - rclone import stages remote content in a temporary directory, filters through
   manifest/exclude policy, and then copies selected relative paths.
+- Local Proton Drive exports use rsync without permission/owner/group metadata,
+  because cloud-synced mounts can reject chmod/chown metadata operations while
+  still accepting content updates.
 - Provider cleanup remains quarantine-first through `dev-sync-prune-excluded.sh`;
   no broad `rclone sync --delete` is used.
 - `.dev_sync_config.json` is private. A fresh clone may need

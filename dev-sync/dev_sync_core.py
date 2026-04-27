@@ -956,7 +956,11 @@ def rsync_transfer(
     validate_no_newline_paths(relpath_list)
     if not options.dry_run:
         dest_base.mkdir(parents=True, exist_ok=True)
-    argv = ["rsync", "-a", "--files-from=-", "--relative"]
+    # Cloud-synced folders such as Proton Drive can reject chmod/chown/mtime
+    # metadata operations even when file content writes are allowed. Copy file
+    # content and directory structure only; secrets stay protected by source
+    # permissions and Git ignore rules.
+    argv = ["rsync", "-rlt", "--no-perms", "--no-owner", "--no-group", "--omit-dir-times", "--files-from=-", "--relative"]
     if options.verbose:
         argv.append("-v")
     if options.dry_run:
@@ -1066,6 +1070,24 @@ def write_manifest(base: Path, relpaths: Iterable[str], logger: Logger, options:
     )
 
 
+def write_manifest_via_transfer(base: Path, relpaths: Iterable[str], logger: Logger, options: RunOptions) -> None:
+    files = sorted({safe_relpath(rel) for rel in relpaths if normalize_relpath(rel)})
+    if options.dry_run:
+        logger.verbose(f"dry-run manifest update: {base / MANIFEST_FILENAME} ({len(files)} file(s))")
+        return
+    with tempfile.TemporaryDirectory(prefix="dev-sync-manifest-local-") as tmp:
+        tmp_path = Path(tmp)
+        write_json(
+            tmp_path / MANIFEST_FILENAME,
+            {
+                "format": 1,
+                "generated_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
+                "files": files,
+            },
+        )
+        sync_relpaths(tmp_path, base, [MANIFEST_FILENAME], logger, options)
+
+
 def require_local_provider(config: DevSyncConfig) -> LocalFileSystemProvider:
     provider = create_provider(config)
     if not isinstance(provider, LocalFileSystemProvider):
@@ -1095,7 +1117,22 @@ def export_candidates(
             destination = provider.get_project_folder()
             logger.log(f"Exporting {len(files_to_copy)} private overlay file(s) to {destination}")
             transport = sync_relpaths(repo_root, destination, files_to_copy, logger, options)
-            write_manifest(destination, files_to_copy, logger, options)
+            try:
+                write_manifest_via_transfer(destination, files_to_copy, logger, options)
+            except OSError as exc:
+                if exc.errno != 30:
+                    raise
+                logger.log(
+                    f"WARNING: provider refused manifest write ({exc}); keeping existing manifest",
+                    always_stdout=True,
+                )
+            except DevSyncError as exc:
+                if "Read-only file system" not in str(exc):
+                    raise
+                logger.log(
+                    f"WARNING: provider refused manifest write ({exc}); keeping existing manifest",
+                    always_stdout=True,
+                )
         else:
             destination = Path(f"{config.rclone_remote}:{config.rclone_remote_path}/{config.project_name}")
             exported, transport = provider.sync_to(files_to_copy, repo_root, dry_run=dry_run)
