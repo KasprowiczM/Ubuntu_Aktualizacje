@@ -13,6 +13,8 @@ Cel projektu: utrzymanie jednego, przewidywalnego workflow aktualizacji Ubuntu 2
 ./update-all.sh --dry-run
 bash -n update-all.sh && bash -n scripts/*.sh && bash -n lib/*.sh
 PYTHONDONTWRITEBYTECODE=1 python3 tests/test_dev_sync_safety.py -v
+bash scripts/preflight.sh
+bash scripts/verify-state.sh
 ```
 
 ## Dev Sync
@@ -21,6 +23,8 @@ PYTHONDONTWRITEBYTECODE=1 python3 tests/test_dev_sync_safety.py -v
 - Nie synchronizuj do Proton Drive plików odtwarzalnych: `APPS.md`, `logs/`, `config/*.bak_*`, `.codex.local/tmp/`, dependency/build/cache outputs.
 - Domyślne sprawdzenie przed użyciem: `bash dev-sync-export.sh --dry-run --verbose`, potem `bash dev-sync-verify-full.sh`.
 - `dev-sync` nie jest częścią domyślnego `update-all.sh`.
+- Fresh clone: `bash scripts/preflight.sh`, `bash dev-sync/provider_setup.sh`, `bash scripts/restore-from-proton.sh --dry-run --verbose`, `bash scripts/bootstrap.sh --skip-sync`, `bash scripts/verify-state.sh`.
+- Zakres odzyskiwania opisuje `config/restore-manifest.json`.
 
 ## Profile Agentów (aktualne)
 - `default` — `gpt-5.3-codex`, reasoning `medium` (codzienna implementacja)

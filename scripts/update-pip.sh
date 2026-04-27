@@ -126,10 +126,13 @@ else
 
     # Upgrade all — must run as user to avoid root-owned pycache in brew Cellar
     print_step "pipx upgrade-all"
-    pipx_out=$(run_as_user "${PIPX_BIN}" upgrade-all 2>&1)
+    pipx_out=$(run_as_user "${PIPX_BIN}" upgrade-all 2>&1) && pipx_rc=0 || pipx_rc=$?
     echo "$pipx_out" >> "${LOG_FILE}"
     echo "$pipx_out"
-    if echo "$pipx_out" | grep -qE "(upgraded|already at latest)"; then
+    if [[ $pipx_rc -ne 0 ]]; then
+        print_warn "pipx upgrade-all returned non-zero"
+        record_warn
+    elif echo "$pipx_out" | grep -qE "(upgraded|already at latest)"; then
         print_ok; record_ok
     else
         print_ok "done"; record_ok

@@ -110,6 +110,7 @@ class StaticDevSyncConfigTests(unittest.TestCase):
         wrappers = [
             "dev-sync-export.sh",
             "dev-sync-import.sh",
+            "dev-sync-restore-preflight.sh",
             "dev-sync-verify-full.sh",
             "dev-sync-verify-git.sh",
             "dev-sync-prune-excluded.sh",
@@ -121,6 +122,30 @@ class StaticDevSyncConfigTests(unittest.TestCase):
                 text = self.read_script(wrapper)
                 self.assertIn(f"/dev-sync/{wrapper}", text)
                 self.assertIn('"$@"', text)
+
+    def test_restore_preflight_is_documented_and_bounded(self) -> None:
+        manifest = self.read_script("dev-sync/RESTORE_MANIFEST.md")
+        restore_manifest = json.loads(self.read_script("config/restore-manifest.json"))
+        preflight = self.read_script("dev-sync/dev_sync_restore_preflight.py")
+        self.assertIn("GitHub is the source of truth", manifest)
+        self.assertIn("bash dev-sync-restore-preflight.sh", manifest)
+        self.assertIn("APPS.md", manifest)
+        self.assertEqual(restore_manifest["tracked_source_of_truth"], "git")
+        self.assertIn("APPS.md", restore_manifest["rebuildable_or_generated"])
+        self.assertIn("REQUIRED_RESTORE_FILES", preflight)
+        self.assertIn("dev-sync/RESTORE_MANIFEST.md", preflight)
+        self.assertIn("config_path(repo_root)", preflight)
+
+    def test_recovery_scripts_exist(self) -> None:
+        for path in [
+            "scripts/preflight.sh",
+            "scripts/restore-from-proton.sh",
+            "scripts/bootstrap.sh",
+            "scripts/verify-state.sh",
+        ]:
+            with self.subTest(path=path):
+                text = self.read_script(path)
+                self.assertIn("set -euo pipefail", text)
 
 
 if __name__ == "__main__":

@@ -43,7 +43,14 @@ while [[ $# -gt 0 ]]; do
         --nvidia)       UPGRADE_NVIDIA=1 ;;
         --dry-run)      DRY_RUN=1 ;;
         --no-notify)    NO_NOTIFY=1 ;;
-        --only)         shift; ONLY="$1" ;;
+        --only)
+            shift
+            [[ $# -gt 0 ]] || { echo "--only requires a group"; exit 2; }
+            ONLY="$1"
+            case "$ONLY" in
+                apt|snap|brew|npm|pip|flatpak|drivers|inventory) ;;
+                *) echo "Invalid --only group: ${ONLY}"; exit 2 ;;
+            esac ;;
         -h|--help)
             echo "Usage: $0 [--no-drivers] [--nvidia] [--dry-run] [--no-notify] [--only <group>]"
             echo "Groups: apt | snap | brew | npm | pip | flatpak | drivers | inventory"
@@ -79,6 +86,8 @@ print_info "Kernel : $(uname -r)"
 print_info "Log    : ${MASTER_LOG}"
 [[ $DRY_RUN -eq 1 ]] && print_warn "DRY RUN MODE — scripts will not actually run"
 echo
+
+acquire_project_lock "update-all"
 
 # ── Script runner ─────────────────────────────────────────────────────────────
 STEP=0

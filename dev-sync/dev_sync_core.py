@@ -9,6 +9,7 @@ import os
 import shlex
 import shutil
 import subprocess
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Iterable, Sequence
@@ -876,13 +877,39 @@ class RCloneProvider(CloudProvider):
                 ["rclone", "copyto", str(source_root / relpath), f"{remote_root}/{relpath}", "--checksum"],
                 cwd=source_root,
             )
+        with tempfile.TemporaryDirectory(prefix="dev-sync-manifest-") as tmp:
+            tmp_path = Path(tmp)
+            write_json(
+                tmp_path / MANIFEST_FILENAME,
+                {
+                    "format": 1,
+                    "generated_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
+                    "files": files,
+                },
+            )
+            run_command(
+                ["rclone", "copyto", str(tmp_path / MANIFEST_FILENAME), f"{remote_root}/{MANIFEST_FILENAME}"],
+                cwd=source_root,
+            )
         return files, "rclone"
 
     def sync_from(self, dest_root: Path, dry_run: bool = False) -> tuple[list[str], str]:
         remote_root = self._remote_root()
-        if not dry_run:
-            run_command(["rclone", "copy", remote_root, str(dest_root), "--checksum"], cwd=dest_root)
-        return [], "rclone"
+        with tempfile.TemporaryDirectory(prefix="dev-sync-rclone-import-") as tmp:
+            tmp_path = Path(tmp)
+            run_command(["rclone", "copy", remote_root, str(tmp_path), "--checksum"], cwd=dest_root)
+            manifest_files = read_manifest(tmp_path)
+            provider_files = manifest_files if manifest_files is not None else scan_overlay_files(tmp_path, self.config)
+            provider_files = {rel for rel in provider_files if should_include_candidate(rel, self.config)}
+            tracked = tracked_files(dest_root)
+            files_to_copy = sorted(provider_files - tracked)
+            options = RunOptions(dry_run=dry_run, verbose=False)
+            logger = Logger(dest_root, "rclone-import", options)
+            try:
+                sync_relpaths(tmp_path, dest_root, files_to_copy, logger, options)
+            finally:
+                logger.close()
+        return files_to_copy, "rclone"
 
 
 def create_provider(config: DevSyncConfig) -> CloudProvider:
@@ -1073,7 +1100,7 @@ def export_candidates(
             destination = Path(f"{config.rclone_remote}:{config.rclone_remote_path}/{config.project_name}")
             exported, transport = provider.sync_to(files_to_copy, repo_root, dry_run=dry_run)
             files_to_copy = exported
-            logger.log("Manifest support is unavailable for rclone exports.", always_stdout=False)
+            logger.log("rclone export writes a manifest alongside overlay files.", always_stdout=False)
 
         logger.log(f"project_root={repo_root}", always_stdout=False)
         logger.log(f"provider={config.provider}", always_stdout=False)
@@ -1125,7 +1152,7 @@ def import_overlay(
             source = Path(f"{config.rclone_remote}:{config.rclone_remote_path}/{config.project_name}")
             files_to_copy, transport = provider.sync_from(repo_root, dry_run=dry_run)
             skipped_tracked = []
-            logger.log("Manifest support is unavailable for rclone imports.", always_stdout=False)
+            logger.log("rclone import stages remote files first, then filters manifest and skips Git-tracked paths.", always_stdout=False)
 
         logger.log(f"project_root={repo_root}", always_stdout=False)
         logger.log(f"provider={config.provider}", always_stdout=False)
@@ -1263,31 +1290,39 @@ def compare_overlay_content(
     relpaths: Iterable[str],
 ) -> tuple[list[str], list[str]]:
     mismatches: list[str] = []
-    skipped_sensitive: list[str] = []
+    not_checked: list[str] = []
     for relpath in sorted(set(relpaths)):
         local_path = local_base / relpath
         provider_path = provider_base / relpath
         if not lexists(local_path) or not lexists(provider_path):
             continue
-        if content_check_is_sensitive(relpath):
-            skipped_sensitive.append(relpath)
-            continue
         if not files_match(local_path, provider_path):
             mismatches.append(relpath)
-    return mismatches, skipped_sensitive
+    return mismatches, not_checked
 
 
 def verify_full_state(repo_root: Path, config: DevSyncConfig, verbose: bool = False) -> FullVerificationResult:
     options = RunOptions(dry_run=True, verbose=verbose)
     logger = Logger(repo_root, "verify-full", options)
+    temp_provider: tempfile.TemporaryDirectory[str] | None = None
     try:
-        provider = require_local_provider(config)
+        provider = create_provider(config)
         validation_errors = provider.validate()
         if validation_errors:
             raise DevSyncError(f"Provider validation failed: {'; '.join(validation_errors)}")
-        provider_root = provider.get_project_folder()
-        if not provider_root.is_dir():
-            raise DevSyncError(f"Provider project folder does not exist: {provider_root}")
+        if not provider.is_available():
+            raise DevSyncError(f"Provider {config.provider} is not available. Check configuration.")
+
+        if provider.is_local_filesystem():
+            provider_root = provider.get_project_folder()
+            if not provider_root.is_dir():
+                raise DevSyncError(f"Provider project folder does not exist: {provider_root}")
+        elif isinstance(provider, RCloneProvider):
+            temp_provider = tempfile.TemporaryDirectory(prefix="dev-sync-rclone-verify-")
+            provider_root = Path(temp_provider.name)
+            run_command(["rclone", "copy", provider._remote_root(), str(provider_root), "--checksum"], cwd=repo_root)
+        else:
+            raise DevSyncError(f"{config.provider} does not expose a verifiable overlay")
 
         classification = classify_repo(repo_root, config)
         git_snapshot = classification.tracked_files
@@ -1351,6 +1386,8 @@ def verify_full_state(repo_root: Path, config: DevSyncConfig, verbose: bool = Fa
             content_not_checked=content_not_checked,
         )
     finally:
+        if temp_provider is not None:
+            temp_provider.cleanup()
         logger.close()
 
 

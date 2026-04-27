@@ -30,9 +30,9 @@ echo "${refresh_out}" >> "${LOG_FILE}"
 
 if echo "${refresh_out}" | grep -q "All snaps up to date"; then
     print_ok "All snaps up to date"; record_ok
-elif echo "${refresh_out}" | grep -qi "error:"; then
-    # snap-store must be closed before refresh — try with --ignore-running
-    print_warn "snap refresh had errors, retrying with --ignore-running"
+elif echo "${refresh_out}" | grep -qi "running apps"; then
+    # Only force refresh for snapd's explicit running-apps condition.
+    print_warn "snap refresh blocked by running apps, retrying with --ignore-running"
     refresh_out2=$(sudo snap refresh --ignore-running 2>&1) || true
     echo "${refresh_out2}" >> "${LOG_FILE}"
     if echo "${refresh_out2}" | grep -qi "error:"; then
@@ -41,6 +41,10 @@ elif echo "${refresh_out}" | grep -qi "error:"; then
     else
         print_ok "Completed with --ignore-running"; record_ok
     fi
+elif echo "${refresh_out}" | grep -qi "error:"; then
+    print_error "snap refresh failed"
+    record_err
+    echo "${refresh_out}" | grep -i "error:" | while IFS= read -r l; do print_info "  $l"; done
 else
     print_ok "Snap refresh completed"
     echo "${refresh_out}" | grep -Ev "^$" | while IFS= read -r line; do
@@ -86,6 +90,10 @@ else
 fi
 
 print_summary "Snap Update Summary"
+
+if [[ "${SUMMARY_ERR:-0}" -gt 0 ]]; then
+    exit 1
+fi
 
 # ── Update inventory (skipped when called from update-all.sh) ─────────────────
 if [[ "${INVENTORY_SILENT:-0}" != "1" ]]; then

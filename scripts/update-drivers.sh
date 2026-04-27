@@ -176,6 +176,10 @@ fi
 
 print_summary "Drivers & Firmware Summary"
 
+if [[ "${SUMMARY_ERR:-0}" -gt 0 ]]; then
+    exit 1
+fi
+
 # ── Update inventory (skipped when called from update-all.sh) ─────────────────
 if [[ "${INVENTORY_SILENT:-0}" != "1" ]]; then
     print_section "Updating APPS.md"

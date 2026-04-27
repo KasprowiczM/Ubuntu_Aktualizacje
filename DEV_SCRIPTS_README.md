@@ -27,7 +27,9 @@ The configured provider, usually Proton Drive via `rclone` on Ubuntu, stores onl
 - local key files such as `github` and `github.pub`
 - other Git-ignored local-only files that cannot be recreated from GitHub plus normal setup
 
-The overlay is manifest-backed for local filesystem providers. Export writes `.dev_sync_manifest.json` into the provider mirror and import prefers that manifest so stale files are not restored accidentally.
+The overlay is manifest-backed for local filesystem and rclone providers. Export
+writes `.dev_sync_manifest.json` into the provider mirror and import prefers
+that manifest so stale files are not restored accidentally.
 
 Normal untracked files are not exported to the provider. If `dev-sync-verify-full.sh`
 reports them as orphan local files, either commit them to GitHub or add an
@@ -111,12 +113,20 @@ Do not directly delete broad directories in provider storage.
 4. Restore private overlay:
 
 ```sh
+bash dev-sync-restore-preflight.sh
 bash dev-sync-import.sh --dry-run --verbose
 bash dev-sync-import.sh
 bash dev-sync-verify-full.sh
 ```
 
-5. Reinstall normal dependencies through this project's documented setup/update commands.
+Or use the top-level wrapper:
+
+```sh
+bash scripts/restore-from-proton.sh --dry-run --verbose
+bash scripts/restore-from-proton.sh --verbose
+```
+
+5. Reinstall normal dependencies through `bash scripts/bootstrap.sh --skip-sync` or `./setup.sh --non-interactive`.
 
 ## Proton Offload Warning
 

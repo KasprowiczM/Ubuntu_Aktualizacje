@@ -1,12 +1,12 @@
 [Unit]
-Description=Ubuntu_Aktualizacje — Weekly update timer
+Description=Ubuntu_Aktualizacje — Weekly update timer for %i
 Documentation=https://github.com/KasprowiczM/Ubuntu_Aktualizacje
 
 [Timer]
 # Run every Sunday at 03:00 AM
 OnCalendar=Sun *-*-* 03:00:00
 
-# If the system was off at scheduled time, run within 1 hour of next boot
+# If the system was off at scheduled time, run after next boot
 Persistent=true
 
 # Randomize start up to 30 minutes to avoid thundering herd

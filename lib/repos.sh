@@ -71,11 +71,17 @@ _setup_repo_chrome() {
         print_info "Google Chrome: repo already exists — skipping"; return 0
     fi
     print_step "Add Google Chrome repo"
-    curl -fsSL https://dl.google.com/linux/linux_signing_key.pub 2>/dev/null | \
-        sudo gpg --batch --yes --dearmor -o "$keyfile" >> "${LOG_FILE:-/dev/null}" 2>&1 || true
-    echo "deb [arch=amd64 signed-by=${keyfile}] https://dl.google.com/linux/chrome/deb/ stable main" | \
-        sudo tee "$listfile" >> "${LOG_FILE:-/dev/null}"
-    print_ok; record_ok
+    if curl -fsSL https://dl.google.com/linux/linux_signing_key.pub 2>/dev/null | \
+        sudo gpg --batch --yes --dearmor -o "$keyfile" >> "${LOG_FILE:-/dev/null}" 2>&1 && \
+        [[ -s "$keyfile" ]]; then
+        echo "deb [arch=amd64 signed-by=${keyfile}] https://dl.google.com/linux/chrome/deb/ stable main" | \
+            sudo tee "$listfile" >> "${LOG_FILE:-/dev/null}"
+        print_ok; record_ok
+    else
+        print_error "Failed to fetch GPG key for Google Chrome"
+        record_err
+        return 1
+    fi
 }
 
 # ── VS Code ───────────────────────────────────────────────────────────────────
@@ -103,11 +109,17 @@ _setup_repo_docker() {
     fi
     print_step "Add Docker repo"
     local codename; codename=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2 | tr -d '"')
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg 2>/dev/null | \
-        sudo gpg --batch --yes --dearmor -o "$keyfile" >> "${LOG_FILE:-/dev/null}" 2>&1 || true
-    printf "Types: deb\nURIs: https://download.docker.com/linux/ubuntu\nSuites: %s\nComponents: stable\nArchitectures: amd64\nSigned-By: %s\n" \
-        "$codename" "$keyfile" | sudo tee "$listfile" >> "${LOG_FILE:-/dev/null}"
-    print_ok; record_ok
+    if curl -fsSL https://download.docker.com/linux/ubuntu/gpg 2>/dev/null | \
+        sudo gpg --batch --yes --dearmor -o "$keyfile" >> "${LOG_FILE:-/dev/null}" 2>&1 && \
+        [[ -s "$keyfile" ]]; then
+        printf "Types: deb\nURIs: https://download.docker.com/linux/ubuntu\nSuites: %s\nComponents: stable\nArchitectures: amd64\nSigned-By: %s\n" \
+            "$codename" "$keyfile" | sudo tee "$listfile" >> "${LOG_FILE:-/dev/null}"
+        print_ok; record_ok
+    else
+        print_error "Failed to fetch GPG key for Docker"
+        record_err
+        return 1
+    fi
 }
 
 # ── NVIDIA Container Toolkit ──────────────────────────────────────────────────
@@ -119,12 +131,23 @@ _setup_repo_nvidia_container_toolkit() {
         print_info "NVIDIA Container Toolkit: repo already exists — skipping"; return 0
     fi
     print_step "Add NVIDIA Container Toolkit repo"
-    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey 2>/dev/null | \
-        sudo gpg --batch --yes --dearmor -o "$keyfile" >> "${LOG_FILE:-/dev/null}" 2>&1 || true
-    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list 2>/dev/null | \
-        sed "s#deb https://#deb [signed-by=${keyfile}] https://#g" | \
-        sudo tee "$listfile" >> "${LOG_FILE:-/dev/null}"
-    print_ok; record_ok
+    if curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey 2>/dev/null | \
+        sudo gpg --batch --yes --dearmor -o "$keyfile" >> "${LOG_FILE:-/dev/null}" 2>&1 && \
+        [[ -s "$keyfile" ]]; then
+        if curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list 2>/dev/null | \
+            sed "s#deb https://#deb [signed-by=${keyfile}] https://#g" | \
+            sudo tee "$listfile" >> "${LOG_FILE:-/dev/null}"; then
+            print_ok; record_ok
+        else
+            print_error "Failed to fetch NVIDIA Container Toolkit source list"
+            record_err
+            return 1
+        fi
+    else
+        print_error "Failed to fetch GPG key for NVIDIA Container Toolkit"
+        record_err
+        return 1
+    fi
 }
 
 # ── MegaSync ──────────────────────────────────────────────────────────────────

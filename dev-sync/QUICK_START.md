@@ -31,8 +31,19 @@ bash dev-sync-verify-full.sh
 git clone <repo-url>
 cd Ubuntu_Aktualizacje
 bash dev-sync/provider_setup.sh
+bash dev-sync-restore-preflight.sh
 bash dev-sync-import.sh --dry-run --verbose
 bash dev-sync-import.sh
+bash dev-sync-verify-full.sh
+```
+
+Or use the top-level recovery wrapper:
+
+```bash
+bash scripts/restore-from-proton.sh --dry-run --verbose
+bash scripts/restore-from-proton.sh --verbose
 ```
 
 Do not use `rclone sync` or manual broad deletion for this overlay. Use the provided prune/quarantine scripts.
+
+The restore scope and rebuildable exclusions are listed in `dev-sync/RESTORE_MANIFEST.md`.

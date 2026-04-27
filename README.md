@@ -60,6 +60,21 @@ Validation after changes:
 
 ```bash
 bash -n update-all.sh && bash -n scripts/*.sh && bash -n lib/*.sh
+PYTHONDONTWRITEBYTECODE=1 python3 tests/test_dev_sync_safety.py -v
+bash scripts/verify-state.sh
+```
+
+Fresh Ubuntu clone / recovery:
+
+```bash
+git clone https://github.com/KasprowiczM/Ubuntu_Aktualizacje.git
+cd Ubuntu_Aktualizacje
+bash scripts/preflight.sh
+bash dev-sync/provider_setup.sh
+bash scripts/restore-from-proton.sh --dry-run --verbose
+bash scripts/restore-from-proton.sh --verbose
+bash scripts/bootstrap.sh --skip-sync
+bash scripts/verify-state.sh
 ```
 
 ## What Gets Updated
@@ -86,11 +101,12 @@ Project layout:
 - `lib/repos.sh` — idempotent APT repo setup by repo ID
 - `config/*.list` — package/repo configuration
 - `setup.sh` — bootstrap, discovery, drift check, and rollback for config files
-- `systemd/` — weekly timer installation assets
+- `systemd/` — weekly templated timer installation assets
+- `config/restore-manifest.json` — tracked contract for private overlay vs rebuildable files
 
 Important runtime rules:
 - `INVENTORY_SILENT=1` is set by master run to avoid repeated `APPS.md` regeneration by sub-scripts.
-- Master script authenticates sudo once at start and keeps sudo credentials alive during run.
+- Master script authenticates sudo once at start, keeps sudo credentials alive during run, and uses a `flock` guard to avoid concurrent update/bootstrap runs.
 - Homebrew/npm/pipx operations use non-root user context via helper wrappers.
 - MEGA repository is maintained as `megaio.sources`; legacy `meganz.list` is removed automatically if present.
 
@@ -122,7 +138,9 @@ Automated weekly run (systemd):
 ./systemd/install-timer.sh --remove
 ```
 
-Timer runs `update-all.sh --no-drivers` on schedule.
+Timer runs `update-all.sh --no-drivers` on schedule. This skips the explicit
+driver/firmware module; APT may still update normal OS packages such as kernels,
+microcode, Mesa, and firmware packages according to Ubuntu/APT policy.
 
 ## Dev Sync
 
@@ -145,6 +163,23 @@ bash dev-sync-export.sh
 bash dev-sync-verify-full.sh
 ```
 
+Fresh-clone restore:
+
+```bash
+bash dev-sync/provider_setup.sh
+bash dev-sync-restore-preflight.sh
+bash dev-sync-import.sh --dry-run --verbose
+bash dev-sync-import.sh
+bash dev-sync-verify-full.sh
+```
+
+Top-level restore wrapper:
+
+```bash
+bash scripts/restore-from-proton.sh --dry-run --verbose
+bash scripts/restore-from-proton.sh --verbose
+```
+
 Verify GitHub coverage for tracked files:
 
 ```bash
@@ -154,7 +189,8 @@ bash dev-sync-verify-git.sh
 Rebuildable/generated files are excluded from Proton sync, including
 `APPS.md`, `logs/`, `config/*.bak_*`, `.codex.local/tmp/`, dependency folders,
 build outputs, and caches. See [DEV_SCRIPTS_README.md](DEV_SCRIPTS_README.md)
-and [config/dev-sync-excludes.txt](config/dev-sync-excludes.txt).
+and [config/dev-sync-excludes.txt](config/dev-sync-excludes.txt). The restore
+scope is documented in [dev-sync/RESTORE_MANIFEST.md](dev-sync/RESTORE_MANIFEST.md).
 
 ## Git & GitHub
 
@@ -180,7 +216,7 @@ CI validation (`.github/workflows/validate.yml`) checks:
 - shell syntax (`bash -n`)
 - required files presence
 - `APPS.md` is gitignored
-- basic secret/token pattern scan
+- broader secret/token/private-key pattern scan over tracked files
 
 ## Troubleshooting
 

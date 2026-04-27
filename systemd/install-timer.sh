@@ -3,7 +3,8 @@
 # systemd/install-timer.sh — Install systemd timer for weekly auto-updates
 #
 # Creates a systemd service + timer that runs update-all.sh every Sunday at 3am.
-# Drivers and firmware updates are excluded from automated runs.
+# The explicit driver/firmware module is skipped; apt may still update kernels,
+# microcode, Mesa, and other normal OS packages.
 #
 # Usage:
 #   ./systemd/install-timer.sh           # Install for current user
@@ -15,6 +16,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CURRENT_USER="${SUDO_USER:-$USER}"
 SERVICE_NAME="ubuntu-aktualizacje@${CURRENT_USER}"
+TIMER_NAME="ubuntu-aktualizacje@${CURRENT_USER}"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; BOLD='\033[1m'; RESET='\033[0m'
@@ -32,7 +34,7 @@ echo -e "\n${BOLD}${BLUE}── Ubuntu_Aktualizacje systemd timer ──${RESET}
 
 if [[ "$MODE" == "status" ]]; then
     echo "── Timer status:"
-    systemctl status "ubuntu-aktualizacje.timer" 2>/dev/null || echo "  (not installed)"
+    systemctl status "${TIMER_NAME}.timer" 2>/dev/null || echo "  (not installed)"
     echo ""
     echo "── Service status:"
     systemctl status "${SERVICE_NAME}.service" 2>/dev/null || echo "  (not installed)"
@@ -44,9 +46,10 @@ fi
 
 if [[ "$MODE" == "remove" ]]; then
     step "Stop and disable timer"
-    sudo systemctl stop "ubuntu-aktualizacje.timer" 2>/dev/null || true
-    sudo systemctl disable "ubuntu-aktualizacje.timer" 2>/dev/null || true
+    sudo systemctl stop "${TIMER_NAME}.timer" 2>/dev/null || true
+    sudo systemctl disable "${TIMER_NAME}.timer" 2>/dev/null || true
     sudo rm -f /etc/systemd/system/ubuntu-aktualizacje@.service
+    sudo rm -f /etc/systemd/system/ubuntu-aktualizacje@.timer
     sudo rm -f /etc/systemd/system/ubuntu-aktualizacje.timer
     sudo systemctl daemon-reload
     ok
@@ -73,7 +76,7 @@ Environment=HOME=/home/%i
 Environment=DISPLAY=:0
 Environment=XDG_RUNTIME_DIR=/run/user/$(id -u "${CURRENT_USER}")
 Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u "${CURRENT_USER}")/bus
-ExecStart=${SCRIPT_DIR}/update-all.sh --no-drivers
+ExecStart=/usr/bin/env bash ${SCRIPT_DIR}/update-all.sh --no-drivers
 TimeoutStartSec=3600
 StandardOutput=append:${SCRIPT_DIR}/logs/systemd_update.log
 StandardError=append:${SCRIPT_DIR}/logs/systemd_update.log
@@ -85,7 +88,7 @@ ok
 
 # Install timer file
 step "Install timer file"
-sudo tee /etc/systemd/system/ubuntu-aktualizacje.timer > /dev/null << 'EOF'
+sudo tee /etc/systemd/system/ubuntu-aktualizacje@.timer > /dev/null << 'EOF'
 [Unit]
 Description=Ubuntu_Aktualizacje — Weekly update timer
 
@@ -104,20 +107,20 @@ step "Reload systemd daemon"
 sudo systemctl daemon-reload && ok
 
 step "Enable and start timer"
-sudo systemctl enable --now "ubuntu-aktualizacje.timer" && ok
+sudo systemctl enable --now "${TIMER_NAME}.timer" && ok
 
 echo ""
 echo -e "${GREEN}✔  Timer installed and active${RESET}"
 echo ""
 info "Schedule: Every Sunday at 03:00 (±30min)"
-info "Skips   : drivers/firmware (require manual review)"
+info "Skips   : explicit driver/firmware module (APT may still update OS packages)"
 info "Log     : ${SCRIPT_DIR}/logs/systemd_update.log"
 echo ""
 echo "── Next scheduled run:"
 systemctl list-timers "ubuntu-aktualizacje*" 2>/dev/null | grep -E "(NEXT|ubuntu)" || true
 echo ""
 echo "── Commands:"
-info "Status  :  systemctl status ubuntu-aktualizacje.timer"
+info "Status  :  systemctl status ${TIMER_NAME}.timer"
 info "Run now :  sudo systemctl start ${SERVICE_NAME}.service"
 info "Logs    :  journalctl -u ${SERVICE_NAME}.service"
 info "Remove  :  ./systemd/install-timer.sh --remove"

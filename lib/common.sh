@@ -154,6 +154,33 @@ require_sudo() {
 # ── Check if a command exists ─────────────────────────────────────────────────
 has_cmd() { command -v "$1" &>/dev/null; }
 
+# ── Cross-script project lock ────────────────────────────────────────────────
+# Keeps manual runs, systemd timer runs, and bootstrap flows from colliding on
+# dpkg/snap/flatpak/brew state or generated inventory files.
+acquire_project_lock() {
+    local name="${1:-project}"
+    local lock_dir="${XDG_RUNTIME_DIR:-/tmp}"
+    local lock_file="${UPDATE_ALL_LOCK_FILE:-${lock_dir}/ubuntu-aktualizacje.lock}"
+
+    if [[ "${UPDATE_ALL_LOCK_HELD:-0}" == "1" ]]; then
+        _log_raw "INFO" "reusing parent ${name} lock"
+        return 0
+    fi
+    if ! has_cmd flock; then
+        print_warn "flock not available — concurrency guard disabled"
+        return 0
+    fi
+
+    exec {PROJECT_LOCK_FD}>"${lock_file}"
+    if ! flock -n "${PROJECT_LOCK_FD}"; then
+        print_error "Another Ubuntu_Aktualizacje workflow is already running (${lock_file})"
+        print_info "If this is stale, verify no update/bootstrap process is active before removing it."
+        exit 75
+    fi
+    export UPDATE_ALL_LOCK_HELD=1
+    _log_raw "INFO" "acquired ${name} lock: ${lock_file}"
+}
+
 # ── Summary counters ──────────────────────────────────────────────────────────
 SUMMARY_OK=0
 SUMMARY_WARN=0

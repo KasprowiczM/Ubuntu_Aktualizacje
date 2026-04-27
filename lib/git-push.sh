@@ -2,8 +2,8 @@
 # =============================================================================
 # lib/git-push.sh — GitHub push helper using GITHUB_TOKEN from .env.local
 #
-# Loads GITHUB_TOKEN from .env.local (gitignored) and configures
-# the git remote URL temporarily for push operations.
+# Loads GITHUB_TOKEN from .env.local (gitignored) and uses a temporary
+# GIT_ASKPASS helper for push operations.
 #
 # Usage:
 #   source lib/git-push.sh && git_push [branch]
@@ -13,8 +13,8 @@
 # Token file: .env.local (gitignored via .env* pattern in .gitignore)
 # Format:     GITHUB_TOKEN=<GitHub PAT>
 #
-# SECURITY: Token is only in memory during the push. It is never written
-# to any config file, never logged, and never committed.
+# SECURITY: Token is never written to Git config, never logged, and never
+# committed. The temporary askpass helper is removed by trap.
 # =============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -23,8 +23,18 @@ ENV_FILE="${SCRIPT_DIR}/.env.local"
 # ── Load token ────────────────────────────────────────────────────────────────
 _load_github_token() {
     if [[ -f "$ENV_FILE" ]]; then
-        # shellcheck disable=SC1090
-        source "$ENV_FILE"
+        local line value
+        line=$(grep -E '^GITHUB_TOKEN=' "$ENV_FILE" | tail -1 || true)
+        if [[ -n "$line" ]]; then
+            value="${line#GITHUB_TOKEN=}"
+            value="${value%\"}"; value="${value#\"}"
+            value="${value%\'}"; value="${value#\'}"
+            if [[ "$value" == *$'\n'* || "$value" == *$'\r'* || "$value" == *" "* ]]; then
+                echo "Error: invalid GITHUB_TOKEN value in .env.local" >&2
+                return 1
+            fi
+            GITHUB_TOKEN="$value"
+        fi
     fi
     if [[ -z "${GITHUB_TOKEN:-}" ]]; then
         echo "Error: GITHUB_TOKEN not set. Add it to .env.local:" >&2
@@ -49,16 +59,34 @@ git_push() {
     # Get the clean repo URL
     local clean_url; clean_url=$(_get_clean_remote_url)
     # Extract owner/repo
-    local repo_path; repo_path=$(echo "$clean_url" | sed 's|https://github.com/||' | sed 's|\.git$||')
-    local token_url="https://x-access-token:${GITHUB_TOKEN}@github.com/${repo_path}.git"
+    local repo_path
+    repo_path=$(echo "$clean_url" | sed -E 's#^https://github.com/##; s#^git@github.com:##; s#\.git$##')
+    if [[ "$repo_path" == "$clean_url" || "$repo_path" != */* ]]; then
+        echo "Error: unsupported origin URL: ${clean_url}" >&2
+        return 1
+    fi
+    local https_url="https://github.com/${repo_path}.git"
 
     echo "Pushing to: https://github.com/${repo_path}.git (branch: ${branch})"
 
-    # Temporarily set remote URL with token, push, restore
-    git -C "$SCRIPT_DIR" remote set-url origin "$token_url"
-    git -C "$SCRIPT_DIR" push -u origin "$branch"
+    local askpass
+    askpass=$(mktemp)
+    chmod 700 "$askpass"
+    cat > "$askpass" << 'EOF'
+#!/usr/bin/env bash
+case "$1" in
+    *Username*) printf '%s\n' "x-access-token" ;;
+    *Password*) printf '%s\n' "${GITHUB_TOKEN:?}" ;;
+    *) printf '\n' ;;
+esac
+EOF
+    trap 'rm -f "$askpass"' RETURN
+
+    GIT_ASKPASS="$askpass" GITHUB_TOKEN="$GITHUB_TOKEN" \
+        git -C "$SCRIPT_DIR" push -u "$https_url" "$branch"
     local rc=$?
-    git -C "$SCRIPT_DIR" remote set-url origin "$clean_url"  # restore clean URL
+    rm -f "$askpass"
+    trap - RETURN
 
     return $rc
 }

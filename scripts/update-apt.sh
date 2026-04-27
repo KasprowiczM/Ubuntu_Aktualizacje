@@ -29,22 +29,54 @@ UPGRADE_NVIDIA="${UPGRADE_NVIDIA:-0}"
 _ensure_configured_repos() {
     [[ ! -f "$CONFIG_REPOS" ]] && return 0
     print_section "Ensuring configured APT repositories"
+    local failed=0
     while IFS= read -r repo_id; do
         [[ -z "$repo_id" ]] && continue
-        setup_repo "$repo_id" || true
+        if ! setup_repo "$repo_id"; then
+            print_error "Repository setup failed: ${repo_id}"
+            failed=1
+        fi
     done < <(parse_config_names "$CONFIG_REPOS")
+    if [[ $failed -ne 0 ]]; then
+        print_error "One or more configured APT repositories failed; aborting fail-closed."
+        exit 1
+    fi
 }
 
-# ── Helper: hold / unhold all installed nvidia-* packages ────────────────────
-_nvidia_hold() {
-    local action="$1"
+declare -a NVIDIA_TEMP_HELD=()
+
+_installed_nvidia_packages() {
     # Match packages actually present in dpkg (any status: ii, iF, iU, hi, etc.)
-    local pkgs
-    pkgs=$(dpkg -l 'nvidia-*' 'libnvidia-*' 2>/dev/null \
-        | awk '/^[iuh][iUFHWt]/{print $2}' | tr '\n' ' ')
-    [[ -z "${pkgs// }" ]] && return 0
-    # shellcheck disable=SC2086
-    sudo apt-mark "$action" $pkgs 2>/dev/null >> "${LOG_FILE}" || true
+    dpkg -l 'nvidia-*' 'libnvidia-*' 2>/dev/null | awk '/^[iuh][iUFHWt]/{print $2}'
+}
+
+_temporarily_hold_nvidia() {
+    mapfile -t _current_holds < <(apt-mark showhold 2>/dev/null || true)
+    mapfile -t _nvidia_pkgs < <(_installed_nvidia_packages)
+    [[ ${#_nvidia_pkgs[@]} -eq 0 ]] && return 0
+
+    local pkg held already_held
+    for pkg in "${_nvidia_pkgs[@]}"; do
+        already_held=0
+        for held in "${_current_holds[@]}"; do
+            [[ "$pkg" == "$held" ]] && already_held=1 && break
+        done
+        [[ $already_held -eq 1 ]] && continue
+        if sudo apt-mark hold "$pkg" >> "${LOG_FILE}" 2>&1; then
+            NVIDIA_TEMP_HELD+=("$pkg")
+        fi
+    done
+}
+
+_restore_nvidia_holds() {
+    [[ ${#NVIDIA_TEMP_HELD[@]} -eq 0 ]] && return 0
+    sudo apt-mark unhold "${NVIDIA_TEMP_HELD[@]}" >> "${LOG_FILE}" 2>&1 || true
+    NVIDIA_TEMP_HELD=()
+}
+
+_apt_exit_cleanup() {
+    _restore_nvidia_holds
+    [[ -n "${SUDO_KEEP_ALIVE_PID:-}" ]] && kill "${SUDO_KEEP_ALIVE_PID}" 2>/dev/null || true
 }
 
 # ── 0. Manage NVIDIA hold state ───────────────────────────────────────────────
@@ -60,7 +92,8 @@ fi
 
 if [[ "${UPGRADE_NVIDIA}" -eq 0 ]]; then
     print_info "NVIDIA packages held (use --nvidia to upgrade)"
-    _nvidia_hold hold
+    _temporarily_hold_nvidia
+    trap _apt_exit_cleanup EXIT
 fi
 
 # ── 1. Refresh all apt sources ────────────────────────────────────────────────
@@ -69,8 +102,8 @@ _ensure_configured_repos
 print_section "Refreshing package lists"
 
 print_step "apt-get update"
-_apt_out=$(sudo apt-get update -q 2>&1) && _apt_rc=0 || _apt_rc=$?
-_log_raw "RUN " "sudo apt-get update -q"
+_apt_out=$(sudo apt-get -o DPkg::Lock::Timeout=600 update -q 2>&1) && _apt_rc=0 || _apt_rc=$?
+_log_raw "RUN " "sudo apt-get -o DPkg::Lock::Timeout=600 update -q"
 [[ -n "${_apt_out}" ]] && echo "${_apt_out}" >> "${LOG_FILE}"
 if [[ $_apt_rc -eq 0 ]]; then
     print_ok; record_ok
@@ -93,6 +126,7 @@ print_section "Upgrading packages"
 
 APT_OPTS=(
     -y -q
+    -o DPkg::Lock::Timeout=600
     -o Dpkg::Options::="--force-confdef"
     -o Dpkg::Options::="--force-confold"
     -o APT::Get::Show-Versions=true
@@ -150,9 +184,8 @@ print_step "Clean package cache"
 sudo_silent apt-get autoclean -q && print_ok || { print_warn "autoclean non-zero"; record_warn; }
 
 # ── Restore NVIDIA hold state ─────────────────────────────────────────────────
-if [[ "${UPGRADE_NVIDIA}" -eq 0 ]]; then
-    _nvidia_hold unhold
-fi
+_restore_nvidia_holds
+[[ -n "${SUDO_KEEP_ALIVE_PID:-}" ]] && trap 'kill "${SUDO_KEEP_ALIVE_PID}" 2>/dev/null; true' EXIT || trap - EXIT
 
 # ── 4. Feed/candidate health for key desktop apps ────────────────────────────
 print_section "Desktop app feed health"

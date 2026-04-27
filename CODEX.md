@@ -18,6 +18,8 @@ Codex w tym repo działa jako główny orchestrator planujący pracę, delegują
 - Kompresuj historię roboczą zanim kontekst przekroczy ~60%.
 - `dev-sync` jest osobnym workflow: GitHub dla plików śledzonych, Proton/rclone tylko dla prywatnego overlay.
 - Przed realnym exportem prywatnego overlay uruchom `bash dev-sync-export.sh --dry-run --verbose`.
+- Fresh-clone recovery ma iść przez `scripts/preflight.sh`, `dev-sync/provider_setup.sh`, `scripts/restore-from-proton.sh`, `scripts/bootstrap.sh --skip-sync`, `scripts/verify-state.sh`.
+- `config/restore-manifest.json` jest deklaratywnym kontraktem: co jest prywatnym overlay, a co jest odtwarzalne/generowane.
 
 ## Referencje
 - @AGENTS.md - główny indeks reguł roboczych

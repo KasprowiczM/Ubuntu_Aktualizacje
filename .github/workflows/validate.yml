@@ -11,7 +11,9 @@ on:
       - 'update-all.sh'
       - 'dev-sync/**'
       - 'dev-sync-*.sh'
+      - 'systemd/**'
       - 'tests/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [ main ]
 
@@ -81,10 +83,18 @@ jobs:
             "scripts/update-inventory.sh"
             "scripts/rebuild-dkms.sh"
             "scripts/notify.sh"
+            "scripts/preflight.sh"
+            "scripts/bootstrap.sh"
+            "scripts/restore-from-proton.sh"
+            "scripts/verify-state.sh"
+            "systemd/install-timer.sh"
+            "systemd/ubuntu-aktualizacje@.service"
+            "systemd/ubuntu-aktualizacje@.timer"
             "dev-sync/dev_sync_core.py"
             "dev-sync/provider_setup.sh"
             "dev-sync/dev-sync-export.sh"
             "dev-sync/dev-sync-import.sh"
+            "dev-sync/dev-sync-restore-preflight.sh"
             "dev-sync/dev-sync-verify-full.sh"
             "dev-sync/dev-sync-verify-git.sh"
             "dev-sync/dev-sync-prune-excluded.sh"
@@ -92,6 +102,7 @@ jobs:
             "dev-sync/dev-sync-proton-status.sh"
             "dev-sync-export.sh"
             "dev-sync-import.sh"
+            "dev-sync-restore-preflight.sh"
             "dev-sync-verify-full.sh"
             "dev-sync-verify-git.sh"
             "dev-sync-prune-excluded.sh"
@@ -101,6 +112,7 @@ jobs:
             "config/apt-packages.list"
             "config/apt-repos.list"
             "config/dev-sync-excludes.txt"
+            "config/restore-manifest.json"
             "config/snap-packages.list"
             "config/brew-formulas.list"
             "config/brew-casks.list"
@@ -157,8 +169,7 @@ jobs:
         run: |
           echo "── Checking for leaked secrets ──"
           # Patterns that should never appear in tracked files
-          if git grep -lE '(ghp_|github_pat_|glpat-|xox[baprs]-|refresh_token|client_secret|token[[:space:]]*=)[A-Za-z0-9]' -- \
-              ':!*.env*' ':!*.local' ':!*secret*' 2>/dev/null; then
+          if git grep -lE 'BEGIN[[:space:]]+(RSA|OPENSSH|PRIVATE)[[:space:]]+KEY|(ghp_|github_pat_|glpat-|xox[baprs]-|AKIA[0-9A-Z]{16}|refresh_token|client_secret|token[[:space:]]*=)[A-Za-z0-9]' -- 2>/dev/null; then
             echo "❌ Potential GitHub/GitLab tokens found in tracked files!"
             exit 1
           else

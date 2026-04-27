@@ -87,6 +87,8 @@ print_info "Machine : ${HW_VENDOR} ${HW_MODEL}"
 print_info "Log     : ${LOG_FILE}"
 echo
 
+acquire_project_lock "setup"
+
 # =============================================================================
 # MODE: ROLLBACK — restore config files from latest backup
 # =============================================================================
@@ -100,7 +102,7 @@ if [[ "$MODE" == "rollback" ]]; then
         [[ -f "$f" ]] || continue
         base="$f"
         # Find most recent backup
-        latest_bak=$(ls -t "${base}".bak_* 2>/dev/null | head -1)
+        latest_bak=$(find "$(dirname "$base")" -maxdepth 1 -name "$(basename "$base").bak_*" -type f -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1{print $2}')
         if [[ -z "$latest_bak" ]]; then
             print_info "$(basename "$base"): no backup found — skipping"
             continue
@@ -455,7 +457,7 @@ print_header "Step 2/7 — Third-Party APT Repositories"
 
 while IFS= read -r repo_id; do
     [[ -z "$repo_id" ]] && continue
-    setup_repo "$repo_id" || true
+    setup_repo "$repo_id"
 done < <(parse_config_names "${CONFIG_DIR}/apt-repos.list")
 
 print_step "apt-get update (after adding repos)"

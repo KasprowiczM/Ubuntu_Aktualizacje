@@ -16,6 +16,8 @@ Obsługuje APT, Snap, Homebrew, npm, pip/pipx, Flatpak, sterowniki NVIDIA i firm
 bash -n update-all.sh && bash -n scripts/*.sh && bash -n lib/*.sh  # walidacja składni
 bash lib/git-push.sh push main         # push do GitHub
 PYTHONDONTWRITEBYTECODE=1 python3 tests/test_dev_sync_safety.py -v
+bash scripts/preflight.sh              # read-only host/recovery readiness
+bash scripts/verify-state.sh           # repo/dev-sync/systemd verification
 ```
 
 ## Dev Sync
@@ -24,6 +26,8 @@ PYTHONDONTWRITEBYTECODE=1 python3 tests/test_dev_sync_safety.py -v
 - Nie wysyłaj do Proton plików odtwarzalnych: `APPS.md`, `logs/`, backupów configów, cache, dependency/build output.
 - Używaj `bash dev-sync-export.sh --dry-run --verbose` przed realnym exportem.
 - `dev-sync` pozostaje oddzielony od `update-all.sh`.
+- Fresh clone flow: `bash scripts/preflight.sh`, `bash dev-sync/provider_setup.sh`, `bash scripts/restore-from-proton.sh --dry-run --verbose`, `bash scripts/bootstrap.sh --skip-sync`, `bash scripts/verify-state.sh`.
+- `config/restore-manifest.json` definiuje prywatny overlay i pliki odtwarzalne.
 
 ## Profile Agentów
 - `default` — `gpt-5.3-codex`, `medium`

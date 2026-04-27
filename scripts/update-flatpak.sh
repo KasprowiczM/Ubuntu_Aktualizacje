@@ -28,7 +28,12 @@ flatpak update --appstream 2>/dev/null >> "${LOG_FILE}" && print_ok || { print_w
 # ── 2. Upgrade all installed apps ─────────────────────────────────────────────
 print_section "Upgrading Flatpak applications"
 print_step "flatpak update --noninteractive"
-if flatpak update --noninteractive 2>&1 | tee -a "${LOG_FILE}" | grep -q "Nothing to do"; then
+flatpak_update_out=$(flatpak update --noninteractive 2>&1) && flatpak_update_rc=0 || flatpak_update_rc=$?
+echo "${flatpak_update_out}" >> "${LOG_FILE}"
+if [[ $flatpak_update_rc -ne 0 ]]; then
+    print_error "flatpak update failed"
+    record_err
+elif echo "${flatpak_update_out}" | grep -q "Nothing to do"; then
     print_ok "All apps up to date"; record_ok
 else
     print_ok "Updates applied"; record_ok
@@ -56,9 +61,15 @@ fi
 # ── 4. Remove unused runtimes ─────────────────────────────────────────────────
 print_section "Cleaning unused runtimes"
 print_step "flatpak uninstall --unused"
-flatpak uninstall --unused --noninteractive 2>&1 | tee -a "${LOG_FILE}" | grep -v "^$" | head -5 | \
-    while IFS= read -r l; do print_info "$l"; done
-print_ok; record_ok
+unused_out=$(flatpak uninstall --unused --noninteractive 2>&1) && unused_rc=0 || unused_rc=$?
+echo "${unused_out}" >> "${LOG_FILE}"
+if [[ $unused_rc -eq 0 ]]; then
+    printf "%s\n" "${unused_out}" | grep -v "^$" | head -5 | while IFS= read -r l; do print_info "$l"; done || true
+    print_ok; record_ok
+else
+    print_warn "unused runtime cleanup failed"
+    record_warn
+fi
 
 # ── 5. List installed apps ────────────────────────────────────────────────────
 print_section "Installed Flatpak applications"
@@ -72,6 +83,10 @@ else
 fi
 
 print_summary "Flatpak Update Summary"
+
+if [[ "${SUMMARY_ERR:-0}" -gt 0 ]]; then
+    exit 1
+fi
 
 # ── 6. Update inventory ───────────────────────────────────────────────────────
 if [[ "${INVENTORY_SILENT:-0}" != "1" ]]; then
