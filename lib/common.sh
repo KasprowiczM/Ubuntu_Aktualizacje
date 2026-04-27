@@ -160,6 +160,9 @@ has_cmd() { command -v "$1" &>/dev/null; }
 acquire_project_lock() {
     local name="${1:-project}"
     local lock_dir="${XDG_RUNTIME_DIR:-/tmp}"
+    if [[ ! -d "$lock_dir" || ! -w "$lock_dir" ]]; then
+        lock_dir="/tmp"
+    fi
     local lock_file="${UPDATE_ALL_LOCK_FILE:-${lock_dir}/ubuntu-aktualizacje.lock}"
 
     if [[ "${UPDATE_ALL_LOCK_HELD:-0}" == "1" ]]; then
@@ -171,7 +174,10 @@ acquire_project_lock() {
         return 0
     fi
 
-    exec {PROJECT_LOCK_FD}>"${lock_file}"
+    if ! eval "exec {PROJECT_LOCK_FD}>\"\${lock_file}\""; then
+        lock_file="/tmp/ubuntu-aktualizacje.lock"
+        eval "exec {PROJECT_LOCK_FD}>\"\${lock_file}\""
+    fi
     if ! flock -n "${PROJECT_LOCK_FD}"; then
         print_error "Another Ubuntu_Aktualizacje workflow is already running (${lock_file})"
         print_info "If this is stale, verify no update/bootstrap process is active before removing it."

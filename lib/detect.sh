@@ -180,17 +180,26 @@ scan_snaps_user() {
 }
 
 scan_snaps_all() {
-    snap list 2>/dev/null | tail -n +2 | while read -r name ver rev chan pub notes; do
+    _snap_cmd list 2>/dev/null | tail -n +2 | while read -r name ver rev chan pub notes; do
         echo "${name}|${ver}|${rev}|${chan}|${pub}"
     done
 }
 
+_snap_cmd() {
+    local timeout_sec="${SNAP_CMD_TIMEOUT:-10}"
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "${timeout_sec}s" snap "$@"
+    else
+        snap "$@"
+    fi
+}
+
 snap_installed() {
-    snap list "$1" &>/dev/null
+    _snap_cmd list "$1" &>/dev/null
 }
 
 snap_version() {
-    snap list "$1" 2>/dev/null | awk 'NR==2{print $2}'
+    _snap_cmd list "$1" 2>/dev/null | awk 'NR==2{print $2}'
 }
 
 # ── Homebrew Scanning ─────────────────────────────────────────────────────────

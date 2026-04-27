@@ -358,15 +358,22 @@ if [[ "$MODE" == "check" ]]; then
 
     _check_snaps() {
         print_section "Snap packages"
+        if ! _snap_cmd list >/tmp/ubuntu-aktualizacje-snap-list.$$ 2>/dev/null; then
+            rm -f /tmp/ubuntu-aktualizacje-snap-list.$$
+            print_warn "snap list timed out or failed — skipping Snap package check"
+            return 0
+        fi
         while IFS= read -r line; do
             [[ -z "$line" ]] && continue
             local pkg; pkg=$(echo "$line" | awk '{print $1}')
-            if snap_installed "$pkg"; then
-                print_info "  ${GREEN}✔${RESET} ${pkg} ($(snap_version "$pkg"))"
+            if awk -v pkg="$pkg" 'NR>1 && $1 == pkg {found=1} END{exit found ? 0 : 1}' /tmp/ubuntu-aktualizacje-snap-list.$$; then
+                local ver; ver=$(awk -v pkg="$pkg" 'NR>1 && $1 == pkg {print $2; exit}' /tmp/ubuntu-aktualizacje-snap-list.$$)
+                print_info "  ${GREEN}✔${RESET} ${pkg} (${ver})"
             else
                 print_warn "  ✘ MISSING: ${pkg}"
             fi
         done < <(parse_config_lines "${CONFIG_DIR}/snap-packages.list")
+        rm -f /tmp/ubuntu-aktualizacje-snap-list.$$
     }
 
     _check_brew() {
