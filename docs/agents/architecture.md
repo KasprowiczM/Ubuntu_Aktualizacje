@@ -50,3 +50,16 @@ Repo utrzymuje przewidywalny workflow aktualizacji Ubuntu 24.04 dla hosta `mk-uP
 - następnie uruchom:
   - `./update-all.sh --dry-run`,
   - `bash -n update-all.sh && bash -n scripts/*.sh && bash -n lib/*.sh`.
+
+## Dev Sync
+- `dev-sync/` jest osobnym workflow od `update-all.sh`.
+- GitHub jest źródłem prawdy dla plików śledzonych.
+- Provider cloud, najczęściej Proton Drive przez `rclone`, przechowuje tylko prywatny overlay ignorowany przez Git.
+- Overlay obejmuje m.in. `.env.local`, `.dev_sync_config.json`, lokalne klucze i lokalne ustawienia agentów.
+- Overlay nie obejmuje plików odtwarzalnych: `APPS.md`, `logs/`, `config/*.bak_*`, `.codex.local/tmp/`, dependency/build/cache outputs.
+- Główne komendy:
+  - `bash dev-sync/provider_setup.sh`,
+  - `bash dev-sync-export.sh --dry-run --verbose`,
+  - `bash dev-sync-export.sh`,
+  - `bash dev-sync-verify-git.sh`,
+  - `bash dev-sync-verify-full.sh`.

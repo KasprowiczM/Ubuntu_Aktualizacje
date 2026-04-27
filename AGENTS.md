@@ -12,7 +12,15 @@ Cel projektu: utrzymanie jednego, przewidywalnego workflow aktualizacji Ubuntu 2
 ./update-all.sh
 ./update-all.sh --dry-run
 bash -n update-all.sh && bash -n scripts/*.sh && bash -n lib/*.sh
+PYTHONDONTWRITEBYTECODE=1 python3 tests/test_dev_sync_safety.py -v
 ```
+
+## Dev Sync
+- GitHub jest źródłem prawdy dla plików śledzonych.
+- `dev-sync/` obsługuje tylko prywatny overlay ignorowany przez Git, np. `.env.local`, `.dev_sync_config.json`, lokalne klucze i lokalne ustawienia agentów.
+- Nie synchronizuj do Proton Drive plików odtwarzalnych: `APPS.md`, `logs/`, `config/*.bak_*`, `.codex.local/tmp/`, dependency/build/cache outputs.
+- Domyślne sprawdzenie przed użyciem: `bash dev-sync-export.sh --dry-run --verbose`, potem `bash dev-sync-verify-full.sh`.
+- `dev-sync` nie jest częścią domyślnego `update-all.sh`.
 
 ## Profile Agentów (aktualne)
 - `default` — `gpt-5.3-codex`, reasoning `medium` (codzienna implementacja)

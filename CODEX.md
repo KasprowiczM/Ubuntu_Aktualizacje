@@ -16,6 +16,8 @@ Codex w tym repo działa jako główny orchestrator planujący pracę, delegują
 ## Rules
 - Zasada 95% pewności obowiązuje z @AGENTS.md.
 - Kompresuj historię roboczą zanim kontekst przekroczy ~60%.
+- `dev-sync` jest osobnym workflow: GitHub dla plików śledzonych, Proton/rclone tylko dla prywatnego overlay.
+- Przed realnym exportem prywatnego overlay uruchom `bash dev-sync-export.sh --dry-run --verbose`.
 
 ## Referencje
 - @AGENTS.md - główny indeks reguł roboczych

@@ -11,7 +11,7 @@
 #   bash lib/git-push.sh status
 #
 # Token file: .env.local (gitignored via .env* pattern in .gitignore)
-# Format:     GITHUB_TOKEN=github_pat_xxxx...
+# Format:     GITHUB_TOKEN=<GitHub PAT>
 #
 # SECURITY: Token is only in memory during the push. It is never written
 # to any config file, never logged, and never committed.
@@ -28,7 +28,7 @@ _load_github_token() {
     fi
     if [[ -z "${GITHUB_TOKEN:-}" ]]; then
         echo "Error: GITHUB_TOKEN not set. Add it to .env.local:" >&2
-        echo "  GITHUB_TOKEN=github_pat_xxxx..." >&2
+        echo "  GITHUB_TOKEN=<GitHub PAT>" >&2
         return 1
     fi
 }

@@ -124,6 +124,38 @@ Automated weekly run (systemd):
 
 Timer runs `update-all.sh --no-drivers` on schedule.
 
+## Dev Sync
+
+`dev-sync` is separate from `update-all.sh`. GitHub stores tracked project
+files; Proton Drive/rclone stores only the private ignored overlay such as
+`.env.local`, `.dev_sync_config.json`, local key files, and local agent
+settings.
+
+Configure provider:
+
+```bash
+bash dev-sync/provider_setup.sh
+```
+
+Daily private-overlay export:
+
+```bash
+bash dev-sync-export.sh --dry-run --verbose
+bash dev-sync-export.sh
+bash dev-sync-verify-full.sh
+```
+
+Verify GitHub coverage for tracked files:
+
+```bash
+bash dev-sync-verify-git.sh
+```
+
+Rebuildable/generated files are excluded from Proton sync, including
+`APPS.md`, `logs/`, `config/*.bak_*`, `.codex.local/tmp/`, dependency folders,
+build outputs, and caches. See [DEV_SCRIPTS_README.md](DEV_SCRIPTS_README.md)
+and [config/dev-sync-excludes.txt](config/dev-sync-excludes.txt).
+
 ## Git & GitHub
 
 Manual workflow:

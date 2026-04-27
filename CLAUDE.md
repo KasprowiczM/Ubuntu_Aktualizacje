@@ -15,7 +15,15 @@ Obsługuje APT, Snap, Homebrew, npm, pip/pipx, Flatpak, sterowniki NVIDIA i firm
 ./update-all.sh --only brew            # tylko brew
 bash -n update-all.sh && bash -n scripts/*.sh && bash -n lib/*.sh  # walidacja składni
 bash lib/git-push.sh push main         # push do GitHub
+PYTHONDONTWRITEBYTECODE=1 python3 tests/test_dev_sync_safety.py -v
 ```
+
+## Dev Sync
+- GitHub przechowuje pliki śledzone.
+- Proton/rclone przechowuje tylko prywatny overlay ignorowany przez Git (`.env.local`, `.dev_sync_config.json`, lokalne klucze, lokalne ustawienia agentów).
+- Nie wysyłaj do Proton plików odtwarzalnych: `APPS.md`, `logs/`, backupów configów, cache, dependency/build output.
+- Używaj `bash dev-sync-export.sh --dry-run --verbose` przed realnym exportem.
+- `dev-sync` pozostaje oddzielony od `update-all.sh`.
 
 ## Profile Agentów
 - `default` — `gpt-5.3-codex`, `medium`

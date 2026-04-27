@@ -9,6 +9,9 @@ on:
       - 'lib/**'
       - 'setup.sh'
       - 'update-all.sh'
+      - 'dev-sync/**'
+      - 'dev-sync-*.sh'
+      - 'tests/**'
   pull_request:
     branches: [ main ]
 
@@ -78,8 +81,26 @@ jobs:
             "scripts/update-inventory.sh"
             "scripts/rebuild-dkms.sh"
             "scripts/notify.sh"
+            "dev-sync/dev_sync_core.py"
+            "dev-sync/provider_setup.sh"
+            "dev-sync/dev-sync-export.sh"
+            "dev-sync/dev-sync-import.sh"
+            "dev-sync/dev-sync-verify-full.sh"
+            "dev-sync/dev-sync-verify-git.sh"
+            "dev-sync/dev-sync-prune-excluded.sh"
+            "dev-sync/dev-sync-purge-quarantine.sh"
+            "dev-sync/dev-sync-proton-status.sh"
+            "dev-sync-export.sh"
+            "dev-sync-import.sh"
+            "dev-sync-verify-full.sh"
+            "dev-sync-verify-git.sh"
+            "dev-sync-prune-excluded.sh"
+            "dev-sync-purge-quarantine.sh"
+            "dev-sync-proton-status.sh"
+            "tests/test_dev_sync_safety.py"
             "config/apt-packages.list"
             "config/apt-repos.list"
+            "config/dev-sync-excludes.txt"
             "config/snap-packages.list"
             "config/brew-formulas.list"
             "config/brew-casks.list"
@@ -112,17 +133,41 @@ jobs:
             exit 1
           fi
 
+      - name: Check dev-sync runtime files are gitignored
+        run: |
+          required_ignored=(
+            ".dev_sync_config.json"
+            ".dev_sync_manifest.json"
+            "dev_sync_logs/test.log"
+            "dev_sync_quarantine/test"
+            "dev_sync_cleanup_plan.json"
+            ".sync-state/protondrive/last_verified.json"
+            ".codex.local/tmp/runtime-file"
+          )
+          for path in "${required_ignored[@]}"; do
+            if git check-ignore -q "$path" 2>/dev/null; then
+              echo "✔  $path is gitignored"
+            else
+              echo "❌ $path is NOT gitignored"
+              exit 1
+            fi
+          done
+
       - name: Check no secrets in tracked files
         run: |
           echo "── Checking for leaked secrets ──"
           # Patterns that should never appear in tracked files
-          if git grep -lE '(ghp_|github_pat_|glpat-|xox[baprs]-)[A-Za-z0-9]' -- \
+          if git grep -lE '(ghp_|github_pat_|glpat-|xox[baprs]-|refresh_token|client_secret|token[[:space:]]*=)[A-Za-z0-9]' -- \
               ':!*.env*' ':!*.local' ':!*secret*' 2>/dev/null; then
             echo "❌ Potential GitHub/GitLab tokens found in tracked files!"
             exit 1
           else
             echo "✔  No obvious tokens found"
           fi
+
+      - name: Dev-sync Python tests
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 tests/test_dev_sync_safety.py -v
 
   check-readme:
     name: README completeness
