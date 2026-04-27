@@ -26,3 +26,4 @@ Codex w tym repo działa jako główny orchestrator planujący pracę, delegują
 - @CLAUDE.md - kontekst projektu i zasady domenowe
 - @docs/agents/workflow.md - szczegółowy workflow orchestrator/advisor/workers
 - @docs/agents/architecture.md - architektura i quirks systemu
+- @docs/last-run-review.md - ostatni przeanalizowany run i bieżące ostrzeżenia operacyjne

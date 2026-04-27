@@ -33,3 +33,10 @@ bash scripts/verify-state.sh
 ./update-all.sh --dry-run
 ./setup.sh --check --non-interactive
 ```
+
+## Last Known Host State
+
+The latest reviewed full update is summarized in
+[last-run-review.md](last-run-review.md). Use it as the current operational
+baseline for this machine before changing driver, firmware, Homebrew ownership,
+or Snap policy.

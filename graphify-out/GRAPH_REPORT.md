@@ -1,7 +1,7 @@
 # Graph Report - /home/mk/Dev_Env/Ubuntu_Aktualizacje  (2026-04-27)
 
 ## Corpus Check
-- 11 files · ~28,285 words
+- 11 files · ~28,763 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary

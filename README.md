@@ -25,6 +25,7 @@ Technical details and agent docs:
 - [AGENTS.md](AGENTS.md)
 - [CLAUDE.md](CLAUDE.md)
 - [CODEX.md](CODEX.md)
+- [docs/last-run-review.md](docs/last-run-review.md)
 - [docs/agents/architecture.md](docs/agents/architecture.md)
 - [docs/agents/workflow.md](docs/agents/workflow.md)
 
@@ -228,6 +229,11 @@ CI validation (`.github/workflows/validate.yml`) checks:
   - run `./scripts/rebuild-dkms.sh`
   - use `./update-all.sh --nvidia` only when you intend to upgrade NVIDIA packages
 - Homebrew cleanup permission warnings:
-  - script auto-repairs ownership under `${BREW_PREFIX}/Cellar` and retries cleanup
+  - when repeated, run `sudo chown -R "$USER:$USER" /home/linuxbrew/.linuxbrew/Cellar/pipx`
+  - then run `brew cleanup --prune=7`
+  - see [docs/last-run-review.md](docs/last-run-review.md)
+- `setup.sh --check` stalls on Snap:
+  - Snap checks use `SNAP_CMD_TIMEOUT` and skip with a warning if `snap list` is unresponsive
+  - if needed, inspect snapd with `systemctl status snapd`
 - inventory refresh only:
   - run `./scripts/update-inventory.sh`

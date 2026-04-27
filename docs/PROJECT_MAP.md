@@ -100,6 +100,7 @@ flowchart TD
 | Scheduled updates | `systemd/install-timer.sh` | generated unit files | Runs `update-all.sh --no-drivers`. |
 | Dev/Proton sync | `dev-sync/`, root `dev-sync-*.sh` wrappers | Git tracked files + private overlay provider | Separate from `update-all.sh`; Proton/rclone stores only ignored private overlay. |
 | Fresh-clone recovery | `scripts/preflight.sh`, `scripts/restore-from-proton.sh`, `scripts/bootstrap.sh`, `scripts/verify-state.sh` | GitHub + dev-sync provider + `config/restore-manifest.json` | One documented onboarding/recovery contract. |
+| Operational run review | `docs/last-run-review.md` | latest reviewed local logs | Captures last full update result, warnings, and provider verification summary. |
 
 ## Key Gaps
 

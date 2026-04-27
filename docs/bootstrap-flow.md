@@ -33,3 +33,7 @@ git clone
 `scripts/restore-from-proton.sh` use the shared project lock from
 `lib/common.sh`. This prevents timer/manual/bootstrap runs from colliding on
 APT/dpkg, Snap, Flatpak, Homebrew, inventory, and provider state.
+
+The lock first uses `XDG_RUNTIME_DIR` when writable and falls back to `/tmp`.
+If a shell session is interrupted, verify no process is active before removing a
+stale `/tmp/ubuntu-aktualizacje.lock` file.

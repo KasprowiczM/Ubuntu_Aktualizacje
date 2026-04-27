@@ -53,3 +53,4 @@ Nie wprowadzaj żadnych zmian w kodzie, dopóki nie poznasz kodu i wymagań na t
 - @docs/agents/testing_rules.md — walidacja i testowanie zmian
 - @docs/agents/security.md — bezpieczeństwo, sekrety, autoryzacja
 - @docs/agents/handoff.md — kompresja kontekstu, przekazywanie pracy między sesjami
+- @docs/last-run-review.md — ostatni pełny run, status pakietów i znane ostrzeżenia
