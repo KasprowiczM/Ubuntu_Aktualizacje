@@ -1,0 +1,230 @@
+#!/usr/bin/env bash
+# =============================================================================
+# scripts/apt/apply.sh — Mutating APT upgrade (sudo required)
+#
+# Reuses logic from scripts/update-apt.sh but emits structured JSON sidecar.
+# Honours UPGRADE_NVIDIA, INVENTORY_SILENT (always 1 here — orchestrator runs
+# inventory as its own category).
+#
+# Exit codes:
+#   0  ok
+#   1  warn  (some non-critical step returned non-zero)
+#   10 missing prerequisite
+#   20 apply failed, system in known state
+#   30 apply failed, system in unknown state (post-apply verify failed)
+# =============================================================================
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=lib/common.sh
+source "${SCRIPT_DIR}/lib/common.sh"
+# shellcheck source=lib/detect.sh
+source "${SCRIPT_DIR}/lib/detect.sh"
+# shellcheck source=lib/repos.sh
+source "${SCRIPT_DIR}/lib/repos.sh"
+# shellcheck source=lib/json.sh
+source "${SCRIPT_DIR}/lib/json.sh"
+
+# Inventory is owned by the inventory category; never re-run from here.
+export INVENTORY_SILENT=1
+
+json_init apply apt
+json_register_exit_trap "${JSON_OUT:-}"
+
+print_header "APT — apply"
+
+if ! has_cmd apt-get; then
+    json_add_diag error MISSING-TOOL "apt-get not found"
+    json_count_err
+    exit 10
+fi
+
+require_sudo
+
+CONFIG_REPOS="${SCRIPT_DIR}/config/apt-repos.list"
+CONFIG_APT="${SCRIPT_DIR}/config/apt-packages.list"
+UPGRADE_NVIDIA="${UPGRADE_NVIDIA:-0}"
+
+declare -a NVIDIA_TEMP_HELD=()
+
+_installed_nvidia_packages() {
+    dpkg -l 'nvidia-*' 'libnvidia-*' 2>/dev/null | awk '/^[iuh][iUFHWt]/{print $2}'
+}
+
+_temporarily_hold_nvidia() {
+    local current_holds
+    mapfile -t current_holds < <(apt-mark showhold 2>/dev/null || true)
+    local nvidia_pkgs
+    mapfile -t nvidia_pkgs < <(_installed_nvidia_packages)
+    [[ ${#nvidia_pkgs[@]} -eq 0 ]] && return 0
+    local pkg held already
+    for pkg in "${nvidia_pkgs[@]}"; do
+        already=0
+        for held in "${current_holds[@]}"; do
+            [[ "$pkg" == "$held" ]] && already=1 && break
+        done
+        [[ $already -eq 1 ]] && continue
+        if sudo apt-mark hold "$pkg" >> "${LOG_FILE}" 2>&1; then
+            NVIDIA_TEMP_HELD+=("$pkg")
+        fi
+    done
+    [[ ${#NVIDIA_TEMP_HELD[@]} -gt 0 ]] && \
+        json_add_diag info APT-NVIDIA-HELD "temporarily held ${#NVIDIA_TEMP_HELD[@]} NVIDIA packages"
+}
+
+_restore_nvidia_holds() {
+    [[ ${#NVIDIA_TEMP_HELD[@]} -eq 0 ]] && return 0
+    sudo apt-mark unhold "${NVIDIA_TEMP_HELD[@]}" >> "${LOG_FILE}" 2>&1 || true
+    NVIDIA_TEMP_HELD=()
+}
+
+trap _restore_nvidia_holds EXIT
+
+# ── 1. Detect broken NVIDIA dpkg state up front ──────────────────────────────
+broken_nvidia=$(dpkg -l 'nvidia-*' 'libnvidia-*' 2>/dev/null | awk '/^iF/{print $2}' | tr '\n' ' ')
+if [[ -n "${broken_nvidia// }" ]]; then
+    json_add_diag warn DPKG-NVIDIA-BROKEN "broken NVIDIA dpkg state: ${broken_nvidia}"
+    json_add_advisory "Run scripts/rebuild-dkms.sh or sudo dpkg --configure -a"
+    print_warn "broken NVIDIA dpkg state — may cause repeated DKMS rebuild attempts"
+    json_count_warn
+fi
+
+# ── 2. Hold NVIDIA unless explicitly upgrading ───────────────────────────────
+if [[ "${UPGRADE_NVIDIA}" -eq 0 ]]; then
+    _temporarily_hold_nvidia
+fi
+
+# ── 3. Ensure third-party repos exist (fail-closed) ──────────────────────────
+print_section "Ensuring configured APT repositories"
+if [[ -f "$CONFIG_REPOS" ]]; then
+    repo_failed=0
+    while IFS= read -r repo_id; do
+        [[ -z "$repo_id" ]] && continue
+        if setup_repo "$repo_id"; then
+            json_count_ok
+        else
+            json_add_diag error APT-REPO-FAIL "repository setup failed: ${repo_id}"
+            json_count_err
+            repo_failed=1
+        fi
+    done < <(parse_config_names "$CONFIG_REPOS")
+    if [[ $repo_failed -ne 0 ]]; then
+        print_error "one or more repos failed — aborting fail-closed"
+        exit 20
+    fi
+fi
+
+# ── 4. apt-get update ─────────────────────────────────────────────────────────
+print_section "Refreshing package lists"
+print_step "apt-get update"
+update_out=$(sudo apt-get -o DPkg::Lock::Timeout=600 update -q 2>&1) && update_rc=0 || update_rc=$?
+echo "${update_out}" >> "${LOG_FILE}"
+if [[ $update_rc -eq 0 ]]; then
+    print_ok
+    json_add_item id="apt:update" action="refresh" result="ok"
+    json_count_ok
+    if echo "${update_out}" | grep -q "configured multiple times"; then
+        dup=$(echo "${update_out}" | grep -oP '/etc/apt/sources\.list\.d/\S+' | sort -u | paste -sd' ')
+        json_add_diag warn APT-DUP-SOURCES "duplicate APT source files: ${dup}"
+        json_count_warn
+    fi
+else
+    print_error "apt-get update failed"
+    json_add_item id="apt:update" action="refresh" result="failed"
+    json_add_diag error APT-UPDATE-FAIL "apt-get update returned ${update_rc}"
+    json_count_err
+    exit 20
+fi
+
+# ── 5. apt-get upgrade + dist-upgrade ─────────────────────────────────────────
+APT_OPTS=(
+    -y -q
+    -o DPkg::Lock::Timeout=600
+    -o Dpkg::Options::="--force-confdef"
+    -o Dpkg::Options::="--force-confold"
+    -o APT::Get::Show-Versions=true
+)
+
+print_section "Upgrading packages"
+upgrade_rc=0
+print_step "apt-get upgrade"
+if sudo apt-get upgrade "${APT_OPTS[@]}" >> "${LOG_FILE}" 2>&1; then
+    print_ok
+    json_add_item id="apt:upgrade" action="upgrade" result="ok"
+    json_count_ok
+else
+    upgrade_rc=$?
+    print_warn "apt-get upgrade non-zero (${upgrade_rc})"
+    if grep -qiE "nvidia-dkms|dkms.*nvidia" "${LOG_FILE}" 2>/dev/null; then
+        json_add_diag warn APT-DKMS-NVIDIA "upgrade hit NVIDIA DKMS build error"
+    fi
+    json_add_item id="apt:upgrade" action="upgrade" result="warn"
+    json_count_warn
+fi
+
+print_step "apt-get dist-upgrade"
+dist_rc=0
+if sudo apt-get dist-upgrade "${APT_OPTS[@]}" >> "${LOG_FILE}" 2>&1; then
+    print_ok
+    json_add_item id="apt:dist-upgrade" action="dist-upgrade" result="ok"
+    json_count_ok
+else
+    dist_rc=$?
+    print_warn "apt-get dist-upgrade non-zero (${dist_rc})"
+    if grep -qiE "nvidia-dkms|dkms.*nvidia" "${LOG_FILE}" 2>/dev/null; then
+        json_add_diag warn APT-DKMS-NVIDIA "dist-upgrade hit NVIDIA DKMS build error"
+    fi
+    json_add_item id="apt:dist-upgrade" action="dist-upgrade" result="warn"
+    json_count_warn
+fi
+
+if [[ $upgrade_rc -ne 0 && $dist_rc -ne 0 ]]; then
+    json_add_diag error APT-UPGRADE-BOTH-FAILED "both upgrade and dist-upgrade returned non-zero"
+    json_count_err
+fi
+
+# ── 6. Targeted desktop-app feed retry (code, antigravity) ──────────────────
+print_section "Targeted desktop-app verification"
+for pkg in code antigravity; do
+    apt_installed "$pkg" || continue
+    inst=$(apt_pkg_version "$pkg")
+    cand=$(apt_pkg_candidate "$pkg")
+    if [[ -z "$cand" || "$cand" == "(none)" || "$cand" == "$inst" ]]; then
+        continue
+    fi
+    print_step "apt-get install --only-upgrade ${pkg} (${inst} -> ${cand})"
+    if sudo apt-get install -y -q --only-upgrade "$pkg" >> "${LOG_FILE}" 2>&1; then
+        new=$(apt_pkg_version "$pkg")
+        json_add_item id="apt:upgrade:${pkg}" action="upgrade" \
+            from="${inst}" to="${new}" result="ok"
+        print_ok
+        json_count_ok
+    else
+        json_add_item id="apt:upgrade:${pkg}" action="upgrade" \
+            from="${inst}" to="${cand}" result="failed"
+        json_add_diag warn APT-PKG-RETRY-FAIL "targeted upgrade for ${pkg} failed"
+        json_count_warn
+    fi
+done
+
+# ── 7. Reboot indicator ───────────────────────────────────────────────────────
+if [[ -f /var/run/reboot-required ]]; then
+    json_set_needs_reboot 1
+    pkgs=""
+    [[ -f /var/run/reboot-required.pkgs ]] && pkgs=$(paste -sd', ' /var/run/reboot-required.pkgs)
+    json_add_diag warn REBOOT-PENDING "reboot required (${pkgs:-no pkg list})"
+fi
+
+# Final exit decision: if both upgrade & dist-upgrade failed → 20, else if any
+# err counted → 1.
+if [[ $upgrade_rc -ne 0 && $dist_rc -ne 0 ]]; then
+    exit 20
+fi
+
+# Read summary back via JSON helper isn't trivial in bash; rely on the count_*.
+# If at least one warn/err recorded, return 1; orchestrator still records ok if
+# critical phases passed.
+if grep -q '"level": "error"' "${JSON_BUFDIR}/diags.jsonl" 2>/dev/null; then
+    exit 1
+fi
+exit 0

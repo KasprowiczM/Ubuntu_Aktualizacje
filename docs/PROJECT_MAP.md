@@ -2,6 +2,59 @@
 
 Generated for architecture review of `Ubuntu_Aktualizacje`.
 
+## Hybrid CLI + Dashboard architecture (2026-04-30)
+
+```mermaid
+flowchart LR
+    subgraph CLI[CLI surface — preserved]
+        L1[scripts/update-*.sh<br/>legacy, standalone]
+        L2[update-all.sh<br/>thin orchestrator]
+    end
+    subgraph Phases[5-phase pipeline per category]
+        P1[scripts/<cat>/check.sh]
+        P2[scripts/<cat>/plan.sh]
+        P3[scripts/<cat>/apply.sh]
+        P4[scripts/<cat>/verify.sh]
+        P5[scripts/<cat>/cleanup.sh]
+    end
+    subgraph Lib[Shared libs]
+        Common[lib/common.sh]
+        Detect[lib/detect.sh]
+        Json[lib/json.sh + lib/_json_emit.py]
+        Orch[lib/orchestrator.sh]
+        Plug[lib/plugins.sh]
+        Sec[lib/secrets.sh]
+        HP[lib/host_profile.sh]
+    end
+    subgraph Dashboard[Dashboard — FastAPI + vanilla SPA]
+        Backend[app/backend/main.py<br/>uvicorn :8765]
+        Inv[app/backend/inventory.py<br/>live package scanners]
+        Sudo[app/backend/sudo.py<br/>SUDO_ASKPASS lifecycle]
+        DBmod[app/backend/db.py + migrations]
+        Hosts[app/backend/hosts.py<br/>multi-host SSH preflight]
+        Settings[app/backend/settings.py]
+        Front[app/frontend/* — index.html, app.js, i18n.js, style.css]
+    end
+    subgraph Tauri[Native shell — opcjonalne]
+        Bin[ubuntu-aktualizacje<br/>.deb / .AppImage]
+        Webview[WebView → 127.0.0.1:8765]
+    end
+
+    L1 --> Lib
+    L2 --> Orch
+    Orch --> Phases
+    Phases --> Json
+    Json --> Sidecar[logs/runs/<id>/<cat>/<phase>.json]
+    Backend --> Orch
+    Backend --> Inv
+    Backend --> Sudo
+    Backend --> DBmod
+    Backend --> Hosts
+    Backend --> Settings
+    Front --> Backend
+    Tauri --> Backend
+```
+
 ## High-Level Flow
 
 ```mermaid
@@ -91,16 +144,28 @@ flowchart TD
 
 | Area | Current owner | Source of truth | Notes |
 |---|---|---|---|
-| Master orchestration | `update-all.sh` | hardcoded group order | Runs inventory once via `INVENTORY_SILENT=1`. |
-| Shared runtime helpers | `lib/common.sh` | helper functions | Logging, sudo keepalive, user-context wrappers. |
+| Master orchestration | `update-all.sh` | `config/categories.toml` + `config/profiles.toml` | Thin wrapper around `lib/orchestrator.sh`; legacy `--only`/`--dry-run`/etc preserved. |
+| Phase contract | `scripts/<cat>/{check,plan,apply,verify,cleanup}.sh` | `schemas/phase-result.schema.json` | All 8 categories × 5 phases native; legacy `scripts/update-<cat>.sh` retained for standalone CLI. |
+| JSON sidecar | `lib/_json_emit.py` + `lib/json.sh` | schema v1 | Emitted by every phase to `logs/runs/<id>/<cat>/<phase>.json`. |
+| Shared runtime helpers | `lib/common.sh` | helper functions | Logging, sudo keepalive (TTY/ASKPASS-aware), user-context wrappers. |
 | Detection and parsing | `lib/detect.sh` | shell functions | Also parses `config/*.list`. |
-| APT repositories | `lib/repos.sh` | `config/apt-repos.list` | Repo setup is idempotent but currently failure-tolerant. |
-| Package desired state | `config/*.list` | first token per line | Comments encode grouping; metadata is not machine-readable. |
-| Inventory | `scripts/update-inventory.sh` | detected local state | Generates gitignored `APPS.md`. |
-| Scheduled updates | `systemd/install-timer.sh` | generated unit files | Runs `update-all.sh --no-drivers`. |
-| Dev/Proton sync | `dev-sync/`, root `dev-sync-*.sh` wrappers | Git tracked files + private overlay provider | Separate from `update-all.sh`; Proton/rclone stores only ignored private overlay. |
-| Fresh-clone recovery | `scripts/preflight.sh`, `scripts/restore-from-proton.sh`, `scripts/bootstrap.sh`, `scripts/verify-state.sh` | GitHub + dev-sync provider + `config/restore-manifest.json` | One documented onboarding/recovery contract. |
-| Operational run review | `docs/last-run-review.md` | latest reviewed local logs | Captures last full update result, warnings, and provider verification summary. |
+| APT repositories | `lib/repos.sh` | `config/apt-repos.list` | Repo setup is idempotent. |
+| Package desired state | `config/*.list` + `config/host-profiles/<host>/*.list` | first token per line | Per-host overlay supports `+name`/`-name` semantics. |
+| Live inventory | `app/backend/inventory.py` | live system scan (apt/snap/brew/npm/pip/flatpak) | Returns `{name, installed, candidate, status, in_config, source}`; 60s in-memory cache. |
+| Inventory snapshot | `scripts/inventory/apply.sh` → `APPS.md` | detected local state | Markdown report; gitignored. |
+| Scheduled updates | `scripts/scheduler/install.sh` (or legacy `systemd/install-timer.sh`) | generated unit files | Configurable from Settings UI. |
+| Snapshots | `scripts/snapshot/{create,list}.sh` | `timeshift` → `etckeeper` fallback | Opt-in via `update-all.sh --snapshot` or Settings toggle. |
+| Plugins | `plugins/<id>/{manifest.toml, *.sh}` + `lib/plugins.sh` | manifest + 5-phase scripts | Sidecar uses `category=plugin:<id>`. |
+| Dashboard backend | `app/backend/main.py` (FastAPI on 127.0.0.1:8765) | REST + SSE | 13 endpoints incl. `/inventory*`, `/sudo/*`, `/hosts*`, `/scheduler/*`, `/sync/*`. |
+| Dashboard frontend | `app/frontend/{index.html, app.js, i18n.js, style.css}` | vanilla SPA | 8 views, EN/PL i18n, light/dark/auto theme, SVG donut+bar charts. |
+| Sudo flow | `app/backend/sudo.py` + `update-all.sh` SUDO_ASKPASS branch | password held in memory | Ephemeral askpass helper in `$XDG_RUNTIME_DIR/ubuntu-aktualizacje/`. |
+| Multi-host preflight | `app/backend/hosts.py` + `config/hosts.toml` | SSH BatchMode read-only | Read-only by design — no remote mutation. |
+| DB migrations | `app/backend/migrations.py` | numbered + idempotent | Schema columns: snapshot_id, label. |
+| Secrets | `lib/secrets.sh` + `scripts/secrets/migrate-to-libsecret.sh` | libsecret with `.env.local` fallback | `secret-tool` based; idempotent migrator. |
+| Native shell | `app/tauri/src-tauri/` | Cargo + tauri.conf.json | Spawns uvicorn sidecar; produces `.deb` + `.AppImage`. |
+| Dev/Proton sync | `dev-sync/`, root `dev-sync-*.sh` wrappers | Git + provider overlay | Separate from `update-all.sh`. |
+| Fresh-clone recovery | `scripts/preflight.sh`, `scripts/restore-from-proton.sh`, `scripts/bootstrap.sh`, `scripts/verify-state.sh` | GitHub + provider + `config/restore-manifest.json` | One documented onboarding/recovery contract. |
+| Operational run review | `docs/last-run-review.md` | latest reviewed local logs | Captures last full update result. |
 
 ## Key Gaps
 

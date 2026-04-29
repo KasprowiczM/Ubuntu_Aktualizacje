@@ -1,33 +1,36 @@
 #!/usr/bin/env bash
 # =============================================================================
-# update-all.sh — Master update script
+# update-all.sh — Master update script (thin orchestrator)
 #
-# Runs all update groups in order:
-#   1.  APT      — Ubuntu OS + all apt-managed apps
-#   2.  Snap     — Snap packages
-#   3.  Homebrew — Formulas + casks
-#   4.  npm      — Global packages (via brew node)
-#   5.  pip      — pip user packages + pipx tools
-#   6.  Flatpak  — Flatpak applications (if installed)
-#   7.  Drivers  — NVIDIA driver + firmware (fwupd)
-#   8.  Inventory — Regenerate APPS.md
+# Drives the 5-phase per-category pipeline via lib/orchestrator.sh and emits
+# JSON sidecars under logs/runs/<run-id>/<category>/<phase>.json (schema v1).
 #
-# Usage:
-#   ./update-all.sh                   # Full update
-#   ./update-all.sh --no-drivers      # Skip driver/firmware updates
-#   ./update-all.sh --dry-run         # Show what would run, don't execute
-#   ./update-all.sh --only apt        # Run only one group
-#   ./update-all.sh --no-notify       # Suppress desktop notification
+# Backward-compat flags (preserved):
+#   --no-drivers      Skip driver/firmware category
+#   --nvidia          Allow NVIDIA APT upgrade (sets UPGRADE_NVIDIA=1)
+#   --dry-run         Run only check+plan, no mutating phases
+#   --no-notify       Suppress desktop notification
+#   --only <group>    Run only one category (apt|snap|brew|npm|pip|flatpak|drivers|inventory)
 #
-# Groups for --only: apt | snap | brew | npm | pip | flatpak | drivers | inventory
+# New flags:
+#   --profile <name>  Profile from config/profiles.toml (quick|safe|full). Default: full
+#   --phase  <name>   Run only one phase (check|plan|apply|verify|cleanup)
+#   --run-id <id>     Override generated run id
+#   --snapshot        Take a pre-apply snapshot (timeshift/etckeeper) before apt:apply
+#
+# Groups for --only (categories): apt | snap | brew | npm | pip | flatpak | drivers | inventory
 # =============================================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/common.sh
 source "${SCRIPT_DIR}/lib/common.sh"
+# shellcheck source=lib/detect.sh
 source "${SCRIPT_DIR}/lib/detect.sh"
+# shellcheck source=lib/orchestrator.sh
+source "${SCRIPT_DIR}/lib/orchestrator.sh"
 
-# Suppress per-script inventory calls — master runs it once at the end
+# Suppress per-script inventory calls — orchestrator runs inventory once.
 export INVENTORY_SILENT=1
 
 # ── Parse arguments ───────────────────────────────────────────────────────────
@@ -35,7 +38,11 @@ NO_DRIVERS=0
 DRY_RUN=0
 NO_NOTIFY=0
 ONLY=""
-UPGRADE_NVIDIA=0   # default: hold NVIDIA during apt, skip NVIDIA apt in drivers
+UPGRADE_NVIDIA=0
+PROFILE="full"
+PHASE=""
+RUN_ID=""
+TAKE_SNAPSHOT=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -51,12 +58,48 @@ while [[ $# -gt 0 ]]; do
                 apt|snap|brew|npm|pip|flatpak|drivers|inventory) ;;
                 *) echo "Invalid --only group: ${ONLY}"; exit 2 ;;
             esac ;;
+        --profile)
+            shift
+            [[ $# -gt 0 ]] || { echo "--profile requires a name"; exit 2; }
+            PROFILE="$1"
+            case "$PROFILE" in
+                quick|safe|full) ;;
+                *) echo "Invalid --profile: ${PROFILE} (use quick|safe|full)"; exit 2 ;;
+            esac ;;
+        --phase)
+            shift
+            [[ $# -gt 0 ]] || { echo "--phase requires a name"; exit 2; }
+            PHASE="$1"
+            case "$PHASE" in
+                check|plan|apply|verify|cleanup) ;;
+                *) echo "Invalid --phase: ${PHASE}"; exit 2 ;;
+            esac ;;
+        --run-id)
+            shift
+            [[ $# -gt 0 ]] || { echo "--run-id requires a value"; exit 2; }
+            RUN_ID="$1" ;;
+        --snapshot)
+            TAKE_SNAPSHOT=1 ;;
         -h|--help)
-            echo "Usage: $0 [--no-drivers] [--nvidia] [--dry-run] [--no-notify] [--only <group>]"
-            echo "Groups: apt | snap | brew | npm | pip | flatpak | drivers | inventory"
-            echo ""
-            echo "  --nvidia    Upgrade NVIDIA driver/DKMS via apt (default: held to avoid"
-            echo "              DKMS build failures on unsupported/mainline kernels)"
+            cat <<'EOF'
+Usage: update-all.sh [options]
+
+Backward-compat:
+  --no-drivers      Skip driver/firmware category
+  --nvidia          Allow NVIDIA APT upgrade (default: held)
+  --dry-run         Run only check+plan (no mutations)
+  --no-notify       Suppress desktop notification
+  --only <group>    Run only one category
+
+New:
+  --profile <name>  quick | safe | full   (default: full)
+  --phase  <name>   check | plan | apply | verify | cleanup
+                    (omit to run the profile's phase set)
+  --run-id <id>     Override the generated run id
+  --snapshot        Pre-apply snapshot (timeshift/etckeeper)
+
+Groups: apt | snap | brew | npm | pip | flatpak | drivers | inventory
+EOF
             exit 0 ;;
         *) echo "Unknown option: $1"; exit 1 ;;
     esac
@@ -65,140 +108,158 @@ done
 
 export UPGRADE_NVIDIA
 
-# ── Detect optional package managers (skip groups if not installed) ───────────
+# ── Detect optional package managers ──────────────────────────────────────────
 detect_package_managers
-
-NO_BREW=$([[ $HAS_BREW -eq 0 ]]    && echo 1 || echo 0)
-NO_SNAP=$([[ $HAS_SNAP -eq 0 ]]    && echo 1 || echo 0)
+NO_BREW=$([[ $HAS_BREW    -eq 0 ]] && echo 1 || echo 0)
+NO_SNAP=$([[ $HAS_SNAP    -eq 0 ]] && echo 1 || echo 0)
 NO_FLATPAK=$([[ $HAS_FLATPAK -eq 0 ]] && echo 1 || echo 0)
 
-# ── Shared log for master run ─────────────────────────────────────────────────
-MASTER_LOG="${LOG_DIR}/master_${TIMESTAMP}.log"
-LOG_FILE="${MASTER_LOG}"
-export LOG_FILE
+# ── Compose category list per profile + flags ─────────────────────────────────
+case "$PROFILE" in
+    quick) DEFAULT_PHASES=(check) ;;
+    safe)  DEFAULT_PHASES=(check plan apply verify cleanup) ;;
+    full)  DEFAULT_PHASES=(check plan apply verify cleanup) ;;
+esac
 
-START_TIME=$(date +%s)
+# Honor --phase override
+if [[ -n "$PHASE" ]]; then
+    PHASES=("$PHASE")
+else
+    PHASES=("${DEFAULT_PHASES[@]}")
+fi
+
+ALL_CATEGORIES=(apt snap brew npm pip flatpak drivers inventory)
+
+active_categories() {
+    local cat
+    for cat in "${ALL_CATEGORIES[@]}"; do
+        # --only filter
+        if [[ -n "$ONLY" && "$cat" != "$ONLY" ]]; then continue; fi
+        # availability gates
+        case "$cat" in
+            snap)    [[ "$NO_SNAP"    -eq 1 ]] && continue ;;
+            brew)    [[ "$NO_BREW"    -eq 1 ]] && continue ;;
+            flatpak) [[ "$NO_FLATPAK" -eq 1 ]] && continue ;;
+            drivers) [[ "$NO_DRIVERS" -eq 1 ]] && continue ;;
+        esac
+        # quick profile = read-only sweep — exclude drivers + inventory
+        if [[ "$PROFILE" == "quick" ]]; then
+            [[ "$cat" == "drivers"   ]] && continue
+            [[ "$cat" == "inventory" ]] && continue
+        fi
+        echo "$cat"
+    done
+}
+
+# Skip categories that don't support a given phase per config/categories.toml.
+# We don't parse TOML in bash; orchestrator handles missing phase scripts by
+# emitting a 'skipped' sidecar. See lib/orchestrator.sh::orch_run_phase.
+phase_supported_for_category() {
+    local phase="$1" cat="$2"
+    # Inventory only supports 'apply' (single regen pass)
+    if [[ "$cat" == "inventory" && "$phase" != "apply" ]]; then return 1; fi
+    # Drivers does not have a cleanup phase (high-risk; manual ops only)
+    if [[ "$cat" == "drivers" && "$phase" == "cleanup" ]]; then return 1; fi
+    return 0
+}
+
+# ── Init orchestrator + lock ──────────────────────────────────────────────────
+[[ -n "$RUN_ID" ]] && orch_init "$RUN_ID" || orch_init ""
+orch_set_dry_run "$DRY_RUN"
+orch_set_profile "$PROFILE"
 
 print_header "Ubuntu System Update — $(date '+%Y-%m-%d %H:%M:%S')"
-print_info "Host   : $(hostname)"
-print_info "OS     : $(lsb_release -ds 2>/dev/null)"
-print_info "Kernel : $(uname -r)"
-print_info "Log    : ${MASTER_LOG}"
-[[ $DRY_RUN -eq 1 ]] && print_warn "DRY RUN MODE — scripts will not actually run"
+print_info "Host    : $(hostname)"
+print_info "OS      : $(lsb_release -ds 2>/dev/null)"
+print_info "Kernel  : $(uname -r)"
+print_info "Run id  : ${ORCH_RUN_ID}"
+print_info "Profile : ${PROFILE}"
+print_info "Phases  : ${PHASES[*]}"
+[[ -n "$ONLY" ]]    && print_info "Only    : ${ONLY}"
+[[ "$DRY_RUN" -eq 1 ]] && print_warn "DRY RUN — apply/verify/cleanup phases skipped"
 echo
 
 acquire_project_lock "update-all"
 
-# ── Script runner ─────────────────────────────────────────────────────────────
-STEP=0
-STEPS_OK=0
-STEPS_FAIL=0
-declare -A STEP_STATUS
-
-run_script() {
-    local name="$1"
-    local script="${SCRIPT_DIR}/scripts/$2"
-    local skip_cond="${3:-0}"
-
-    STEP=$((STEP + 1))
-
-    if [[ -n "$ONLY" && "$name" != "$ONLY" ]]; then
-        echo -e "${DIM}  [${STEP}] ${name} — skipped (--only ${ONLY})${RESET}"
-        return
-    fi
-
-    if [[ "$skip_cond" == "1" ]]; then
-        echo -e "${DIM}  [${STEP}] ${name} — skipped (not installed/disabled)${RESET}"
-        STEP_STATUS[$name]="SKIPPED"
-        return
-    fi
-
-    echo -e "\n${BOLD}${BLUE}╔══ [${STEP}] ${name} ══${RESET}"
-
-    if [[ $DRY_RUN -eq 1 ]]; then
-        echo -e "${DIM}     Would run: ${script}${RESET}"
-        STEP_STATUS[$name]="DRY-RUN"
-        return
-    fi
-
-    if [[ ! -f "$script" ]]; then
-        print_error "Script not found: ${script}"
-        STEP_STATUS[$name]="MISSING"
-        STEPS_FAIL=$((STEPS_FAIL + 1))
-        return
-    fi
-
-    local step_start; step_start=$(date +%s)
-
-    if bash "$script"; then
-        local step_end; step_end=$(date +%s)
-        local elapsed=$(( step_end - step_start ))
-        echo -e "${BOLD}${BLUE}╚══ ${name} done in ${elapsed}s ══${RESET}"
-        STEP_STATUS[$name]="OK"
-        STEPS_OK=$((STEPS_OK + 1))
+# ── Sudo upfront (only if any mutating phase will run) ───────────────────────
+needs_sudo=0
+for p in "${PHASES[@]}"; do
+    case "$p" in
+        apply|cleanup) needs_sudo=1 ;;
+    esac
+done
+if [[ "$DRY_RUN" -eq 0 && "$needs_sudo" -eq 1 ]]; then
+    echo -e "${YELLOW}  Authenticating sudo (needed for apt/snap/drivers)...${RESET}"
+    if sudo -n -v 2>/dev/null; then
+        echo -e "${DIM}  sudo cache already warm${RESET}"
+    elif [[ -n "${SUDO_ASKPASS:-}" ]]; then
+        sudo -A -v || { echo -e "${RED}  sudo askpass failed — aborting${RESET}"; exit 1; }
+    elif [[ -t 0 && -t 1 ]]; then
+        sudo -v || { echo -e "${RED}  sudo failed — aborting${RESET}"; exit 1; }
     else
-        local step_end; step_end=$(date +%s)
-        local elapsed=$(( step_end - step_start ))
-        echo -e "${BOLD}${RED}╚══ ${name} FAILED after ${elapsed}s ══${RESET}"
-        STEP_STATUS[$name]="FAILED"
-        STEPS_FAIL=$((STEPS_FAIL + 1))
+        cat >&2 <<'EOF'
+  sudo cache empty and no terminal/askpass available.
+  This usually means update-all.sh was started without warming sudo first.
+  Options:
+    • CLI:        sudo -v   (then re-run this script)
+    • Dashboard:  click "Authenticate sudo" / POST /sudo/auth
+    • Headless:   export SUDO_ASKPASS=/path/to/askpass.sh
+EOF
+        exit 1
     fi
-}
-
-# ── Authenticate sudo upfront ─────────────────────────────────────────────────
-if [[ $DRY_RUN -eq 0 ]]; then
-    echo -e "${YELLOW}  Authenticating sudo (needed for APT/drivers)...${RESET}"
-    sudo -v || { echo -e "${RED}  sudo failed — aborting${RESET}"; exit 1; }
     export UPDATE_ALL_SUDO_READY=1
-    (while true; do sudo -n -v; sleep 50; done) &
+    (while true; do sudo -n -v 2>/dev/null || break; sleep 50; done) &
     SUDO_KEEP_PID=$!
     trap 'kill "${SUDO_KEEP_PID}" 2>/dev/null; true' INT TERM EXIT
 fi
 
-# ── Run all groups in order ───────────────────────────────────────────────────
-run_script "apt"       "update-apt.sh"
-run_script "snap"      "update-snap.sh"      "${NO_SNAP}"
-run_script "brew"      "update-brew.sh"      "${NO_BREW}"
-run_script "npm"       "update-npm.sh"
-run_script "pip"       "update-pip.sh"
-run_script "flatpak"   "update-flatpak.sh"   "${NO_FLATPAK}"
-run_script "drivers"   "update-drivers.sh"   "${NO_DRIVERS}"
-run_script "inventory" "update-inventory.sh"
+# ── Pre-apply snapshot (opt-in) ──────────────────────────────────────────────
+SNAPSHOT_ID=""
+if [[ "$TAKE_SNAPSHOT" -eq 1 && "$DRY_RUN" -eq 0 ]]; then
+    if printf '%s\n' "${PHASES[@]}" | grep -qx apply; then
+        echo
+        echo -e "${BOLD}${BLUE}══ pre-apply snapshot ══${RESET}"
+        SNAPSHOT_ID=$(bash "${SCRIPT_DIR}/scripts/snapshot/create.sh" \
+            "Ubuntu_Aktualizacje run ${ORCH_RUN_ID}" 2>&1 | tail -1)
+        if [[ -n "$SNAPSHOT_ID" ]]; then
+            print_info "snapshot id: ${SNAPSHOT_ID}"
+            echo "$SNAPSHOT_ID" > "${ORCH_RUN_DIR}/snapshot.id"
+        else
+            print_warn "snapshot creation reported no id — continuing"
+        fi
+    fi
+fi
 
-# ── Final summary ─────────────────────────────────────────────────────────────
+# ── Run pipeline: outer = phase, inner = category (DAG-friendly) ─────────────
+START_TIME=$(date +%s)
+
+for phase in "${PHASES[@]}"; do
+    echo
+    echo -e "${BOLD}${BLUE}══ phase: ${phase} ══${RESET}"
+    while IFS= read -r cat; do
+        [[ -z "$cat" ]] && continue
+        phase_supported_for_category "$phase" "$cat" || continue
+        orch_run_phase "$cat" "$phase" || true
+    done < <(active_categories)
+done
+
 END_TIME=$(date +%s)
 TOTAL_TIME=$(( END_TIME - START_TIME ))
-TOTAL_MINS=$(( TOTAL_TIME / 60 ))
-TOTAL_SECS=$(( TOTAL_TIME % 60 ))
-ELAPSED_STR="${TOTAL_MINS}m ${TOTAL_SECS}s"
+ELAPSED_STR="$((TOTAL_TIME/60))m $((TOTAL_TIME%60))s"
 
 echo
 echo -e "${BOLD}${BLUE}══════════════════════════════════════════════════════════${RESET}"
 echo -e "${BOLD}${BLUE}  COMPLETE — ${ELAPSED_STR}${RESET}"
 echo -e "${BOLD}${BLUE}══════════════════════════════════════════════════════════${RESET}"
-echo
 
-# Print step results in order
-for name in apt snap brew npm pip flatpak drivers inventory; do
-    status="${STEP_STATUS[$name]:-}"
-    [[ -z "$status" ]] && continue
-    case "$status" in
-        OK)      echo -e "  ${GREEN}✔${RESET}  ${name}" ;;
-        FAILED)  echo -e "  ${RED}✘${RESET}  ${name}" ;;
-        SKIPPED) echo -e "  ${DIM}⊘${RESET}  ${name} (skipped)" ;;
-        DRY-RUN) echo -e "  ${DIM}○${RESET}  ${name} (dry-run)" ;;
-        MISSING) echo -e "  ${RED}?${RESET}  ${name} (script missing)" ;;
-    esac
-done
-
-echo
-echo -e "  ${DIM}Log: ${MASTER_LOG}${RESET}"
-echo
+orch_summary_rc=0
+orch_summary || orch_summary_rc=$?
 
 # ── Reboot notice ─────────────────────────────────────────────────────────────
 REBOOT_FLAG=0
 if [[ -f /var/run/reboot-required ]]; then
     REBOOT_FLAG=1
+    echo
     echo -e "${YELLOW}  ⚠  REBOOT REQUIRED — run: sudo reboot${RESET}"
     echo
 fi
@@ -208,9 +269,9 @@ if [[ $NO_NOTIFY -eq 0 && $DRY_RUN -eq 0 && -f "${SCRIPT_DIR}/scripts/notify.sh"
     bash "${SCRIPT_DIR}/scripts/notify.sh" \
         --title "Ubuntu Updates Complete" \
         --time "${ELAPSED_STR}" \
-        --errors "${STEPS_FAIL}" \
+        --errors "${ORCH_FAILED}" \
         $([[ $REBOOT_FLAG -eq 1 ]] && echo "--reboot") \
         2>/dev/null || true
 fi
 
-[[ $STEPS_FAIL -gt 0 ]] && exit 1 || exit 0
+exit "$orch_summary_rc"

@@ -109,6 +109,11 @@ jobs:
             "dev-sync-purge-quarantine.sh"
             "dev-sync-proton-status.sh"
             "tests/test_dev_sync_safety.py"
+            "tests/validate_phase_json.py"
+            "tests/python/test_frontend.py"
+            "tests/bash/test_json_emit.bats"
+            "tests/bash/test_orchestrator.bats"
+            "tests/bash/test_phase_contract.bats"
             "config/apt-packages.list"
             "config/apt-repos.list"
             "config/dev-sync-excludes.txt"
@@ -120,6 +125,78 @@ jobs:
             "config/pip-packages.list"
             "config/pipx-packages.list"
             "config/flatpak-packages.list"
+            "config/categories.toml"
+            "config/profiles.toml"
+            "schemas/phase-result.schema.json"
+            "lib/json.sh"
+            "lib/_json_emit.py"
+            "lib/orchestrator.sh"
+            "scripts/apt/check.sh"
+            "scripts/apt/plan.sh"
+            "scripts/apt/apply.sh"
+            "scripts/apt/verify.sh"
+            "scripts/apt/cleanup.sh"
+            "scripts/snap/check.sh"
+            "scripts/snap/plan.sh"
+            "scripts/snap/apply.sh"
+            "scripts/snap/verify.sh"
+            "scripts/snap/cleanup.sh"
+            "scripts/brew/check.sh"
+            "scripts/brew/plan.sh"
+            "scripts/brew/apply.sh"
+            "scripts/brew/verify.sh"
+            "scripts/brew/cleanup.sh"
+            "scripts/npm/check.sh"
+            "scripts/npm/plan.sh"
+            "scripts/npm/apply.sh"
+            "scripts/npm/verify.sh"
+            "scripts/npm/cleanup.sh"
+            "scripts/pip/check.sh"
+            "scripts/pip/plan.sh"
+            "scripts/pip/apply.sh"
+            "scripts/pip/verify.sh"
+            "scripts/pip/cleanup.sh"
+            "scripts/flatpak/check.sh"
+            "scripts/flatpak/plan.sh"
+            "scripts/flatpak/apply.sh"
+            "scripts/flatpak/verify.sh"
+            "scripts/flatpak/cleanup.sh"
+            "scripts/drivers/check.sh"
+            "scripts/drivers/plan.sh"
+            "scripts/drivers/apply.sh"
+            "scripts/drivers/verify.sh"
+            "scripts/inventory/apply.sh"
+            "scripts/drivers/cleanup.sh"
+            "scripts/secrets/migrate-to-libsecret.sh"
+            "lib/secrets.sh"
+            "lib/host_profile.sh"
+            "config/host-profiles/README.md"
+            "app/backend/migrations.py"
+            "app/backend/settings.py"
+            "app/install.sh"
+            "docs/agents/hybrid-mode.md"
+            "scripts/snapshot/create.sh"
+            "scripts/snapshot/list.sh"
+            "scripts/scheduler/install.sh"
+            "lib/plugins.sh"
+            "plugins/example/manifest.toml"
+            "plugins/example/check.sh"
+            "plugins/example/apply.sh"
+            "app/backend/__init__.py"
+            "app/backend/__main__.py"
+            "app/backend/main.py"
+            "app/backend/runner.py"
+            "app/backend/db.py"
+            "app/backend/config.py"
+            "app/frontend/index.html"
+            "app/frontend/style.css"
+            "app/frontend/app.js"
+            "app/pyproject.toml"
+            "app/README.md"
+            "systemd/user/ubuntu-aktualizacje-dashboard.service"
+            "systemd/user/install-dashboard.sh"
+            "share/applications/ubuntu-aktualizacje.desktop"
+            "docs/agents/contract.md"
             "APPS.md.example"
             "README.md"
           )
@@ -179,6 +256,102 @@ jobs:
       - name: Dev-sync Python tests
         run: |
           PYTHONDONTWRITEBYTECODE=1 python3 tests/test_dev_sync_safety.py -v
+
+      - name: Phase JSON contract — emitter smoke test + schema validation
+        run: |
+          set -euo pipefail
+          # 1. Generate a synthetic phase sidecar via lib/json.sh
+          tmpdir="$(mktemp -d)"
+          out="$tmpdir/phase.json"
+          JSON_OUT="$out" bash -c '
+            source lib/json.sh
+            json_init check apt
+            json_register_exit_trap "$JSON_OUT"
+            json_count_ok
+            json_add_item id=ci:smoke action=present result=ok
+            json_add_diag info CI-SMOKE "ci synthesised sidecar"
+          '
+          test -f "$out"
+          # 2. Validate against schema
+          python3 tests/validate_phase_json.py "$out"
+          # 3. Run apt:check phase (read-only) and validate its sidecar too
+          mkdir -p "$tmpdir/runs"
+          JSON_OUT="$tmpdir/runs/apt-check.json" \
+            LOG_FILE="$tmpdir/runs/apt-check.log" \
+            bash scripts/apt/check.sh || true
+          test -f "$tmpdir/runs/apt-check.json"
+          python3 tests/validate_phase_json.py "$tmpdir/runs/apt-check.json"
+
+      - name: bats — emitter, orchestrator, phase contract
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q bats
+          bats tests/bash/test_json_emit.bats
+          bats tests/bash/test_orchestrator.bats
+          bats tests/bash/test_phase_contract.bats
+
+      - name: Plugin manifest scanner smoke test
+        run: |
+          source lib/plugins.sh
+          ids=$(plugins_list_ids | tr '\n' ' ')
+          test -n "$ids"
+          for id in $ids; do plugins_validate "$id"; done
+          echo "plugins ok: $ids"
+
+      - name: Dashboard backend + frontend smoke test
+        run: |
+          python3 -m pip install --quiet fastapi uvicorn pydantic httpx
+          python3 tests/python/test_frontend.py
+
+      - name: DB migrations smoke test
+        run: |
+          python3 -m pip install --quiet fastapi pydantic   # for app.backend imports
+          python3 - <<'PY'
+          import sys, sqlite3, tempfile, pathlib
+          sys.path.insert(0, '.')
+          from app.backend import db, migrations
+          tmp = pathlib.Path(tempfile.mkdtemp()) / 'mig.db'
+          db.init_db(tmp)
+          with sqlite3.connect(tmp) as c:
+              ver = migrations.current_version(c)
+              cols = {r[1] for r in c.execute('PRAGMA table_info(runs)')}
+          assert ver == len(migrations.MIGRATIONS), f'unexpected version {ver}'
+          assert {'snapshot_id', 'label'} <= cols, f'missing columns: {cols}'
+          # idempotency
+          db.init_db(tmp)
+          print(f'migrations: {ver} applied, idempotent re-init ok')
+          PY
+
+      - name: Secrets API smoke test (env-fallback path)
+        run: |
+          set -e
+          tmp=$(mktemp)
+          SECRETS_ENV_FILE="$tmp" bash -c '
+            source lib/secrets.sh
+            secrets_set FOO_TOKEN "secret value"
+            v=$(secrets_get FOO_TOKEN)
+            test "$v" = "secret value" || { echo "fail: got [$v]"; exit 1; }
+            secrets_has FOO_TOKEN
+            secrets_list | grep -q FOO_TOKEN
+          '
+          rm -f "$tmp"
+          echo "  secrets API ok (env fallback)"
+
+      - name: Host profile resolver smoke test
+        run: |
+          set -e
+          T=$(mktemp -d)
+          mkdir -p "$T/config/host-profiles/h1" "$T/lib"
+          cp lib/host_profile.sh "$T/lib/"
+          printf 'a\nb\nc\n' > "$T/config/foo.list"
+          printf 'd\n-b\n' > "$T/config/host-profiles/h1/foo.list"
+          out=$(SCRIPT_DIR="$T" HOSTNAME=h1 bash -c 'source lib/host_profile.sh; host_profile_resolve foo.list' | tr "\n" " ")
+          echo "  resolved: $out"
+          test "$out" = "a c d " || { echo "FAIL"; exit 1; }
+          # No-overlay falls through
+          out2=$(SCRIPT_DIR="$T" HOSTNAME=other bash -c 'source lib/host_profile.sh; host_profile_resolve foo.list' | tr "\n" " ")
+          test "$out2" = "a b c " || { echo "FAIL fallback"; exit 1; }
+          rm -rf "$T"
+          echo "  host_profile_resolve ok"
 
   check-readme:
     name: README completeness

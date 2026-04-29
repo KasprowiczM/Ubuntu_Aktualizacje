@@ -1,0 +1,215 @@
+:root {
+  --bg: #0f1115;
+  --panel: #161922;
+  --border: #232838;
+  --text: #d8dcea;
+  --dim: #8892a8;
+  --ok: #34c270;
+  --warn: #e5a23a;
+  --err: #e3614e;
+  --accent: #7aa6ff;
+  --mono: ui-monospace, "JetBrains Mono", Menlo, monospace;
+  /* Tell the UA to render native widgets (scrollbar, select dropdown popup,
+     checkbox) using the active palette. Without this, WebView2/WebKitGTK
+     renders selects with a white system background even in dark mode. */
+  color-scheme: dark;
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"]  { color-scheme: dark;  }
+/* Auto from OS preference (only when no explicit theme is set by JS) */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg: #f7f8fb;
+    --panel: #ffffff;
+    --border: #e0e3ee;
+    --text: #1a1d29;
+    --dim: #687085;
+  }
+}
+/* Explicit theme overrides */
+:root[data-theme="light"] {
+  --bg: #f7f8fb;
+  --panel: #ffffff;
+  --border: #e0e3ee;
+  --text: #1a1d29;
+  --dim: #687085;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115;
+  --panel: #161922;
+  --border: #232838;
+  --text: #d8dcea;
+  --dim: #8892a8;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  height: 100%;
+}
+header {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+header h1 { font-size: 1rem; margin: 0; }
+nav { display: flex; gap: 0.25rem; flex: 1; }
+nav a {
+  padding: 0.4rem 0.85rem; border-radius: 6px; text-decoration: none;
+  color: var(--dim);
+}
+nav a:hover { background: var(--border); }
+nav a.active { color: var(--text); background: var(--border); }
+#hostbadge { color: var(--dim); font-family: var(--mono); }
+
+main { padding: 1.25rem; }
+.view.hidden { display: none; }
+.view h2 { margin-top: 0; }
+
+.grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+.card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 8px; padding: 1rem;
+}
+.card h3 { margin: 0 0 0.5rem; font-size: 0.85rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; }
+.card button { display: block; width: 100%; margin-bottom: 0.5rem; }
+
+button {
+  background: var(--accent); color: #0a0e18; border: 0; border-radius: 6px;
+  padding: 0.5rem 0.85rem; font-weight: 600; cursor: pointer;
+}
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+button.secondary { background: var(--border); color: var(--text); }
+
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 0.45rem 0.6rem; text-align: left; border-bottom: 1px solid var(--border); }
+th { color: var(--dim); font-weight: 500; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+tbody tr:hover { background: var(--panel); }
+
+form#run-form {
+  display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: end;
+  margin-bottom: 1rem; padding: 1rem; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 8px;
+}
+form label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.85rem; color: var(--dim); }
+form label.inline { flex-direction: row; align-items: center; gap: 0.4rem; color: var(--text); }
+/* Form controls: explicit colours for both themes — Tauri's webkit renderer
+   does not always pick up our CSS variables for native widgets. */
+select, input[type="text"], input[type="password"], input[type="search"], textarea {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  color: var(--text);
+  min-width: 9rem;
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text) 50%),
+    linear-gradient(135deg, var(--text) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) calc(50% - 2px),
+    calc(100% - 9px)  calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 1.6rem;
+}
+input[type="text"], input[type="password"], input[type="search"], textarea {
+  background-image: none; padding-right: 0.5rem;
+}
+select option {
+  /* Some webkit builds leave the popup with system-default colours; force
+     the panel palette so options are readable in dark mode. */
+  background: var(--panel);
+  color: var(--text);
+}
+select:focus, input:focus, textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+pre#live-log {
+  background: #08090d; color: #cdd2e0; padding: 0.85rem 1rem;
+  border-radius: 8px; height: 60vh; overflow-y: auto;
+  font-family: var(--mono); font-size: 12px; line-height: 1.4; white-space: pre-wrap;
+}
+
+.badge { display: inline-block; padding: 0.1em 0.5em; border-radius: 999px; font-size: 0.75rem; }
+.badge.ok    { background: rgba(52, 194, 112, 0.18); color: var(--ok); }
+.badge.warn  { background: rgba(229, 162, 58, 0.18); color: var(--warn); }
+.badge.fail, .badge.failed, .badge.error { background: rgba(227, 97, 78, 0.18); color: var(--err); }
+.badge.running { background: rgba(122, 166, 255, 0.18); color: var(--accent); }
+
+footer {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  padding: 0.35rem 1rem; background: var(--panel);
+  border-top: 1px solid var(--border); color: var(--dim);
+  font-family: var(--mono); font-size: 12px;
+}
+
+.modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+.modal.hidden { display: none; }
+.modal-card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; padding: 1.5rem; min-width: 360px; max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+.modal-card h3 { margin: 0 0 0.5rem; }
+.modal-card input[type="password"] {
+  width: 100%; padding: 0.6rem; margin: 0.6rem 0;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); font-size: 0.95rem;
+}
+.modal-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+.modal-actions button { flex: 0 0 auto; }
+#sudo-error:empty { display: none; }
+#sudo-error { color: var(--err); margin-top: 0.6rem; font-size: 0.85rem; }
+#sudo-indicator { font-size: 11px; }
+.dim { color: var(--dim); }
+.mono { font-family: var(--mono); }
+
+/* ── Charts (pure SVG) ─────────────────────────────────────────────────── */
+.chart-card { display: flex; flex-direction: column; align-items: center; }
+.chart-card svg { max-width: 100%; height: auto; }
+.donut-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem; font-size: 0.85rem; }
+.donut-legend span.swatch {
+  display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: middle;
+}
+.bar-row { display: flex; align-items: center; gap: 0.5rem; margin: 0.2rem 0; font-size: 0.85rem; }
+.bar-row .bar-label { width: 5.5rem; color: var(--dim); }
+.bar-row .bar-track { flex: 1; height: 0.7rem; background: var(--bg); border-radius: 3px; overflow: hidden; display: flex; }
+.bar-row .bar-fill-ok       { background: var(--ok);   height: 100%; }
+.bar-row .bar-fill-outdated { background: var(--warn); height: 100%; }
+.bar-row .bar-fill-missing  { background: var(--err);  height: 100%; }
+.bar-row .bar-counts { width: 8rem; text-align: right; color: var(--dim); font-family: var(--mono); font-size: 0.8rem; }
+
+/* ── Inventory table ────────────────────────────────────────────────────── */
+.inv-table { font-size: 0.85rem; }
+.inv-table td { padding: 0.3rem 0.6rem; }
+.inv-table tr.status-outdated { background: rgba(229, 162, 58, 0.06); }
+.inv-table tr.status-missing  { background: rgba(227, 97, 78, 0.06); }
+.inv-table tr.status-ok td:nth-child(2) { color: var(--ok); }
+.inv-table .pkg-name { font-family: var(--mono); }
+.cat-row { cursor: pointer; }
+.cat-row:hover td { background: var(--panel); }
+.cat-row .toggle { color: var(--dim); width: 1.2em; display: inline-block; transition: transform 0.15s; }
+.cat-row.open .toggle { transform: rotate(90deg); }
+.cat-detail { background: var(--bg); }
+.cat-detail .cat-detail-inner { padding: 0.5rem 1rem; }
+.spinner {
+  display: inline-block; width: 0.8em; height: 0.8em; border-radius: 50%;
+  border: 2px solid var(--border); border-top-color: var(--accent);
+  animation: spin 0.6s linear infinite; vertical-align: -2px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

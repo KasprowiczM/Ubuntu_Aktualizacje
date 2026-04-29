@@ -7,6 +7,17 @@ APPS.md
 
 # ── Runtime logs ──────────────────────────────────────────────────────────────
 logs/*.log
+logs/runs/
+
+# ── Dashboard runtime ─────────────────────────────────────────────────────────
+app/tauri/src-tauri/target/
+app/tauri/src-tauri/Cargo.lock
+app/tauri/src-tauri/icons/
+
+# ── SQLite (per-user dashboard history) ──────────────────────────────────────
+*.db
+*.db-wal
+*.db-shm
 
 # ── Config backups created by --discover mode ─────────────────────────────────
 config/*.bak_*
@@ -52,3 +63,5 @@ Thumbs.db
 # SSH keys
 github
 github.pub
+app/.venv/
+config/hosts.toml

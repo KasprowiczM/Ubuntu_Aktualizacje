@@ -10,14 +10,29 @@ Obsługuje APT, Snap, Homebrew, npm, pip/pipx, Flatpak, sterowniki NVIDIA i firm
 
 ## Komendy
 ```bash
-./update-all.sh                        # pełna aktualizacja (NVIDIA held)
+./update-all.sh                        # pełna aktualizacja (full profile, NVIDIA held)
+./update-all.sh --profile quick        # tylko check (read-only sweep)
+./update-all.sh --profile safe         # bez drivers/firmware
 ./update-all.sh --dry-run              # podgląd bez wykonania
-./update-all.sh --only brew            # tylko brew
-bash -n update-all.sh && bash -n scripts/*.sh && bash -n lib/*.sh  # walidacja składni
-bash lib/git-push.sh push main         # push do GitHub
+./update-all.sh --only brew --phase apply
+bash -n update-all.sh && bash -n scripts/*/*.sh && bash -n lib/*.sh
+python3 tests/validate_phase_json.py   # walidacja sidecarów JSON v1
+bats tests/bash/test_json_emit.bats    # testy emittera (jeśli bats zainstalowany)
+bash lib/git-push.sh push main
 PYTHONDONTWRITEBYTECODE=1 python3 tests/test_dev_sync_safety.py -v
 bash scripts/preflight.sh              # read-only host/recovery readiness
 bash scripts/verify-state.sh           # repo/dev-sync/systemd verification
+
+# Dashboard (Etap 2)
+pip install --user fastapi uvicorn pydantic
+python3 -m app.backend                 # http://127.0.0.1:8765
+bash systemd/user/install-dashboard.sh # instaluje user-service
+
+# Snapshot / scheduler / pluginy (Etap 3)
+bash scripts/snapshot/create.sh "before apt apply"
+bash scripts/scheduler/install.sh --calendar "Sun *-*-* 03:00:00" --profile safe
+bash scripts/scheduler/install.sh --status
+bash scripts/scheduler/install.sh --remove
 ```
 
 ## Dev Sync
@@ -47,10 +62,14 @@ Nie wprowadzaj żadnych zmian w kodzie, dopóki nie poznasz kodu i wymagań na t
 - Nie commituj `APPS.md` ani `.env.local`.
 
 ## Referencje (Progressive Disclosure)
+- @RUN.md — **uruchomienie + weryfikacja od zera (CLI, dashboard, scheduler, snapshot)**
+- @docs/agents/hybrid-mode.md — **hybrid CLI/dashboard, 3 ścieżki tego samego use-case**
 - @docs/agents/architecture.md — architektura skryptów, menedżery pakietów, quirks systemu
+- @docs/agents/contract.md — **5-fazowy kontrakt skryptów + JSON sidecar (schema v1)**
 - @docs/agents/workflow.md — workflow agentów, profile modeli, delegowanie
 - @docs/agents/style_guide.md — zasady stylu kodu Bash
 - @docs/agents/testing_rules.md — walidacja i testowanie zmian
 - @docs/agents/security.md — bezpieczeństwo, sekrety, autoryzacja
 - @docs/agents/handoff.md — kompresja kontekstu, przekazywanie pracy między sesjami
 - @docs/last-run-review.md — ostatni pełny run, status pakietów i znane ostrzeżenia
+- @app/README.md — dashboard (FastAPI + vanilla SPA), REST API, instalacja

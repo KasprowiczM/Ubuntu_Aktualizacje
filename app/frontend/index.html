@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ubuntu_Aktualizacje Dashboard</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Ubuntu_Aktualizacje</h1>
+    <nav id="nav">
+      <a href="#overview"   data-view="overview"   class="active" data-i18n="nav.overview">Overview</a>
+      <a href="#categories" data-view="categories" data-i18n="nav.categories">Categories</a>
+      <a href="#run"        data-view="run"        data-i18n="nav.run">Run Center</a>
+      <a href="#history"    data-view="history"    data-i18n="nav.history">History</a>
+      <a href="#logs"       data-view="logs"       data-i18n="nav.logs">Logs</a>
+      <a href="#sync"       data-view="sync"       data-i18n="nav.sync">Sync</a>
+      <a href="#hosts"      data-view="hosts"      data-i18n="nav.hosts">Hosts</a>
+      <a href="#settings"   data-view="settings"   data-i18n="nav.settings">Settings</a>
+    </nav>
+    <div id="hostbadge"></div>
+  </header>
+
+  <main>
+    <!-- Overview -->
+    <section id="view-overview" class="view">
+      <h2 data-i18n="overview.title">Overview</h2>
+      <div class="grid">
+        <div class="card">
+          <h3 data-i18n="overview.last_run">Last run</h3>
+          <div id="last-run">…</div>
+        </div>
+        <div class="card">
+          <h3 data-i18n="overview.health">System health</h3>
+          <div id="preflight">…</div>
+        </div>
+        <div class="card">
+          <h3 data-i18n="overview.git">Git</h3>
+          <div id="git-status">…</div>
+        </div>
+        <div class="card">
+          <h3 data-i18n="overview.quick">Quick actions</h3>
+          <button data-quick='{"profile":"quick"}' data-i18n="overview.btn_quick">Quick check</button>
+          <button data-quick='{"profile":"safe"}'  data-i18n="overview.btn_safe">Safe update</button>
+          <button data-quick='{"profile":"full"}'  data-i18n="overview.btn_full">Full update</button>
+          <button data-quick='{"profile":"full","dry_run":true}' data-i18n="overview.btn_dry">Full dry-run</button>
+        </div>
+      </div>
+
+      <h3 style="margin-top:1.5rem;display:flex;align-items:center;gap:0.5rem">
+        <span data-i18n="overview.inventory">Inventory</span>
+        <button id="inv-refresh-btn" class="secondary" style="margin-left:auto;font-size:0.8rem"
+                data-i18n="overview.refresh">Refresh</button>
+      </h3>
+      <div class="grid">
+        <div class="card chart-card">
+          <h3 data-i18n="overview.status_donut">Status (all categories)</h3>
+          <div id="inv-donut">…</div>
+        </div>
+        <div class="card">
+          <h3 data-i18n="overview.per_category">Per category</h3>
+          <div id="inv-bars">…</div>
+        </div>
+        <div class="card" style="grid-column: 1 / -1">
+          <h3 data-i18n="overview.available_updates">Available updates</h3>
+          <div id="inv-updates">…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Categories -->
+    <section id="view-categories" class="view hidden">
+      <h2 data-i18n="categories.title">Categories</h2>
+      <p class="dim" data-i18n="categories.hint">Click a row to expand the full
+        list of installed packages with version and status.</p>
+      <table id="cats-table">
+        <thead><tr>
+          <th></th>
+          <th data-i18n="categories.col_cat">Category</th>
+          <th data-i18n="categories.col_total">Total</th>
+          <th data-i18n="categories.col_ok">OK</th>
+          <th data-i18n="categories.col_outdated">Outdated</th>
+          <th data-i18n="categories.col_missing">Missing</th>
+          <th data-i18n="categories.col_act">Actions</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Run Center -->
+    <section id="view-run" class="view hidden">
+      <h2 data-i18n="run.title">Run Center</h2>
+      <form id="run-form">
+        <label><span data-i18n="run.profile">Profile</span>
+          <select name="profile" id="profile-select"></select>
+        </label>
+        <label><span data-i18n="run.only">Only</span>
+          <select name="only" id="only-select">
+            <option value="" data-i18n="run.all">(all)</option>
+          </select>
+        </label>
+        <label><span data-i18n="run.phase">Phase</span>
+          <select name="phase">
+            <option value="" data-i18n="run.profile_default">(profile default)</option>
+            <option>check</option>
+            <option>plan</option>
+            <option>apply</option>
+            <option>verify</option>
+            <option>cleanup</option>
+          </select>
+        </label>
+        <label class="inline">
+          <input type="checkbox" name="dry_run" /> <span data-i18n="run.dry_run">Dry run</span>
+        </label>
+        <button type="submit" data-i18n="run.start">Start run</button>
+        <button type="button" id="stop-btn" disabled data-i18n="run.stop">Stop</button>
+      </form>
+      <div id="active-run"></div>
+      <pre id="live-log"></pre>
+    </section>
+
+    <!-- History -->
+    <section id="view-history" class="view hidden">
+      <h2 data-i18n="history.title">History</h2>
+      <table id="history-table">
+        <thead><tr>
+          <th data-i18n="history.started">Started</th>
+          <th data-i18n="history.profile">Profile</th>
+          <th data-i18n="history.status">Status</th>
+          <th data-i18n="history.phases">Phases</th>
+          <th data-i18n="history.reboot">Reboot</th>
+          <th data-i18n="history.run_id">Run id</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Logs -->
+    <section id="view-logs" class="view hidden">
+      <h2 data-i18n="logs.title">Logs</h2>
+      <p>
+        <span data-i18n="logs.hint_pick">Pick a run from</span>
+        <a href="#history" onclick="ui.show('history')" data-i18n="logs.hint_history">History</a>
+        <span data-i18n="logs.hint_after">to inspect per-phase JSON sidecars and logs.</span>
+      </p>
+      <div id="run-detail"></div>
+    </section>
+
+    <!-- Sync -->
+    <section id="view-sync" class="view hidden">
+      <h2 data-i18n="sync.title">Sync</h2>
+      <div class="grid">
+        <div class="card">
+          <h3 data-i18n="sync.git">Git</h3>
+          <div id="sync-git">…</div>
+          <button id="git-fetch-btn" data-i18n="sync.btn_fetch">Fetch</button>
+          <button id="git-pull-btn"  data-i18n="sync.btn_pull">Pull (ff-only)</button>
+          <button id="git-push-btn" class="secondary" data-i18n="sync.btn_push">Push</button>
+        </div>
+        <div class="card">
+          <h3 data-i18n="sync.cloud">Cloud overlay (dev-sync)</h3>
+          <div id="sync-cloud">…</div>
+          <button id="sync-export-dry-btn" data-i18n="sync.btn_export_dry">Export (dry-run)</button>
+          <button id="sync-export-btn" class="secondary" data-i18n="sync.btn_export_real">Export (real)</button>
+        </div>
+      </div>
+      <h3 data-i18n="sync.output">Output</h3>
+      <pre id="sync-output"></pre>
+    </section>
+
+    <!-- Hosts -->
+    <section id="view-hosts" class="view hidden">
+      <h2 data-i18n="hosts.title">Hosts</h2>
+      <p class="dim">
+        <span data-i18n="hosts.hint">Read-only SSH preflight across machines in</span>
+        <code>config/hosts.toml</code>.
+      </p>
+      <button id="hosts-refresh-btn" data-i18n="hosts.btn_refresh">Refresh all</button>
+      <table id="hosts-table" style="margin-top:1rem">
+        <thead><tr>
+          <th data-i18n="hosts.col_host">Host</th>
+          <th data-i18n="hosts.col_hostname">Hostname</th>
+          <th data-i18n="hosts.col_os">OS</th>
+          <th data-i18n="hosts.col_kernel">Kernel</th>
+          <th data-i18n="hosts.col_repo">Repo</th>
+          <th data-i18n="hosts.col_lastrun">Last run</th>
+          <th data-i18n="hosts.col_status">Status</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Settings -->
+    <section id="view-settings" class="view hidden">
+      <h2 data-i18n="settings.title">Settings</h2>
+      <form id="settings-form">
+        <div class="grid">
+          <div class="card">
+            <h3 data-i18n="settings.defaults">Defaults</h3>
+            <label><span data-i18n="settings.default_profile">Default profile</span>
+              <select name="default_profile">
+                <option value="quick">quick</option>
+                <option value="safe">safe</option>
+                <option value="full">full</option>
+              </select>
+            </label>
+            <label class="inline">
+              <input type="checkbox" name="snapshot_before_apply" />
+              <span data-i18n="settings.snapshot">Pre-apply snapshot</span>
+            </label>
+            <label class="inline">
+              <input type="checkbox" name="notifications_desktop" />
+              <span data-i18n="settings.desktop_notif">Desktop notifications</span>
+            </label>
+          </div>
+          <div class="card">
+            <h3 data-i18n="settings.ui">Appearance</h3>
+            <label><span data-i18n="settings.theme">Theme</span>
+              <select name="ui_theme" id="ui-theme-select">
+                <option value="auto"  data-i18n="settings.theme_auto">auto (system)</option>
+                <option value="light" data-i18n="settings.theme_light">light</option>
+                <option value="dark"  data-i18n="settings.theme_dark">dark</option>
+              </select>
+            </label>
+            <label><span data-i18n="settings.language">Language</span>
+              <select name="ui_language" id="ui-language-select">
+                <option value="auto" data-i18n="settings.lang_auto">auto (browser)</option>
+                <option value="en"   data-i18n="settings.lang_en">English</option>
+                <option value="pl"   data-i18n="settings.lang_pl">Polski</option>
+              </select>
+            </label>
+          </div>
+          <div class="card">
+            <h3 data-i18n="settings.scheduler">Scheduler (systemd timer)</h3>
+            <label class="inline">
+              <input type="checkbox" name="scheduler_enabled" disabled />
+              <span data-i18n="settings.scheduler_enabled">Enabled (status from system)</span>
+            </label>
+            <label><span data-i18n="settings.calendar">OnCalendar</span>
+              <input type="text" name="scheduler_calendar" placeholder="Sun *-*-* 03:00:00" />
+            </label>
+            <label><span data-i18n="settings.profile">Profile</span>
+              <select name="scheduler_profile">
+                <option value="quick">quick</option>
+                <option value="safe">safe</option>
+                <option value="full">full</option>
+              </select>
+            </label>
+            <label class="inline">
+              <input type="checkbox" name="scheduler_no_drivers" />
+              <span data-i18n="settings.skip_drivers">Skip drivers in scheduled run</span>
+            </label>
+          </div>
+        </div>
+        <div style="margin-top:1rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <button type="submit" data-i18n="settings.btn_save">Save settings</button>
+          <button type="button" id="scheduler-install-btn" class="secondary" data-i18n="settings.btn_install_t">Install/Update timer</button>
+          <button type="button" id="scheduler-remove-btn"  class="secondary" data-i18n="settings.btn_remove_t">Remove timer</button>
+        </div>
+      </form>
+      <pre id="settings-output"></pre>
+    </section>
+  </main>
+
+  <!-- Sudo modal -->
+  <div id="sudo-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3 data-i18n="sudo.title">Authenticate sudo</h3>
+      <p class="dim" data-i18n="sudo.hint">Required for apt / snap / drivers apply phases.
+        Password is sent to 127.0.0.1 only and used to warm the OS sudo timestamp.</p>
+      <form id="sudo-form">
+        <input type="password" id="sudo-pass" name="password" autofocus
+               data-i18n-placeholder="sudo.placeholder"
+               placeholder="sudo password" autocomplete="current-password" />
+        <div class="modal-actions">
+          <button type="submit" data-i18n="sudo.authenticate">Authenticate</button>
+          <button type="button" id="sudo-cancel" class="secondary" data-i18n="sudo.cancel">Cancel</button>
+        </div>
+        <div id="sudo-error" class="dim"></div>
+      </form>
+    </div>
+  </div>
+
+  <footer>
+    <span id="status-line" data-i18n="footer.ready">ready</span>
+    <span id="sudo-indicator" class="dim" style="float:right"></span>
+  </footer>
+  <script src="/i18n.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
