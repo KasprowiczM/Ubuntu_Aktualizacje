@@ -82,16 +82,19 @@ declare -a EXCL_TEMP_HELD=()
 
 # Apply per-user exclusions via apt-mark hold for the duration of this phase.
 # Exclusions live in config/exclusions.list as "apt:<package>" lines.
+APT_CATEGORY_EXCLUDED=0
 _temporarily_hold_excluded_apt() {
     # shellcheck disable=SC1091
     [[ -f "${SCRIPT_DIR}/lib/exclusions.sh" ]] && source "${SCRIPT_DIR}/lib/exclusions.sh"
     declare -F excl_load >/dev/null 2>&1 || return 0
     excl_load
-    declare -F excl_category_skipped >/dev/null && excl_category_skipped apt && {
-        # Whole apt category disabled — abort the upgrade phase silently with skip.
+    if declare -F excl_category_skipped >/dev/null && excl_category_skipped apt; then
+        # Whole apt category disabled — record and let main flow exit cleanly
+        # with a sidecar (don't `exit 0` here, that would lose the JSON output).
+        APT_CATEGORY_EXCLUDED=1
         json_add_diag info APT-EXCLUDED-ALL "apt category disabled in config/exclusions.list"
-        exit 0
-    }
+        return 0
+    fi
     local current_holds key pkg
     mapfile -t current_holds < <(apt-mark showhold 2>/dev/null || true)
     for key in "${!EXCL_SET[@]}"; do
@@ -99,7 +102,7 @@ _temporarily_hold_excluded_apt() {
         pkg="${key#apt:}"
         if dpkg -l "$pkg" >/dev/null 2>&1; then
             local already=0
-            for h in "${current_holds[@]}"; do [[ "$h" == "$pkg" ]] && already=1 && break; done
+            for h in "${current_holds[@]:-}"; do [[ "$h" == "$pkg" ]] && already=1 && break; done
             [[ $already -eq 1 ]] && continue
             if sudo apt-mark hold "$pkg" >> "${LOG_FILE}" 2>&1; then
                 EXCL_TEMP_HELD+=("$pkg")
@@ -108,6 +111,7 @@ _temporarily_hold_excluded_apt() {
     done
     [[ ${#EXCL_TEMP_HELD[@]} -gt 0 ]] && \
         json_add_diag info APT-USER-HELD "user-excluded packages held: ${#EXCL_TEMP_HELD[@]}"
+    return 0
 }
 _restore_excluded_apt_holds() {
     [[ ${#EXCL_TEMP_HELD[@]} -eq 0 ]] && return 0
@@ -115,8 +119,24 @@ _restore_excluded_apt_holds() {
     EXCL_TEMP_HELD=()
 }
 
-trap '_restore_nvidia_holds; _restore_excluded_apt_holds' EXIT
+# Compose EXIT handler so that hold-restoration AND JSON sidecar finalize both
+# fire on exit (regardless of whether we exit normally or via set -e). The
+# previous version overrode the json trap and the apply.json sidecar was never
+# written — orchestrator then silently dropped apt:apply from run.json.
+_apt_apply_on_exit() {
+    local rc=$?
+    _restore_nvidia_holds 2>/dev/null || true
+    _restore_excluded_apt_holds 2>/dev/null || true
+    _json_finalize_on_exit "$rc"
+}
+trap _apt_apply_on_exit EXIT
+
 _temporarily_hold_excluded_apt
+if [[ "$APT_CATEGORY_EXCLUDED" -eq 1 ]]; then
+    print_warn "apt category excluded via config/exclusions.list — skipping upgrade"
+    json_count_ok
+    exit 0
+fi
 
 # ── 1. Detect broken NVIDIA dpkg state up front ──────────────────────────────
 broken_nvidia=$(dpkg -l 'nvidia-*' 'libnvidia-*' 2>/dev/null | awk '/^iF/{print $2}' | tr '\n' ' ')

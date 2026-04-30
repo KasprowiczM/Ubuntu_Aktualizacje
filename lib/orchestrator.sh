@@ -110,6 +110,37 @@ orch_run_phase() {
     local end_ts; end_ts=$(date +%s)
     ORCH_DURATION[$key]=$(( end_ts - start_ts ))
 
+    # Defensive: a phase script that exits 0 but produces no sidecar means a
+    # silent failure (typically: a downstream `trap EXIT` clobbered the JSON
+    # finalize trap). Synthesize an error sidecar and treat as failed so the
+    # operator sees it instead of "all green" when the work didn't happen.
+    if [[ ! -f "$json_out" ]]; then
+        _orch_emit_skipped "$category" "$phase" "$json_out" \
+            "phase produced no JSON sidecar (exit ${rc}); see ${log_out}"
+        # Mark sidecar as error so summary status reflects reality.
+        python3 - "$json_out" <<'PY' || true
+import json, sys
+p = sys.argv[1]
+try:
+    d = json.load(open(p))
+except Exception:
+    sys.exit(0)
+d["exit_code"] = 30
+d["summary"] = {"ok": 0, "warn": 0, "err": 1}
+d.setdefault("diagnostics", []).append({
+    "level": "error",
+    "code": "PHASE-NO-SIDECAR",
+    "msg": "phase script exited without writing a JSON sidecar — likely a trap-override bug or early die",
+})
+with open(p + ".partial", "w") as f:
+    json.dump(d, f, ensure_ascii=False, indent=2)
+import os
+os.replace(p + ".partial", p)
+PY
+        # Force fail status so the run is not reported as ok.
+        rc=30
+    fi
+
     # Classify exit code
     local status="ok"
     case "$rc" in

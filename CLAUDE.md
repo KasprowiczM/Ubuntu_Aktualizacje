@@ -80,6 +80,7 @@ Nie wprowadzaj żadnych zmian w kodzie, dopóki nie poznasz kodu i wymagań na t
 - Nie commituj `APPS.md` ani `.env.local`.
 
 ## Referencje (Progressive Disclosure)
+- @MIGRATION.md — **świeża maszyna Ubuntu: instalacja, ikona Ascendo, sanity checks**
 - @RUN.md — **uruchomienie + weryfikacja od zera (CLI, dashboard, scheduler, snapshot)**
 - @docs/agents/hybrid-mode.md — **hybrid CLI/dashboard, 3 ścieżki tego samego use-case**
 - @docs/agents/architecture.md — architektura skryptów, menedżery pakietów, quirks systemu
