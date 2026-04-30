@@ -78,7 +78,45 @@ _restore_nvidia_holds() {
     NVIDIA_TEMP_HELD=()
 }
 
-trap _restore_nvidia_holds EXIT
+declare -a EXCL_TEMP_HELD=()
+
+# Apply per-user exclusions via apt-mark hold for the duration of this phase.
+# Exclusions live in config/exclusions.list as "apt:<package>" lines.
+_temporarily_hold_excluded_apt() {
+    # shellcheck disable=SC1091
+    [[ -f "${SCRIPT_DIR}/lib/exclusions.sh" ]] && source "${SCRIPT_DIR}/lib/exclusions.sh"
+    declare -F excl_load >/dev/null 2>&1 || return 0
+    excl_load
+    declare -F excl_category_skipped >/dev/null && excl_category_skipped apt && {
+        # Whole apt category disabled — abort the upgrade phase silently with skip.
+        json_add_diag info APT-EXCLUDED-ALL "apt category disabled in config/exclusions.list"
+        exit 0
+    }
+    local current_holds key pkg
+    mapfile -t current_holds < <(apt-mark showhold 2>/dev/null || true)
+    for key in "${!EXCL_SET[@]}"; do
+        [[ "$key" == apt:* ]] || continue
+        pkg="${key#apt:}"
+        if dpkg -l "$pkg" >/dev/null 2>&1; then
+            local already=0
+            for h in "${current_holds[@]}"; do [[ "$h" == "$pkg" ]] && already=1 && break; done
+            [[ $already -eq 1 ]] && continue
+            if sudo apt-mark hold "$pkg" >> "${LOG_FILE}" 2>&1; then
+                EXCL_TEMP_HELD+=("$pkg")
+            fi
+        fi
+    done
+    [[ ${#EXCL_TEMP_HELD[@]} -gt 0 ]] && \
+        json_add_diag info APT-USER-HELD "user-excluded packages held: ${#EXCL_TEMP_HELD[@]}"
+}
+_restore_excluded_apt_holds() {
+    [[ ${#EXCL_TEMP_HELD[@]} -eq 0 ]] && return 0
+    sudo apt-mark unhold "${EXCL_TEMP_HELD[@]}" >> "${LOG_FILE}" 2>&1 || true
+    EXCL_TEMP_HELD=()
+}
+
+trap '_restore_nvidia_holds; _restore_excluded_apt_holds' EXIT
+_temporarily_hold_excluded_apt
 
 # ── 1. Detect broken NVIDIA dpkg state up front ──────────────────────────────
 broken_nvidia=$(dpkg -l 'nvidia-*' 'libnvidia-*' 2>/dev/null | awk '/^iF/{print $2}' | tr '\n' ' ')
@@ -162,6 +200,8 @@ fi
 upgrade_rc=0
 print_step "apt-get upgrade (streaming)"
 echo
+# Emit start marker for the dashboard progress bar before apt streams.
+printf 'PROGRESS|start|apt-upgrade|%d|apt upgrade\n' "${#_upgradable[@]}"
 # Stream apt output through tee to BOTH the per-phase log and a parser that
 # emits one human-friendly line per package, plus a JSON sidecar item.
 # Dpkg::Progress-Fancy=0 keeps lines plain (no terminal-resize escape codes).
@@ -177,14 +217,30 @@ sudo apt-get upgrade "${APT_OPTS[@]}" \
         # capture: "Setting up firefox (132.0+build1-0ubuntu1) ..."
         match($0, /^Setting up ([^ ]+) \(([^)]+)\)/, m)
         if (m[1] != "") {
-            printf "  [%d/%d] %s → %s\n", i, total, m[1], m[2]
+            # Human-friendly line for the console.
+            printf "  \033[0;32m✔\033[0m  [%d/%d] %s → %s\n", i, total, m[1], m[2]
+            # Machine marker for the dashboard SSE consumer (matches lib/progress.sh).
+            printf "PROGRESS|step|apt-upgrade|%d|%d|ok|%s → %s\n", i, total, m[1], m[2]
             fflush()
         }
     }
-    /^Unpacking /  { fflush() }
-    /^Removing /   { fflush() }
+    /^Unpacking / {
+        match($0, /^Unpacking ([^ ]+) \(([^)]+)\)/, m)
+        if (m[1] != "") {
+            printf "  \033[2m·  unpacking %s\033[0m\n", m[1]
+            fflush()
+        }
+    }
+    /^Removing / {
+        match($0, /^Removing ([^ ]+) /, m)
+        if (m[1] != "") {
+            printf "  \033[2m·  removing %s\033[0m\n", m[1]
+            fflush()
+        }
+    }
 '
 upgrade_rc=${PIPESTATUS[0]}
+printf 'PROGRESS|done|apt-upgrade|%d|0|0|0\n' "${#_upgradable[@]}"
 set -e
 if [[ $upgrade_rc -eq 0 ]]; then
     print_ok "apt-get upgrade complete"

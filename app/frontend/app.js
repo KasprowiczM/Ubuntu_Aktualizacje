@@ -66,7 +66,7 @@ const ui = {
   show(view) {
     $$(".view").forEach(v => v.classList.add("hidden"));
     $(`#view-${view}`).classList.remove("hidden");
-    $$("nav a").forEach(a => a.classList.toggle("active", a.dataset.view === view));
+    $$("a[data-view]").forEach(a => a.classList.toggle("active", a.dataset.view === view));
     location.hash = view;
     // Lazy-load on first visit only. Subsequent tab switches reuse the cached
     // data — user explicitly clicks "Refresh" (or finishes a run, which calls
@@ -80,6 +80,7 @@ const ui = {
     if (view === "settings"   && !ui._loaded.settings)   { ui._loaded.settings = true;   ui.loadSettings(); }
     if (view === "hosts"      && !ui._loaded.hosts)      { ui._loaded.hosts = true;      ui.loadHosts(); }
     if (view === "apps"       && !ui._loaded.apps)       { ui._loaded.apps = true;       ui.loadApps(); }
+    if (view === "suggest"    && !ui._loaded.suggest)    { ui._loaded.suggest = true;    ui.loadSuggestions(); }
     // Run Center is special: must always (re)bind active-stream subscription.
     if (view === "run") ui.loadRunCenter();
   },
@@ -167,6 +168,90 @@ const ui = {
     return d.toLocaleString();
   },
 
+  async loadHealth() {
+    const card = $("#health-card");
+    if (!card) return;
+    try {
+      const h = await api.get("/health/check");
+      if (!h.available) {
+        card.innerHTML = `<p class="dim">${tr("health.no_data")}</p>`;
+        return;
+      }
+      const score = h.score ?? 0;
+      const cls = score >= 85 ? "good" : score >= 60 ? "warn" : "bad";
+      const lbl = score >= 85 ? tr("health.good")
+                : score >= 60 ? tr("health.warn")
+                : tr("health.bad");
+      const issues = h.issues || [];
+      card.innerHTML =
+        `<div class="health-score ${cls}">${score}<span style="font-size:0.5em;color:var(--dim)">/100</span></div>
+         <div style="text-align:center"><b>${lbl}</b></div>
+         ${issues.length ? `<div class="health-issues"><ul>${issues.map(i =>
+            `<li><span class="badge ${i.severity === "err" ? "fail" : "warn"}">${i.severity}</span> ${i.msg}</li>`
+          ).join("")}</ul></div>` : ""}
+         ${h.run_id ? `<div class="dim" style="font-size:0.7rem;margin-top:0.4rem">run: <code>${h.run_id}</code></div>` : ""}`;
+    } catch (e) { card.innerHTML = `<p class="dim">${e}</p>`; }
+  },
+
+  async loadSuggestions() {
+    const wrap = $("#suggest-list");
+    wrap.innerHTML = `<span class="spinner"></span> ${tr("overview.scanning")}`;
+    try {
+      const items = (await api.get("/suggestions")).items || [];
+      if (!items.length) {
+        wrap.innerHTML = `<p class="dim">${tr("suggest.empty")}</p>`;
+      } else {
+        wrap.innerHTML = items.map(s => {
+          const conf = s.confidence === "high" ? "confidence-high" :
+                       s.confidence === "med"  ? "confidence-med" : "confidence-low";
+          const confLbl = s.confidence === "high" ? tr("suggest.conf_high")
+                        : s.confidence === "med"  ? tr("suggest.conf_med")
+                        :                            tr("suggest.conf_low");
+          const diffStr = (s.diff||[]).map(d => {
+            const adds = (d.add||[]).map(L => `<span class="add">+ ${L}</span>`).join("\n");
+            const dels = (d.remove||[]).map(L => `<span class="del">- ${L}</span>`).join("\n");
+            return `${d.file}\n${[adds, dels].filter(Boolean).join("\n")}`;
+          }).join("\n\n");
+          return `
+            <div class="suggestion ${conf}" data-sid="${s.id}">
+              <h4>${s.title}</h4>
+              <div class="meta">${confLbl} · ${s.category} · source: ${s.source}</div>
+              <p>${s.rationale}</p>
+              ${diffStr ? `<pre class="diff">${diffStr}</pre>` : ""}
+              <div class="actions">
+                ${(s.diff||[]).length ? `<button data-sg-apply='${JSON.stringify({id:s.id,diff:s.diff})}'>${tr("suggest.btn_apply")}</button>` : ""}
+                <button class="secondary" data-sg-dismiss="${s.id}">${tr("suggest.btn_dismiss")}</button>
+              </div>
+            </div>`;
+        }).join("");
+      }
+      // Load AI form values
+      const s = await api.get("/settings");
+      const ai = s.ai || {};
+      const f = $("#ai-form");
+      if (f) {
+        f.elements.ai_provider.value = ai.provider || "";
+        f.elements.ai_api_key.value  = ai.api_key  || "";
+        f.elements.ai_model.value    = ai.model    || "";
+      }
+    } catch (e) {
+      wrap.innerHTML = `<p class="badge fail">${e}</p>`;
+    }
+  },
+
+  async applySuggestion(payload) {
+    try {
+      const r = await api.post("/suggestions/apply", payload);
+      ui.status(`applied: ${(r.changes||[]).map(c=>c.file).join(", ")}`);
+      ui._loaded.suggest = false; ui.loadSuggestions();
+    } catch (e) { ui.status(String(e)); }
+  },
+  async dismissSuggestion(sid) {
+    try { await api.post("/suggestions/dismiss", {id: sid}); }
+    catch (e) { ui.status(String(e)); return; }
+    ui._loaded.suggest = false; ui.loadSuggestions();
+  },
+
   async loadOverview() {
     try {
       const h = await api.get("/health");
@@ -195,6 +280,7 @@ const ui = {
     } catch (e) { $("#git-status").textContent = String(e); }
     // Inventory charts (slow scan, runs after the rest paints)
     ui.loadInventoryDashboard();
+    ui.loadHealth();
   },
 
   // ── SVG donut + bar charts (pure DOM, no chart libs) ─────────────────
@@ -258,25 +344,39 @@ const ui = {
     wrap.innerHTML = `<span class="spinner"></span> ${tr("overview.scanning") || "Scanning…"}`;
     summary.textContent = "";
     try {
-      const data = await api.get("/apps/detect");
+      const [data, excl] = await Promise.all([
+        api.get("/apps/detect"),
+        api.get("/exclusions").catch(() => ({items:[], category_skipped:[]})),
+      ]);
       const s = data.summary || {tracked:0, detected:0, missing:0};
+      const exclSet = new Set((excl.items||[]).map(e => `${e.category}:${e.package}`));
+      const exclCats = new Set(excl.category_skipped || []);
       summary.innerHTML = `
         <span class="st-pill st-info">tracked ${s.tracked}</span>
         <span class="st-pill st-warn">detected ${s.detected}</span>
-        <span class="st-pill st-err">missing ${s.missing}</span>`;
+        <span class="st-pill st-err">missing ${s.missing}</span>
+        <span class="st-pill st-skip">excluded ${exclSet.size}${exclCats.size?` +${exclCats.size} cats`:""}</span>`;
       const items = data.items || [];
-      // Sort: missing → detected → tracked, then alphabetical
       const rank = {missing:0, detected:1, tracked:2};
       items.sort((a,b) =>
         (rank[a.state]??9) - (rank[b.state]??9) ||
         a.category.localeCompare(b.category) ||
         a.package.localeCompare(b.package));
       const stCls = {tracked:"st-info", detected:"st-warn", missing:"st-err"};
-      const rows = items.map(it => `
-        <tr>
+      const rows = items.map(it => {
+        const key = `${it.category}:${it.package}`;
+        const isExcl = exclSet.has(key) || exclCats.has(it.category);
+        return `
+        <tr class="${isExcl ? "excluded" : ""}">
           <td>${it.category}</td>
-          <td class="col-mono">${it.package}</td>
+          <td class="col-mono pkg-name">${it.package}</td>
           <td><span class="st-pill ${stCls[it.state]||"st-skip"}">${it.state}</span></td>
+          <td class="excl-toggle">
+            <label title="Skip this package on apply phases">
+              <input type="checkbox" data-excl-toggle data-pkg="${it.package}" data-cat="${it.category}" ${isExcl ? "checked" : ""} />
+              skip
+            </label>
+          </td>
           <td>
             ${it.state === "detected"
               ? `<button class="secondary" data-apps-add data-pkg="${it.package}" data-cat="${it.category}">+ Add to config</button>`
@@ -284,15 +384,23 @@ const ui = {
               ? `<button class="secondary" data-apps-rm data-pkg="${it.package}" data-cat="${it.category}">Remove</button>`
               : `<span class="dim">${it.suggested||""}</span>`}
           </td>
-        </tr>`).join("");
+        </tr>`;
+      }).join("");
       wrap.innerHTML = `
         <table class="tbl">
-          <thead><tr><th>Category</th><th>Package</th><th>State</th><th>Action</th></tr></thead>
-          <tbody>${rows||"<tr><td colspan='4' class='dim'>—</td></tr>"}</tbody>
+          <thead><tr><th>Category</th><th>Package</th><th>State</th><th>Auto-update</th><th>Action</th></tr></thead>
+          <tbody>${rows||"<tr><td colspan='5' class='dim'>—</td></tr>"}</tbody>
         </table>`;
     } catch (e) {
       wrap.textContent = String(e);
     }
+  },
+
+  async toggleExclusion(pkg, cat, on) {
+    try {
+      await api.post(on ? "/exclusions/add" : "/exclusions/remove", {package: pkg, category: cat});
+      ui.status(on ? `excluded ${cat}:${pkg}` : `un-excluded ${cat}:${pkg}`);
+    } catch (e) { ui.status(String(e)); }
   },
 
   async appsAdd(pkg, cat) {
@@ -372,8 +480,14 @@ const ui = {
         <td>${counts.outdated ? `<span class="badge warn">${counts.outdated}</span>` : `<span class="dim">${counts.outdated}</span>`}</td>
         <td>${counts.missing  ? `<span class="badge fail">${counts.missing}</span>`  : `<span class="dim">${counts.missing}</span>`}</td>
         <td>
-          <button data-only="${c.id}" data-phase="check">check</button>
-          <button data-only="${c.id}" data-phase="apply" class="secondary">apply</button>
+          <div class="cat-actions">
+            <button class="phase-check"   data-cat-run data-only="${c.id}" data-phase="check">check</button>
+            <button class="phase-plan"    data-cat-run data-only="${c.id}" data-phase="plan">plan</button>
+            <button class="phase-apply"   data-cat-run data-only="${c.id}" data-phase="apply">apply</button>
+            <button class="phase-verify"  data-cat-run data-only="${c.id}" data-phase="verify">verify</button>
+            <button class="phase-cleanup" data-cat-run data-only="${c.id}" data-phase="cleanup">cleanup</button>
+            <button class="phase-all"     data-cat-run data-only="${c.id}" data-phase="" title="Run all phases for this category">▶ run all</button>
+          </div>
         </td>`;
       tb.appendChild(tr);
       const det = document.createElement("tr");
@@ -394,11 +508,21 @@ const ui = {
         }
       });
     });
-    $$("#cats-table tr.cat-row button").forEach(b => b.addEventListener("click", e => {
+    // Per-category phase buttons → start the run directly (with sudo for mutating).
+    $$("#cats-table button[data-cat-run]").forEach(b => b.addEventListener("click", async e => {
       e.stopPropagation();
-      ui.show("run");
-      $("#only-select").value  = b.dataset.only;
-      $("select[name=phase]").value = b.dataset.phase;
+      const body = {
+        only: b.dataset.only || null,
+        phase: b.dataset.phase || null,
+        dry_run: false,
+      };
+      try {
+        const r = await startRunWithSudo(body);
+        ui.show("run");
+        ui.attachStream(r.run_id);
+        $("#stop-btn").disabled = false;
+        ui.status(`run ${r.run_id} started — ${body.only}/${body.phase || "all phases"}`);
+      } catch (err) { ui.status(String(err)); }
     }));
   },
 
@@ -422,6 +546,7 @@ const ui = {
             <th>${tr("categories.col_status")}</th>
             <th>${tr("categories.col_source")}</th>
             <th>${tr("categories.col_in_cfg")}</th>
+            <th>Action</th>
           </tr></thead>
           <tbody>
             ${items.map(it => `
@@ -432,6 +557,9 @@ const ui = {
                 <td>${ui.badge(it.status)}</td>
                 <td class="dim">${it.source||""}</td>
                 <td>${it.in_config ? "✔" : "<span class='dim'>—</span>"}</td>
+                <td>${it.in_config
+                  ? `<button class="secondary" data-cat-rm data-pkg="${it.name}" data-cat="${cat}" title="Remove from config (does NOT uninstall)">remove</button>`
+                  : `<button class="secondary" data-cat-add data-pkg="${it.name}" data-cat="${cat}" title="Add to config so future updates include it">+ add</button>`}</td>
               </tr>`).join("")}
           </tbody>
         </table>`;
@@ -470,17 +598,36 @@ const ui = {
   },
 
   async loadHistory() {
-    const rows = (await api.get("/runs?limit=200")).runs;
+    const [rows, eta] = await Promise.all([
+      api.get("/runs?limit=200").then(d => d.runs),
+      api.get("/telemetry/eta").catch(() => ({profiles:{}})),
+    ]);
+    // Header line: shows expected duration for each profile based on history.
+    const etaTxt = Object.entries(eta.profiles||{}).map(([prof, p]) =>
+      `<span class="badge ${p.ok_pct>=90?"ok":p.ok_pct>=70?"warn":"fail"}">${prof}</span> avg ${Math.round(p.avg_seconds/60)}m, p90 ${Math.round(p.p90_seconds/60)}m, ${p.ok_pct}% ok (${p.samples})`
+    ).join(" · ");
+    $("#history-eta").innerHTML = etaTxt
+      ? `Based on history: ${etaTxt}`
+      : "<span class='dim'>No prior runs to compute ETA from yet.</span>";
     const tb = $("#history-table tbody");
     tb.innerHTML = "";
     for (const r of rows) {
       const tr = document.createElement("tr");
       const phaseSummary = r.summary && r.summary.phases
         ? `${r.summary.phases.length} phase(s)` : "—";
+      let durStr = "—";
+      if (r.started_at && r.ended_at) {
+        try {
+          const a = new Date(r.started_at), b = new Date(r.ended_at);
+          const sec = Math.max(0, Math.round((b - a) / 1000));
+          durStr = sec >= 60 ? `${Math.floor(sec/60)}m${sec%60}s` : `${sec}s`;
+        } catch {}
+      }
       tr.innerHTML = `
         <td>${ui.fmtTime(r.started_at)}</td>
         <td>${r.profile || "—"}${r.dry_run ? " <span class='dim'>(dry)</span>":""}</td>
         <td>${ui.badge(r.status)}</td>
+        <td class="duration">${durStr}</td>
         <td>${phaseSummary}</td>
         <td>${r.needs_reboot ? "yes" : "—"}</td>
         <td><a href="#logs" data-run="${r.id}">${r.id}</a></td>`;
@@ -633,33 +780,81 @@ const ui = {
   attachStream(runId) {
     const log = $("#live-log");
     log.textContent = "";
+    const prog = $("#run-progress");
+    const fill = prog.querySelector(".run-progress-fill");
+    const lbl  = prog.querySelector(".run-progress-label");
+    const rec  = prog.querySelector(".run-progress-recent");
+    rec.innerHTML = ""; lbl.innerHTML = ""; fill.style.width = "0%";
+    prog.classList.add("hidden");
+    const stripAnsi = s => s.replace(/\x1b\[[0-9;]*m/g, "");
+
+    // Parse PROGRESS|... markers emitted by lib/progress.sh + apt awk parser.
+    function handleMarker(line) {
+      const stripped = stripAnsi(line);
+      if (!stripped.startsWith("PROGRESS|")) return false;
+      const parts = stripped.split("|");
+      const kind = parts[1];
+      if (kind === "start") {
+        const total = +parts[3]; const label = parts[4] || parts[2];
+        prog.classList.remove("hidden");
+        lbl.innerHTML = `<span><b>${label}</b> — 0/${total}</span><span class="dim">running…</span>`;
+        fill.style.width = "0%";
+        rec.innerHTML = "";
+        prog._total = total;
+      } else if (kind === "step") {
+        const n = +parts[3], total = +parts[4], status = parts[5], msg = parts.slice(6).join("|");
+        const pct = total > 0 ? Math.round((n/total) * 100) : 0;
+        fill.style.width = pct + "%";
+        lbl.innerHTML = `<span><b>${parts[2]}</b> — ${n}/${total}</span><span class="dim">${pct}%</span>`;
+        const div = document.createElement("div");
+        div.className = status;
+        div.textContent = `[${n}/${total}] ${msg}`;
+        rec.prepend(div);
+        // Cap to last 12 entries to keep DOM light.
+        while (rec.children.length > 12) rec.removeChild(rec.lastChild);
+      } else if (kind === "done") {
+        const ok = +parts[3], warn = +parts[4], err = +parts[5];
+        lbl.innerHTML = `<span><b>${parts[2]}</b> — done</span>` +
+          `<span><span class="badge ok">${ok}</span> ` +
+          `<span class="badge ${warn?"warn":"ok"}">${warn} warn</span> ` +
+          `<span class="badge ${err?"fail":"ok"}">${err} err</span></span>`;
+        fill.style.width = "100%";
+        // Auto-hide after a short delay; user still sees the recent list.
+        setTimeout(() => { if (prog._total === +parts[3]) prog.classList.add("hidden"); }, 4000);
+      }
+      return true;
+    }
+
     const es = new EventSource(`/runs/active/stream`);
     es.addEventListener("log", e => {
       const m = JSON.parse(e.data);
-      log.textContent += (m.line || "") + "\n";
-      log.scrollTop = log.scrollHeight;
+      const ln = m.line || "";
+      if (!handleMarker(ln)) {
+        log.textContent += ln + "\n";
+        log.scrollTop = log.scrollHeight;
+      }
     });
     es.addEventListener("done", e => {
       const m = JSON.parse(e.data);
       log.textContent += `\n[done — exit ${m.exit_code}]\n`;
       ui.status(`run ${runId} done (exit ${m.exit_code})`);
       $("#stop-btn").disabled = true;
+      prog.classList.add("hidden");
       es.close();
-      // Run finished — invalidate cached data so user gets fresh stats
-      // when they go back to Overview/Categories. Also re-check reboot flag.
       ui.invalidateCaches();
       ui.checkRebootBanner();
+      ui.loadHealth();
     });
     es.onerror = () => { es.close(); };
   },
 };
 
-// Hook nav
+// Hook nav (works for both old top-nav and new sidebar nav-link)
 document.addEventListener("click", e => {
-  if (e.target.matches("nav a[data-view]")) {
-    e.preventDefault();
-    ui.show(e.target.dataset.view);
-  }
+  const a = e.target.closest("a[data-view]");
+  if (!a) return;
+  e.preventDefault();
+  ui.show(a.dataset.view);
 });
 
 // Helper that retries a /runs POST after sudo modal if 401 SUDO-REQUIRED
@@ -681,17 +876,25 @@ async function startRunWithSudo(body) {
   }
 }
 
-// Quick-action buttons
-$$("[data-quick]").forEach(b => b.addEventListener("click", async () => {
-  const body = JSON.parse(b.dataset.quick);
+// Quick-action buttons. Use delegation so dynamically-added buttons (e.g.
+// inside a re-rendered card) inherit the handler.
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-quick]");
+  if (!b) return;
+  let body;
+  try { body = JSON.parse(b.dataset.quick); } catch { return; }
+  // Confirm destructive NVIDIA path.
+  if ((body.extra_args || []).includes("--nvidia")) {
+    if (!confirm("Apply NVIDIA driver upgrade?\n\nNVIDIA drivers are held by default because DKMS rebuilds can fail. The upgrade will run apt with --only-upgrade nvidia-driver-*, then verify nvidia-smi.")) return;
+  }
   try {
     const r = await startRunWithSudo(body);
     ui.show("run");
     ui.attachStream(r.run_id);
     $("#stop-btn").disabled = false;
     ui.status(`run ${r.run_id} started`);
-  } catch (e) { ui.status(String(e)); }
-}));
+  } catch (err) { ui.status(String(err)); }
+});
 
 // Run form
 $("#run-form").addEventListener("submit", async e => {
@@ -780,6 +983,73 @@ document.addEventListener("click", e => {
   if (e.target.id === "hosts-refresh-btn") ui.loadHosts();
 });
 
+// Suggestions panel
+document.addEventListener("click", async e => {
+  if (e.target.id === "suggest-refresh-btn") { ui._loaded.suggest = false; ui.loadSuggestions(); }
+  const ap = e.target.closest("[data-sg-apply]");
+  if (ap) {
+    try { ui.applySuggestion(JSON.parse(ap.dataset.sgApply)); }
+    catch (err) { ui.status(String(err)); }
+  }
+  const dm = e.target.closest("[data-sg-dismiss]");
+  if (dm) ui.dismissSuggestion(dm.dataset.sgDismiss);
+  if (e.target.id === "health-recheck-btn") {
+    try { await api.post("/health/run"); } catch {}
+    ui.loadHealth();
+  }
+  if (e.target.id === "backup-export-btn") {
+    location.href = "/backup/export";
+  }
+});
+
+// AI form (in Suggestions tab)
+document.addEventListener("submit", async e => {
+  if (e.target && e.target.id === "ai-form") {
+    e.preventDefault();
+    const f = e.target;
+    const out = $("#ai-output");
+    try {
+      const cur = await api.get("/settings");
+      const merged = {...cur, ai: {
+        provider: f.elements.ai_provider.value,
+        api_key:  f.elements.ai_api_key.value,
+        model:    f.elements.ai_model.value,
+      }};
+      const r = await fetch("/settings", {method:"PUT",
+        headers:{"content-type":"application/json"}, body: JSON.stringify(merged)});
+      out.textContent = r.ok ? "saved" : `error ${r.status}`;
+      ui._loaded.suggest = false; ui.loadSuggestions();
+    } catch (err) { out.textContent = String(err); }
+  }
+});
+
+// Exclusion checkboxes (in Apps tab)
+document.addEventListener("change", e => {
+  const t = e.target.closest("[data-excl-toggle]");
+  if (t) ui.toggleExclusion(t.dataset.pkg, t.dataset.cat, t.checked);
+});
+
+// Backup import (file upload)
+document.addEventListener("change", async e => {
+  if (e.target && e.target.id === "backup-import-file") {
+    const f = e.target.files[0];
+    if (!f) return;
+    const out = $("#backup-output");
+    out.textContent = `Uploading ${f.name} (${Math.round(f.size/1024)}KB)…`;
+    try {
+      const r = await fetch("/backup/import", {
+        method: "POST",
+        headers: {"content-type": "application/gzip"},
+        body: f,
+      });
+      const j = await r.json();
+      out.textContent = r.ok
+        ? `restored ${(j.restored||[]).length} files. Reload the page.`
+        : `failed: ${JSON.stringify(j)}`;
+    } catch (err) { out.textContent = String(err); }
+  }
+});
+
 $("#stop-btn").addEventListener("click", async () => {
   try {
     await api.post("/runs/active/stop");
@@ -833,6 +1103,142 @@ document.addEventListener("click", async e => {
   }
 });
 
+// ── Inject inline icons into nav + topbar buttons ──────────────────────
+function injectIcons() {
+  if (!window.ICONS) return;
+  document.querySelectorAll("[data-icon]").forEach(el => {
+    const slot = el.querySelector(".nav-icon");
+    const target = slot || el;
+    const ic = window.ICONS[el.dataset.icon];
+    if (ic) target.innerHTML = ic;
+  });
+  // Topbar buttons get icons that reflect current state.
+  const setBtn = (id, key) => {
+    const b = document.getElementById(id);
+    if (b && window.ICONS[key]) b.innerHTML = window.ICONS[key];
+  };
+  setBtn("sidebar-toggle", "menu");
+  setBtn("lang-switcher",  "globe");
+  setBtn("theme-switcher", (document.documentElement.dataset.theme === "dark") ? "moon" : "sun");
+  setBtn("font-switcher",  "type");
+}
+
+// ── Sidebar drawer (mobile) ────────────────────────────────────────────
+function bindSidebar() {
+  const shell = document.body;
+  const open  = () => { shell.classList.add("sidebar-open"); $("#sidebar-backdrop")?.classList.remove("hidden"); };
+  const close = () => { shell.classList.remove("sidebar-open"); $("#sidebar-backdrop")?.classList.add("hidden"); };
+  $("#sidebar-toggle")?.addEventListener("click", () => {
+    shell.classList.contains("sidebar-open") ? close() : open();
+  });
+  $("#sidebar-backdrop")?.addEventListener("click", close);
+  // Close drawer after picking a nav item on mobile.
+  document.addEventListener("click", e => {
+    if (window.matchMedia("(max-width: 768px)").matches && e.target.closest(".sidebar-nav .nav-link")) close();
+  });
+}
+
+// ── Topbar switchers: theme / language / font-size ─────────────────────
+function bindSwitchers() {
+  const root = document.documentElement;
+  // Theme cycle: auto → light → dark → auto
+  $("#theme-switcher")?.addEventListener("click", () => {
+    const order = ["auto", "light", "dark"];
+    const cur = root.dataset.theme || "auto";
+    const next = order[(order.indexOf(cur) + 1) % order.length];
+    window.applyTheme(next);
+    // Persist into settings.
+    fetch("/settings", {method:"PUT", headers:{"content-type":"application/json"},
+      body: JSON.stringify({...(window.SETTINGS_CACHE||{}), ui:{...((window.SETTINGS_CACHE||{}).ui||{}), theme: next}})}).catch(()=>{});
+    // Repaint icon (sun/moon/auto).
+    const k = next === "dark" ? "moon" : next === "light" ? "sun" : "globe";
+    if (window.ICONS) $("#theme-switcher").innerHTML = window.ICONS[k];
+    ui.status(`theme: ${next}`);
+  });
+  // Language cycle: en ↔ pl
+  $("#lang-switcher")?.addEventListener("click", () => {
+    const cur = window.UI_LANG || "en";
+    const next = cur === "en" ? "pl" : "en";
+    window.UI_LANG = next; window.applyI18n();
+    fetch("/settings", {method:"PUT", headers:{"content-type":"application/json"},
+      body: JSON.stringify({...(window.SETTINGS_CACHE||{}), ui:{...((window.SETTINGS_CACHE||{}).ui||{}), language: next}})}).catch(()=>{});
+    ui.status(`language: ${next}`);
+  });
+  // Font cycle: sm → md → lg → sm
+  $("#font-switcher")?.addEventListener("click", () => {
+    const order = ["sm", "md", "lg"];
+    const cur = root.dataset.font || "md";
+    const next = order[(order.indexOf(cur) + 1) % order.length];
+    root.dataset.font = next;
+    try { localStorage.setItem("ui-font", next); } catch {}
+    ui.status(`font size: ${next}`);
+  });
+  // Restore persisted font choice.
+  try {
+    const f = localStorage.getItem("ui-font");
+    if (f && ["sm","md","lg"].includes(f)) root.dataset.font = f;
+    else root.dataset.font = "md";
+  } catch { root.dataset.font = "md"; }
+}
+
+// ── Categories add-widget: append package to a config list ─────────────
+async function bindCatsAddWidget() {
+  // Populate <select> with categories.
+  try {
+    const cats = (await api.get("/categories")).categories || [];
+    const sel = $("#cats-add-cat");
+    if (sel && !sel.options.length || (sel && sel.options.length <= 1)) {
+      for (const c of cats) {
+        if (!c.id) continue;
+        // Skip categories without a config/*.list file (drivers, inventory).
+        if (["drivers", "inventory"].includes(c.id)) continue;
+        const o = document.createElement("option");
+        o.value = c.id; o.textContent = c.id;
+        sel.appendChild(o);
+      }
+    }
+  } catch {}
+}
+// Inline +add / remove buttons inside Categories detail
+document.addEventListener("click", async e => {
+  const ad = e.target.closest("[data-cat-add]");
+  if (ad) {
+    try {
+      await api.post("/apps/add", {package: ad.dataset.pkg, category: ad.dataset.cat});
+      ui.status(`added ${ad.dataset.cat}:${ad.dataset.pkg}`);
+      // Refresh just this expanded detail.
+      ui.loadCategoryDetail(ad.dataset.cat);
+    } catch (err) { ui.status(String(err)); }
+  }
+  const rm = e.target.closest("[data-cat-rm]");
+  if (rm) {
+    if (!confirm(`Remove ${rm.dataset.pkg} from ${rm.dataset.cat} config?\n(does NOT uninstall the package itself)`)) return;
+    try {
+      await api.post("/apps/remove", {package: rm.dataset.pkg, category: rm.dataset.cat});
+      ui.status(`removed ${rm.dataset.cat}:${rm.dataset.pkg}`);
+      ui.loadCategoryDetail(rm.dataset.cat);
+    } catch (err) { ui.status(String(err)); }
+  }
+});
+
+document.addEventListener("click", async e => {
+  if (e.target.id === "cats-add-btn") {
+    const cat = $("#cats-add-cat").value;
+    const pkg = $("#cats-add-pkg").value.trim();
+    const out = $("#cats-add-out");
+    if (!cat || !pkg) { out.textContent = "pick a category and type a package name"; return; }
+    out.textContent = "adding…";
+    try {
+      const r = await api.post("/apps/add", {package: pkg, category: cat});
+      out.textContent = r.ok ? `added ${cat}:${pkg}` : `error: ${(r.stderr||"").slice(0,200)}`;
+      $("#cats-add-pkg").value = "";
+      ui._loaded.categories = false; ui._loaded.apps = false;
+      // Re-render Categories so the new package shows in the detail expand.
+      ui.show("categories");
+    } catch (err) { out.textContent = String(err); }
+  }
+});
+
 // Init: load settings first so theme/language are applied before paint flicker
 async function bootstrap() {
   try {
@@ -850,6 +1256,10 @@ async function bootstrap() {
     window.UI_LANG = window.detectLanguage();
     window.applyI18n();
   }
+  injectIcons();
+  bindSidebar();
+  bindSwitchers();
+  bindCatsAddWidget();
   const start = location.hash.replace("#", "") || "overview";
   ui.show(start);
   ui.checkRebootBanner();

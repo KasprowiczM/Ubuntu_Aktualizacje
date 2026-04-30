@@ -1,5 +1,181 @@
 # Handoff
 
+## 2026-05-03 (late) — Sidebar redesign + verbose progress + NVIDIA fix (Etap 8)
+
+### Stan na koniec sesji
+
+| Obszar | Status |
+|---|---|
+| **Sidebar layout** zamiast navbar | ✅ `<aside id="sidebar">` po lewej, brand+tagline+nav+hostbadge; main scroll niezależny |
+| **Inline SVG icons** per pozycja menu | ✅ `app/frontend/icons.js` (22 ikon Lucide-style); `data-icon=` w nav-link, injectIcons() po bootstrap |
+| **Topbar utilities** (theme/lang/font) | ✅ `<header class="topbar">`; ikony cykla: sun↔moon, globe (en↔pl), type (sm↔md↔lg); persist do `/settings` + localStorage |
+| **Hamburger** + drawer mobile <768px | ✅ sidebar fixed translateX(-100%) → slide-in; backdrop click zamyka; auto-close po wyborze; box-shadow 4px |
+| **Responsive grid** mobile/tablet/desktop | ✅ breakpoints: 1024 (narrow sidebar), 768 (drawer); `.grid` jednokolumnowo; mniejsze cat-actions na mobile |
+| **Categories add/remove pakietu** | ✅ Add widget na górze (`<select cat>` + `<input pkg>` + button); Remove button per row w detail expand |
+| **NVIDIA detection fix** | ✅ używa `apt_pkg_candidate` + `dpkg --compare-versions` zamiast `madison NR==1`; pokazuje "newer: X [dpkg verdict: X > Y]" gdy candidate faktycznie > installed |
+| **NVIDIA candidate older?** | ✅ jasne info "candidate ${cand} (older than installed — no upgrade needed)" gdy security pocket ma starszą |
+| **Snap firefox refresh** | ✅ `--ignore-running` fallback działa; dorzuciłem hint "If you're using a snap right now, close it" + `running apps (xxx)` w warn |
+| **CHECK-ONLY banner** w CLI | ✅ żółta ramka gdy phases=[check] |
+
+### Nowe pliki
+
+```
+app/frontend/icons.js                          (Lucide-style inline SVG, 22 keys)
+```
+
+### Zmodyfikowane (tej sesji)
+
+```
+app/frontend/index.html                        (sidebar + topbar + cats-add-widget; usunięto stary <header>)
+app/frontend/style.css                         (layout-shell grid, sidebar/.topbar, responsive, font-size scale)
+app/frontend/app.js                            (injectIcons, bindSidebar, bindSwitchers, bindCatsAddWidget, data-cat-add/rm)
+scripts/drivers/check.sh                       (dpkg --compare-versions logic)
+scripts/snap/apply.sh                          (running-apps hint)
+```
+
+### Walidacja
+
+```
+bash -n na wszystkich .sh                                                OK
+python3 ast parse na wszystkich .py                                      OK
+TestClient: 22 GET endpoints (incl. /icons.js)                           22/22 → 200
+SPA: layout-shell + sidebar + topbar + 10 data-icon attrs               present
+JS: injectIcons/bindSidebar/bindSwitchers/bindCatsAddWidget defined      present
+./update-all.sh --only drivers --phase check --no-notify                 newer: 0ubuntu1.24.04.1 [dpkg verdict: > 0ubuntu0.24.04.2]
+python3 tests/validate_phase_json.py                                     PASS
+test_dev_sync_safety.py                                                  9/9 OK
+dev-sync overlay                                                         8 files
+```
+
+### Wyjaśnienie NVIDIA (była niejasność)
+
+User widział "installed 0ubuntu0.24.04.2 → available 0ubuntu1.24.04.1" i myślał, że `.2 > .1` więc instalowany jest nowszy. **Tak nie jest** — Debian-style versioning porównuje całe człony: `0ubuntu0` vs `0ubuntu1` — różnica w przedostatnim segmencie (`0` vs `1`), więc `0ubuntu1.24.04.1 > 0ubuntu0.24.04.2`. Potwierdzone `dpkg --compare-versions`. Teraz CLI pokazuje "[dpkg verdict: X > Y]" żeby było jednoznacznie.
+
+### Snap firefox
+
+`snap refresh` dla firefoxa wymaga zamknięcia browsera lub `--ignore-running`. Master script już ma fallback `--ignore-running`. Jeśli nadal nie idzie:
+1. Zamknij Firefoxa.
+2. `bin/ascendo --only snap --phase apply`.
+3. Lub w UI: Categories → snap → apply.
+
+---
+
+## 2026-05-03 — UX wave 1+2 + AI suggestions + pain-points (Etap 7)
+
+### Stan na koniec sesji
+
+| Obszar | Status |
+|---|---|
+| Slogan **"unified updates"** w UI header (gradient) + i18n PL/EN | ✅ `app/frontend/index.html` + `style.css` + `i18n.js` |
+| **Per-category 5-fazowe przyciski** (check/plan/apply/verify/cleanup + ▶ run all) | ✅ Categories tab; jeden klik = run; sudo modal jeśli mutating |
+| **Snapshot stuck-fix** (timeshift hang bez TTY) | ✅ `scripts/snapshot/create.sh` z `timeout`+SUDO_ASKPASS, `update-all.sh` loguje do `<run>/snapshot.log` i nigdy nie blokuje |
+| **`config/exclusions.list`** + `lib/exclusions.sh` + filtered list reader | ✅ `parse_config_*_filtered <cat>` używane w apt/snap/brew/npm/pip/flatpak apply |
+| Apps tab — **checkbox "skip"** per pakiet | ✅ wraz z `/exclusions` REST endpoints |
+| **Settings backup/restore** | ✅ `app/backend/backup.py` + `/backup/{export,import}` + UI buttons + CLI `ascendo settings export/import` |
+| **Smart Suggestions panel** (heuristyki + opcjonalny LLM) | ✅ nowa zakładka `Suggestions`, `app/backend/suggestions.py`, AI provider settings (Anthropic/OpenAI, opt-in, read-only) |
+| **Post-run health check** (score 0-100 + issues list) | ✅ `scripts/health-check.sh`, JSON do `<run>/health.json`, **Health card** na Overview |
+| **ETA from history** | ✅ `app/backend/telemetry.py` + history banner: avg/p90/ok% per profile |
+| **`--budget Ns/m/h`** w `update-all.sh` | ✅ stop-early gdy przekroczony |
+| **Maintenance windows + battery guard** dla schedulera | ✅ `scripts/scheduler/should-run.sh` jako `ExecStartPre=`, env `UA_REQUIRE_AC=1`, `UA_MAINTENANCE_WINDOW=02:00-05:00`, `UA_RESPECT_FOCUS=1` |
+| **CLI `ascendo` rozszerzony** | ✅ + `settings export/import`, `health`, `exclusions {list,add,remove}` |
+| **Stuck dashboard runs cleaned** | ✅ `141545Z`, `141641Z` usunięte (były pre-fix snapshot hang) |
+
+### Nowe endpointy
+
+```
+/suggestions                  GET    — heuristic + AI advice (read-only)
+/suggestions/apply            POST   — write diff with .bak_<ts> backup
+/suggestions/dismiss          POST   — persist dismissed-suggestions.json
+/health/check                 GET    — last health.json (latest run by default)
+/health/run                   POST   — run health-check.sh on demand
+/backup/export                GET    — download tar.gz
+/backup/import                POST   — upload tar.gz, restores w/ .bak_<ts>
+/telemetry/eta                GET    — avg/median/p90/ok% per profile
+/exclusions                   GET    — list of cat:pkg + category-skipped
+/exclusions/add               POST   — {category, package}
+/exclusions/remove            POST   — {category, package}
+```
+
+### Nowe pliki
+
+```
+config/exclusions.list                         (template, gitignored when populated)
+lib/exclusions.sh                              (loader + filter helpers)
+scripts/health-check.sh                        (post-run health, JSON)
+scripts/scheduler/should-run.sh                (battery / maint window / busy guard)
+app/backend/suggestions.py                     (heuristics + LLM provider)
+app/backend/health.py                          (facade for health.json)
+app/backend/backup.py                          (tar.gz export/import)
+app/backend/telemetry.py                       (ETA averages from db)
+app/backend/exclusions.py                      (list edit facade)
+```
+
+### Zmodyfikowane
+
+```
+update-all.sh                                  (--budget, --no-health, post-run health, snapshot non-blocking)
+scripts/snapshot/create.sh                     (timeout + SUDO_ASKPASS-aware)
+scripts/scheduler/install.sh                   (ExecStartPre=should-run.sh)
+scripts/{apt,snap,brew,npm,pip,flatpak}/apply.sh  (parse_config_*_filtered)
+lib/detect.sh                                  (parse_config_*_filtered)
+app/backend/main.py                            (+10 endpoints)
+app/backend/settings.py                        (ai.*, scheduler.maintenance_window, scheduler.require_ac)
+app/frontend/{index.html,app.js,style.css,i18n.js}  (slogan, Suggestions, Health card, Backup, Exclusion checkbox, ETA in History, per-category 5-phase buttons)
+packaging/deb/usr/bin/ubuntu-aktualizacje      (settings/health/exclusions subcommands)
+```
+
+### Walidacje
+
+```text
+bash -n na wszystkich .sh                                                OK
+python3 -c ast parse na wszystkich .py                                   OK
+python3 tests/validate_phase_json.py                                     PASS (266+)
+PYTHONDONTWRITEBYTECODE=1 python3 tests/test_dev_sync_safety.py          9/9 OK
+TestClient: 18 GET endpoints (incl. /suggestions, /health/check, /telemetry/eta, /exclusions) → 200
+TestClient: POST /exclusions/add + /remove + /backup/export + /suggestions/apply → 200
+./update-all.sh --profile quick --no-notify                              6/6 ok, 13s, post-run health 100/100
+```
+
+### Pain-points adresowane (z sesji-2026-05-03)
+
+| Pain point | Rozwiązanie |
+|---|---|
+| Strach przed zepsuciem | Snapshot non-blocking + Health card po runie + per-app skip |
+| Brak alertu "untracked package pojawił się sam" | Apps tab pokazuje `detected ` z propozycją tracking |
+| Update fatigue | ETA z historii (avg, p90, ok%) na History |
+| Brak rollbacku per-package | TODO follow-up (apt downgrade UI; przygotowane API) |
+| Confidence "to się skończyło" | Health score na Overview + post-run banner z linkiem |
+| Strach przed chronić-przed-touchem | exclusions.list + UI checkbox w Apps |
+| Long brew runs | `--budget 30m` zatrzymuje czysto i wraca następnym razem |
+| Scheduled na baterii? | should-run.sh: defer w `UA_REQUIRE_AC=1` + niskim akku |
+
+### Co zostało nieruszone (do następnej sesji)
+
+| Priorytet | ID | Zadanie |
+|---|---|---|
+| P1 | B5+ | apt:apply changelog preview ("co się zmieni") przed potwierdzeniem |
+| P1 | rollback | UI button "downgrade to previous version" per-pakiet (apt cache .deb files) |
+| P2 | gh-releases | Notifier dla nowych Ascendo releases (settings.updates.check_repo wpięte; ale brak workera) |
+| P2 | profile templates | Kuratorowane `config/profiles/{dev,media,minimal}.list` + import w wizardzie |
+| P3 | telemetry chart | History "duration over time" SVG line chart |
+| P3 | per-package failure mining | Heurystyka per-package z sidecar items (już częściowo w suggestions.py) |
+| P3 | i18n parity | Klucze `suggest.*`, `health.*`, `backup.*` są w PL/EN; reszta UI nadal hybrydowa |
+
+### Komendy weryfikujące
+
+```bash
+git pull
+bash scripts/fresh-machine.sh --check-only
+./update-all.sh --profile quick --no-notify
+bin/ascendo health --json
+bin/ascendo exclusions list
+bin/ascendo settings export /tmp/test.tar.gz
+python3 tests/validate_phase_json.py | tail -3
+app/.venv/bin/python -m app.backend &  # otwórz http://127.0.0.1:8765
+```
+
+---
+
 ## 2026-05-02 — Ascendo brand + i18n + apps (Etap 6)
 
 ### Stan na koniec sesji

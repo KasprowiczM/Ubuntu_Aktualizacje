@@ -4,6 +4,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 source "${SCRIPT_DIR}/lib/detect.sh"
 source "${SCRIPT_DIR}/lib/json.sh"
+source "${SCRIPT_DIR}/lib/progress.sh"
 
 json_init check brew
 json_register_exit_trap "${JSON_OUT:-}"
@@ -17,15 +18,21 @@ if [[ "${HAS_BREW:-0}" -ne 1 ]]; then
 fi
 
 # Outdated formulas
-out_f=$(run_as_user "${BREW_BIN}" outdated --formula 2>/dev/null || true)
-out_c=$(run_as_user "${BREW_BIN}" outdated --cask 2>/dev/null || true)
+print_step "brew outdated --formula"
+out_f=$(run_as_user "${BREW_BIN}" outdated --formula --verbose 2>/dev/null || true)
+print_ok
+print_step "brew outdated --cask"
+out_c=$(run_as_user "${BREW_BIN}" outdated --cask --verbose 2>/dev/null || true)
+print_ok
 
-n_f=0; n_c=0
+n_f=0; n_c=0; detail=""
 if [[ -n "$out_f" ]]; then
     while IFS= read -r line; do
         [[ -z "$line" ]] && continue
         pkg=$(echo "$line" | awk '{print $1}')
+        # Verbose format: "name (current) < new"
         json_add_item id="brew:upgrade:formula:${pkg}" action="upgrade" result="noop"
+        detail+="formula ${line}"$'\n'
         n_f=$((n_f + 1))
     done <<< "$out_f"
 fi
@@ -34,9 +41,11 @@ if [[ -n "$out_c" ]]; then
         [[ -z "$line" ]] && continue
         pkg=$(echo "$line" | awk '{print $1}')
         json_add_item id="brew:upgrade:cask:${pkg}" action="upgrade" result="noop"
+        detail+="cask    ${line}"$'\n'
         n_c=$((n_c + 1))
     done <<< "$out_c"
 fi
+print_found brew "$((n_f + n_c))" "$detail"
 json_add_diag info BREW-OUTDATED "${n_f} formula(s) and ${n_c} cask(s) outdated"
 
 # brew doctor (informational)

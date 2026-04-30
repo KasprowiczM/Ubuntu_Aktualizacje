@@ -41,6 +41,28 @@ case "${1:-}" in
                       create) shift; exec bash "$ROOT/scripts/snapshot/create.sh" "$@" ;;
                       restore) shift; exec bash "$ROOT/scripts/snapshot/restore.sh" "$@" ;;
                   esac ;;
+    settings)     shift; case "${1:-help}" in
+                      export) shift
+                              dest="${1:-ascendo-backup-$(date +%Y%m%d_%H%M%S).tar.gz}"
+                              cd "$ROOT" && python3 -c "import sys; sys.path.insert(0,'.'); from app.backend import backup; sys.stdout.buffer.write(backup.export_bundle())" > "$dest"
+                              echo "wrote ${dest} ($(stat -c%s "$dest") bytes)" ;;
+                      import) shift
+                              src="${1:-}"
+                              [[ -f "$src" ]] || { echo "ascendo settings import <bundle.tar.gz>"; exit 2; }
+                              cd "$ROOT" && python3 -c "import sys; sys.path.insert(0,'.'); from app.backend import backup; r=backup.import_bundle(open(sys.argv[1],'rb').read()); print('restored:', len(r['restored']), 'files')" "$src" ;;
+                      *) echo "ascendo settings {export [file]|import <file>}"; exit 2 ;;
+                  esac ;;
+    health)       shift; exec bash "$ROOT/scripts/health-check.sh" "$@" ;;
+    exclusions)   shift; case "${1:-list}" in
+                      list) grep -v '^[[:space:]]*#' "$ROOT/config/exclusions.list" 2>/dev/null | grep -v '^[[:space:]]*$' || echo "(none)" ;;
+                      add)  shift; pkg="${1:-}"; [[ -n "$pkg" ]] || { echo "ascendo exclusions add <cat:pkg>"; exit 2; }
+                            grep -qx "$pkg" "$ROOT/config/exclusions.list" 2>/dev/null || echo "$pkg" >> "$ROOT/config/exclusions.list"
+                            echo "+ $pkg" ;;
+                      remove) shift; pkg="${1:-}"; [[ -n "$pkg" ]] || { echo "ascendo exclusions remove <cat:pkg>"; exit 2; }
+                            tmp=$(mktemp); grep -vx "$pkg" "$ROOT/config/exclusions.list" > "$tmp" && mv "$tmp" "$ROOT/config/exclusions.list"
+                            echo "- $pkg" ;;
+                      *) echo "ascendo exclusions {list|add cat:pkg|remove cat:pkg}"; exit 2 ;;
+                  esac ;;
     dashboard)
         if [[ -x "$ROOT/app/.venv/bin/python" ]]; then
             cd "$ROOT" && exec "$ROOT/app/.venv/bin/python" -m app.backend

@@ -7,7 +7,7 @@ import shlex
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -24,6 +24,11 @@ from . import (
     metrics as metrics_mod,
     report as report_mod,
     diff as diff_mod,
+    suggestions as sugg_mod,
+    health as health_mod,
+    backup as backup_mod,
+    telemetry as telem_mod,
+    exclusions as excl_mod,
 )
 from .runner import get_runner
 
@@ -36,6 +41,9 @@ class StartRunRequest(BaseModel):
     only: str | None = None
     phase: str | None = None
     dry_run: bool = False
+    # extra_args are forwarded verbatim to update-all.sh after sanitisation.
+    # Whitelisted to a known set so the UI cannot inject arbitrary flags.
+    extra_args: list[str] = []
 
 
 class SudoAuthRequest(BaseModel):
@@ -106,6 +114,9 @@ async def start_run(req: StartRunRequest) -> dict[str, Any]:
                     "sudo_detail": st.detail,
                 },
             )
+    # Whitelist for extra_args — we never pass through unknown flags.
+    _ALLOWED_EXTRA = {"--nvidia", "--snapshot", "--no-drivers", "--no-health"}
+    safe_extra = [a for a in (req.extra_args or []) if a in _ALLOWED_EXTRA]
     runner = get_runner()
     try:
         h = runner.start(
@@ -114,12 +125,13 @@ async def start_run(req: StartRunRequest) -> dict[str, Any]:
             only=req.only,
             phase=req.phase,
             dry_run=req.dry_run,
+            extra_args=safe_extra,
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
     audit_mod.log("run.start", details={
         "run_id": h.run_id, "profile": req.profile, "only": req.only,
-        "phase": req.phase, "dry_run": req.dry_run,
+        "phase": req.phase, "dry_run": req.dry_run, "extra": safe_extra,
     })
     return {"run_id": h.run_id, "started_at": h.started_at}
 
@@ -653,6 +665,102 @@ def system_cancel_reboot() -> dict[str, Any]:
     res = subprocess.run(["sudo", "-A", "/sbin/shutdown", "-c"], env=env,
                          capture_output=True, text=True)
     return {"ok": res.returncode == 0, "stderr": res.stderr.strip()}
+
+
+# ── Smart suggestions ────────────────────────────────────────────────────────
+@app.get("/suggestions")
+def suggestions_list() -> dict[str, Any]:
+    return {"items": sugg_mod.list_all()}
+
+
+class SuggestionApplyRequest(BaseModel):
+    id: str
+    diff: list[dict[str, Any]] = []
+
+
+@app.post("/suggestions/apply")
+def suggestions_apply(req: SuggestionApplyRequest) -> dict[str, Any]:
+    res = sugg_mod.apply_diff(req.diff)
+    audit_mod.log("suggestion.apply", details={"id": req.id, "changes": res.get("changes")})
+    return res
+
+
+@app.post("/suggestions/dismiss")
+def suggestions_dismiss(payload: dict[str, Any]) -> dict[str, Any]:
+    sid = (payload or {}).get("id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="id required")
+    sugg_mod.dismiss(sid)
+    audit_mod.log("suggestion.dismiss", details={"id": sid})
+    return {"ok": True}
+
+
+# ── Post-run health ──────────────────────────────────────────────────────────
+@app.get("/health/check")
+def health_check(run_id: str | None = None) -> dict[str, Any]:
+    h = health_mod.latest_health(run_id)
+    if h is None:
+        return {"available": False}
+    return {"available": True, **h}
+
+
+@app.post("/health/run")
+def health_run() -> dict[str, Any]:
+    return health_mod.run_now()
+
+
+# ── Settings backup/restore ──────────────────────────────────────────────────
+@app.get("/backup/export")
+def backup_export() -> Any:
+    """Stream a tar.gz of the user's config (lists, exclusions, settings)."""
+    from fastapi.responses import Response
+    blob = backup_mod.export_bundle()
+    fname = f"ascendo-backup-{int(__import__('time').time())}.tar.gz"
+    audit_mod.log("backup.export", details={"bytes": len(blob)})
+    return Response(content=blob, media_type="application/gzip",
+                    headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
+
+@app.post("/backup/import")
+async def backup_import(request: Request) -> dict[str, Any]:
+    """Accept a raw tar.gz body and restore it."""
+    blob = await request.body()
+    if not blob:
+        raise HTTPException(status_code=400, detail="empty upload")
+    res = backup_mod.import_bundle(blob)
+    audit_mod.log("backup.import", details={"restored": len(res.get("restored", []))})
+    return res
+
+
+# ── Telemetry: ETA from history ──────────────────────────────────────────────
+@app.get("/telemetry/eta")
+def telemetry_eta() -> dict[str, Any]:
+    return {"profiles": telem_mod.averages_by_profile()}
+
+
+# ── Exclusions ───────────────────────────────────────────────────────────────
+@app.get("/exclusions")
+def exclusions_list() -> dict[str, Any]:
+    return excl_mod.load()
+
+
+class ExclusionEdit(BaseModel):
+    category: str
+    package: str
+
+
+@app.post("/exclusions/add")
+def exclusions_add(req: ExclusionEdit) -> dict[str, Any]:
+    res = excl_mod.add(req.category, req.package)
+    audit_mod.log("exclusion.add", details={"category": req.category, "package": req.package})
+    return res
+
+
+@app.post("/exclusions/remove")
+def exclusions_remove(req: ExclusionEdit) -> dict[str, Any]:
+    res = excl_mod.remove(req.category, req.package)
+    audit_mod.log("exclusion.remove", details={"category": req.category, "package": req.package})
+    return res
 
 
 # ── Static frontend ──────────────────────────────────────────────────────────

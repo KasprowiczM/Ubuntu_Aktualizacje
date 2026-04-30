@@ -4,6 +4,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 source "${SCRIPT_DIR}/lib/detect.sh"
 source "${SCRIPT_DIR}/lib/json.sh"
+source "${SCRIPT_DIR}/lib/progress.sh"
 
 json_init check pip
 json_register_exit_trap "${JSON_OUT:-}"
@@ -28,13 +29,15 @@ d=json.loads(sys.stdin.read() or '[]')
 for x in d:
     print(f\"{x['name']}|{x['version']}|{x['latest_version']}\")
 ")
-count_pip=0
+count_pip=0; detail=""
 while IFS='|' read -r name cur lat; do
     [[ -z "$name" ]] && continue
     json_add_item id="pip:upgrade:${name}" action="upgrade" \
         from="${cur}" to="${lat}" result="noop"
+    detail+="${name}: ${cur} → ${lat}"$'\n'
     count_pip=$((count_pip + 1))
 done <<< "$n"
+print_found pip "$count_pip" "$detail"
 json_add_diag info PIP-OUTDATED "${count_pip} pip user package(s) outdated"
 
 # pipx outdated detection — pipx list --json

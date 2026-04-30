@@ -21,6 +21,7 @@ source "${SCRIPT_DIR}/lib/common.sh"
 source "${SCRIPT_DIR}/lib/detect.sh"
 # shellcheck source=lib/json.sh
 source "${SCRIPT_DIR}/lib/json.sh"
+source "${SCRIPT_DIR}/lib/progress.sh"
 
 json_init check apt
 json_register_exit_trap "${JSON_OUT:-}"
@@ -55,9 +56,12 @@ if [[ -d "$LISTS_DIR" ]]; then
 fi
 
 # ── 3. Outdated packages (no sudo) ────────────────────────────────────────────
-print_section "Upgradable packages"
+print_section "Scanning APT package universe"
+print_step "apt list --upgradable"
 mapfile -t upgradable < <(apt list --upgradable 2>/dev/null | tail -n +2 || true)
+print_ok
 out_count=0
+detail=""
 for line in "${upgradable[@]}"; do
     [[ -z "$line" ]] && continue
     # Format: pkg/release version arch [upgradable from: oldver]
@@ -66,9 +70,10 @@ for line in "${upgradable[@]}"; do
     old=$(echo "$line" | grep -oP 'upgradable from: \K\S+' | tr -d ']' || true)
     json_add_item id="apt:upgrade:${pkg}" action="upgrade" \
         from="${old}" to="${new}" result="noop"
+    detail+="${pkg}: ${old} → ${new}"$'\n'
     out_count=$((out_count + 1))
 done
-print_info "${out_count} package(s) upgradable"
+print_found apt "$out_count" "$detail"
 json_add_diag info APT-OUTDATED "${out_count} packages have updates"
 
 # ── 4. Broken dpkg state ──────────────────────────────────────────────────────

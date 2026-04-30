@@ -4,6 +4,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 source "${SCRIPT_DIR}/lib/detect.sh"
 source "${SCRIPT_DIR}/lib/json.sh"
+source "${SCRIPT_DIR}/lib/progress.sh"
 
 json_init check flatpak
 json_register_exit_trap "${JSON_OUT:-}"
@@ -34,6 +35,10 @@ if [[ -f "$CONFIG_FLATPAK" ]]; then
 fi
 
 # Updates available
-upd=$(flatpak remote-ls --updates 2>/dev/null | wc -l | awk '{print $1}' || echo 0)
+print_step "flatpak remote-ls --updates"
+upd_lines=$(flatpak remote-ls --updates --columns=application,version 2>/dev/null || true)
+print_ok
+upd=$(printf '%s' "$upd_lines" | awk 'NF{n++} END{print n+0}')
+print_found flatpak "$upd" "$upd_lines"
 json_add_diag info FLATPAK-OUTDATED "${upd} update(s) available across remotes"
 exit 0

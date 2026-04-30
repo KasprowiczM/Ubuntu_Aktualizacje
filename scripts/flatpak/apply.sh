@@ -85,7 +85,7 @@ if [[ -f "$CONFIG_FLATPAK" ]]; then
                 [[ $EXIT_RC -eq 0 ]] && EXIT_RC=1
             fi
         fi
-    done < <(parse_config_names "$CONFIG_FLATPAK")
+    done < <(parse_config_names_filtered flatpak "$CONFIG_FLATPAK")
 fi
 
 exit $EXIT_RC

@@ -110,7 +110,7 @@ if [[ -f "$CONFIG_F" ]]; then
                 [[ $EXIT_RC -eq 0 ]] && EXIT_RC=1
             fi
         fi
-    done < <(parse_config_names "$CONFIG_F")
+    done < <(parse_config_names_filtered brew "$CONFIG_F")
 fi
 if [[ -f "$CONFIG_C" ]]; then
     while IFS= read -r c; do
@@ -128,7 +128,7 @@ if [[ -f "$CONFIG_C" ]]; then
                 [[ $EXIT_RC -eq 0 ]] && EXIT_RC=1
             fi
         fi
-    done < <(parse_config_names "$CONFIG_C")
+    done < <(parse_config_names_filtered brew "$CONFIG_C")
 fi
 
 # ── 7. brew doctor (informational) ────────────────────────────────────────────

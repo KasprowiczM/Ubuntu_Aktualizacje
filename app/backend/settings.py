@@ -14,9 +14,23 @@ DEFAULTS: dict[str, Any] = {
         "calendar": "Sun *-*-* 03:00:00",
         "profile": "safe",
         "no_drivers": True,
+        # Maintenance window guard (HH:MM-HH:MM, 24h). Blank = no restriction.
+        "maintenance_window": "",
+        # Defer if on battery / low battery.
+        "require_ac": False,
     },
     "notifications": {
         "desktop": True,
+    },
+    # Optional AI provider for Smart Suggestions enrichment.
+    "ai": {
+        "provider": "",     # "" | "anthropic" | "openai"
+        "api_key": "",
+        "model": "",
+    },
+    # GitHub releases auto-update notifier (opt-in, read-only).
+    "updates": {
+        "check_repo": "",   # e.g. "user/ascendo" — empty disables check
     },
 }
 

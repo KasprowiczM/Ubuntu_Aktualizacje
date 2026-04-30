@@ -27,6 +27,8 @@ EXIT_RC=0
 
 # ── 1. NVIDIA driver (apt) ────────────────────────────────────────────────────
 if [[ "${UPGRADE_NVIDIA}" -eq 0 ]]; then
+    print_warn "NVIDIA driver UPGRADE SKIPPED — protected by hold (default)."
+    print_info "To apply NVIDIA updates: re-run with --nvidia, or use UI 'Update NVIDIA' button."
     json_add_diag info NVIDIA-HOLD "NVIDIA APT upgrade skipped (use --nvidia)"
 else
     print_step "apt-get update (NVIDIA)"

@@ -11,6 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 source "${SCRIPT_DIR}/lib/detect.sh"
 source "${SCRIPT_DIR}/lib/json.sh"
+source "${SCRIPT_DIR}/lib/progress.sh"
 
 export INVENTORY_SILENT=1
 json_init apply snap
@@ -30,6 +31,13 @@ EXIT_RC=0
 
 # ── 1. snap refresh (with running-apps fallback) ─────────────────────────────
 print_section "Refreshing snaps"
+# Pre-scan: how many will be refreshed?
+mapfile -t _to_refresh < <(_snap_cmd refresh --list 2>/dev/null | tail -n +2 | awk 'NF{print $1}')
+n_pre=${#_to_refresh[@]}
+if (( n_pre > 0 )); then
+    print_info "Will refresh ${n_pre} snap(s): ${_to_refresh[*]}"
+    progress_start "snap-refresh" "$n_pre" "snap refresh"
+fi
 print_step "snap refresh"
 refresh_out=$(sudo snap refresh 2>&1) || refresh_rc=$? || true
 echo "${refresh_out}" >> "${LOG_FILE}"
@@ -39,8 +47,10 @@ if echo "${refresh_out}" | grep -q "All snaps up to date"; then
     json_add_item id="snap:refresh" action="refresh" result="noop"
     json_count_ok
 elif echo "${refresh_out}" | grep -qi "running apps"; then
-    print_warn "blocked by running apps; retrying with --ignore-running"
-    json_add_diag warn SNAP-RUNNING "initial refresh blocked by running apps"
+    blocked=$(echo "${refresh_out}" | grep -oE 'running apps \([^)]*\)' | head -1)
+    print_warn "blocked by running apps ${blocked:-}; retrying with --ignore-running"
+    print_info "If you're using a snap right now (e.g. Firefox), close it for cleanest results."
+    json_add_diag warn SNAP-RUNNING "initial refresh blocked by running apps: ${blocked}"
     refresh_out2=$(sudo snap refresh --ignore-running 2>&1) || true
     echo "${refresh_out2}" >> "${LOG_FILE}"
     if echo "${refresh_out2}" | grep -qi "error:"; then
@@ -78,9 +88,11 @@ else
             ver=$(echo "$line" | grep -oP '\(\K[^)]+' | head -1 || true)
             json_add_item id="snap:upgrade:${pkg}" action="refresh" \
                 to="${ver}" result="ok"
+            (( n_pre > 0 )) && progress_step "${pkg} → ${ver:-?}" ok
         fi
     done <<< "${refresh_out}"
 fi
+(( n_pre > 0 )) && progress_done
 
 # ── 2. Install missing snaps from config ─────────────────────────────────────
 if [[ -f "$CONFIG_SNAP" ]]; then
@@ -110,7 +122,7 @@ if [[ -f "$CONFIG_SNAP" ]]; then
                 [[ $EXIT_RC -eq 0 ]] && EXIT_RC=1
             fi
         fi
-    done < <(parse_config_lines "$CONFIG_SNAP")
+    done < <(parse_config_lines_filtered snap "$CONFIG_SNAP")
 fi
 
 # ── 3. Reboot signal? ─────────────────────────────────────────────────────────

@@ -103,7 +103,7 @@ except Exception:
                 [[ $EXIT_RC -eq 0 ]] && EXIT_RC=1
             fi
         fi
-    done < <(parse_config_names "$CONFIG_PIP")
+    done < <(parse_config_names_filtered pip "$CONFIG_PIP")
 fi
 
 # ── 4. pipx ───────────────────────────────────────────────────────────────────
@@ -160,7 +160,7 @@ except Exception:
                     [[ $EXIT_RC -eq 0 ]] && EXIT_RC=1
                 fi
             fi
-        done < <(parse_config_names "$CONFIG_PIPX")
+        done < <(parse_config_names_filtered pip "$CONFIG_PIPX")
     fi
 fi
 

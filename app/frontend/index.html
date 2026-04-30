@@ -7,33 +7,60 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="stylesheet" href="/style.css" />
 </head>
-<body>
-  <header>
-    <h1 class="brand">
-      <svg viewBox="0 0 64 64" width="28" height="28" aria-hidden="true">
+<body class="layout-shell">
+  <!-- Mobile topbar (hidden on desktop) — hamburger + brand + theme/lang/font switchers -->
+  <header class="topbar">
+    <button id="sidebar-toggle" class="icon-btn" aria-label="Toggle menu" title="Menu"></button>
+    <div class="topbar-brand">
+      <svg viewBox="0 0 64 64" width="22" height="22" aria-hidden="true" class="brand-mark">
+        <defs><linearGradient id="ag2" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#22c55e"/><stop offset="100%" stop-color="#0ea5e9"/>
+        </linearGradient></defs>
+        <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#ag2)"/>
+        <path d="M16 44 L32 22 L48 44" fill="none" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="brand-name">Ascendo</span>
+    </div>
+    <div class="topbar-actions">
+      <button id="lang-switcher"  class="icon-btn" aria-label="Language" title="Language"></button>
+      <button id="theme-switcher" class="icon-btn" aria-label="Theme"    title="Theme"></button>
+      <button id="font-switcher"  class="icon-btn" aria-label="Font size" title="Font size"></button>
+      <span id="sudo-indicator" class="dim"></span>
+    </div>
+  </header>
+
+  <!-- Sidebar (left) — primary navigation -->
+  <aside id="sidebar" class="sidebar" aria-label="Primary navigation">
+    <div class="sidebar-brand">
+      <svg viewBox="0 0 64 64" width="36" height="36" aria-hidden="true" class="brand-mark">
         <defs><linearGradient id="ag" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#22c55e"/>
-          <stop offset="100%" stop-color="#0ea5e9"/>
+          <stop offset="0%" stop-color="#22c55e"/><stop offset="100%" stop-color="#0ea5e9"/>
         </linearGradient></defs>
         <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#ag)"/>
-        <path d="M16 44 L32 22 L48 44" fill="none" stroke="white"
-              stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16 44 L32 22 L48 44" fill="none" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <span>Ascendo</span>
-    </h1>
-    <nav id="nav">
-      <a href="#overview"   data-view="overview"   class="active" data-i18n="nav.overview">Overview</a>
-      <a href="#categories" data-view="categories" data-i18n="nav.categories">Categories</a>
-      <a href="#run"        data-view="run"        data-i18n="nav.run">Run Center</a>
-      <a href="#history"    data-view="history"    data-i18n="nav.history">History</a>
-      <a href="#logs"       data-view="logs"       data-i18n="nav.logs">Logs</a>
-      <a href="#sync"       data-view="sync"       data-i18n="nav.sync">Sync</a>
-      <a href="#apps"       data-view="apps"       data-i18n="nav.apps">Apps</a>
-      <a href="#hosts"      data-view="hosts"      data-i18n="nav.hosts">Hosts</a>
-      <a href="#settings"   data-view="settings"   data-i18n="nav.settings">Settings</a>
+      <div class="brand-text">
+        <span class="brand-name">Ascendo</span>
+        <span class="brand-tagline" data-i18n="brand.tagline">unified updates</span>
+      </div>
+    </div>
+    <nav id="nav" class="sidebar-nav">
+      <a href="#overview"   data-view="overview"   data-icon="overview"   class="nav-link active"><span class="nav-icon"></span><span class="nav-label" data-i18n="nav.overview">Overview</span></a>
+      <a href="#categories" data-view="categories" data-icon="categories" class="nav-link"><span class="nav-icon"></span><span class="nav-label" data-i18n="nav.categories">Categories</span></a>
+      <a href="#run"        data-view="run"        data-icon="run"        class="nav-link"><span class="nav-icon"></span><span class="nav-label" data-i18n="nav.run">Run Center</span></a>
+      <a href="#history"    data-view="history"    data-icon="history"    class="nav-link"><span class="nav-icon"></span><span class="nav-label" data-i18n="nav.history">History</span></a>
+      <a href="#logs"       data-view="logs"       data-icon="logs"       class="nav-link"><span class="nav-icon"></span><span class="nav-label" data-i18n="nav.logs">Logs</span></a>
+      <a href="#sync"       data-view="sync"       data-icon="sync"       class="nav-link"><span class="nav-icon"></span><span class="nav-label" data-i18n="nav.sync">Sync</span></a>
+      <a href="#apps"       data-view="apps"       data-icon="apps"       class="nav-link"><span class="nav-icon"></span><span class="nav-label" data-i18n="nav.apps">Apps</span></a>
+      <a href="#suggest"    data-view="suggest"    data-icon="suggest"    class="nav-link"><span class="nav-icon"></span><span class="nav-label" data-i18n="nav.suggest">Suggestions</span></a>
+      <a href="#hosts"      data-view="hosts"      data-icon="hosts"      class="nav-link"><span class="nav-icon"></span><span class="nav-label" data-i18n="nav.hosts">Hosts</span></a>
+      <a href="#settings"   data-view="settings"   data-icon="settings"   class="nav-link"><span class="nav-icon"></span><span class="nav-label" data-i18n="nav.settings">Settings</span></a>
     </nav>
-    <div id="hostbadge"></div>
-  </header>
+    <div class="sidebar-footer">
+      <div id="hostbadge" class="dim"></div>
+    </div>
+  </aside>
+  <div id="sidebar-backdrop" class="sidebar-backdrop hidden" aria-hidden="true"></div>
 
   <main>
     <!-- First-run wizard modal -->
@@ -103,6 +130,14 @@
           <button data-quick='{"profile":"safe"}'  data-i18n="overview.btn_safe">Safe update</button>
           <button data-quick='{"profile":"full"}'  data-i18n="overview.btn_full">Full update</button>
           <button data-quick='{"profile":"full","dry_run":true}' data-i18n="overview.btn_dry">Full dry-run</button>
+          <button data-quick='{"profile":"full","extra_args":["--nvidia"]}' style="background:linear-gradient(90deg,#76b900,#5b9100);color:#fff" title="Apply NVIDIA driver upgrade (held by default)">⚡ Update NVIDIA</button>
+          <button data-quick='{"only":"drivers","phase":"apply","extra_args":["--nvidia"]}' class="secondary" title="Apply only the NVIDIA driver category">drivers only · with NVIDIA</button>
+        </div>
+        <div class="card">
+          <h3 data-i18n="health.title">Post-run health</h3>
+          <div id="health-card">…</div>
+          <button id="health-recheck-btn" class="secondary" style="margin-top:0.5rem"
+                  data-i18n="health.btn_recheck">Re-check</button>
         </div>
       </div>
 
@@ -147,8 +182,17 @@
     <!-- Categories -->
     <section id="view-categories" class="view hidden">
       <h2 data-i18n="categories.title">Categories</h2>
-      <p class="dim" data-i18n="categories.hint">Click a row to expand the full
-        list of installed packages with version and status.</p>
+      <p class="dim" data-i18n="categories.hint">Click a row to expand. Each
+        category supports add/remove of packages from your config and runs the
+        5 phases independently.</p>
+      <div id="cats-add-widget" class="cats-add-widget">
+        <select id="cats-add-cat" aria-label="Category">
+          <option value="">— category —</option>
+        </select>
+        <input id="cats-add-pkg" type="text" placeholder="package name (e.g. snap-store)" autocomplete="off" />
+        <button id="cats-add-btn" type="button">+ Add to config</button>
+        <span class="dim" id="cats-add-out"></span>
+      </div>
       <table id="cats-table">
         <thead><tr>
           <th></th>
@@ -192,17 +236,24 @@
         <button type="button" id="stop-btn" disabled data-i18n="run.stop">Stop</button>
       </form>
       <div id="active-run"></div>
+      <div id="run-progress" class="run-progress hidden">
+        <div class="run-progress-label"></div>
+        <div class="run-progress-bar"><div class="run-progress-fill"></div></div>
+        <div class="run-progress-recent"></div>
+      </div>
       <pre id="live-log"></pre>
     </section>
 
     <!-- History -->
     <section id="view-history" class="view hidden">
       <h2 data-i18n="history.title">History</h2>
+      <p id="history-eta" class="dim" style="font-size:0.82rem"></p>
       <table id="history-table">
         <thead><tr>
           <th data-i18n="history.started">Started</th>
           <th data-i18n="history.profile">Profile</th>
           <th data-i18n="history.status">Status</th>
+          <th>Duration</th>
           <th data-i18n="history.phases">Phases</th>
           <th data-i18n="history.reboot">Reboot</th>
           <th data-i18n="history.run_id">Run id</th>
@@ -242,6 +293,44 @@
       </div>
       <h3 data-i18n="sync.output">Output</h3>
       <pre id="sync-output"></pre>
+    </section>
+
+    <!-- Suggestions -->
+    <section id="view-suggest" class="view hidden">
+      <h2 style="display:flex;align-items:center;gap:0.5rem">
+        <span data-i18n="suggest.title">Smart Suggestions</span>
+        <button id="suggest-refresh-btn" class="secondary" style="margin-left:auto;font-size:0.8rem"
+                data-i18n="suggest.btn_refresh">Re-analyse</button>
+      </h2>
+      <p class="dim" data-i18n="suggest.hint">
+        Heuristic + optional AI advice based on your inventory and run history.
+        Always shown as a diff — nothing is applied without your click.
+      </p>
+      <div id="suggest-list">…</div>
+
+      <h3 style="margin-top:1.5rem" data-i18n="suggest.ai_panel">AI provider</h3>
+      <p class="dim" data-i18n="suggest.ai_hint">
+        Optional. Configure an LLM provider to enrich rule-based suggestions.
+      </p>
+      <form id="ai-form" class="grid">
+        <label><span data-i18n="suggest.ai_provider">Provider</span>
+          <select name="ai_provider">
+            <option value="">(disabled)</option>
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="openai">OpenAI</option>
+          </select>
+        </label>
+        <label><span data-i18n="suggest.ai_apikey">API key</span>
+          <input type="password" name="ai_api_key" autocomplete="off" />
+        </label>
+        <label><span data-i18n="suggest.ai_model">Model</span>
+          <input type="text" name="ai_model" placeholder="claude-haiku-4-5-20251001 / gpt-4o-mini" />
+        </label>
+        <div style="display:flex;gap:0.4rem;align-items:end">
+          <button type="submit" data-i18n="suggest.ai_save">Save AI settings</button>
+        </div>
+      </form>
+      <pre id="ai-output" class="dim"></pre>
     </section>
 
     <!-- Hosts -->
@@ -307,6 +396,21 @@
             </label>
           </div>
           <div class="card">
+            <h3 data-i18n="backup.title">Backup &amp; restore</h3>
+            <p class="dim" data-i18n="backup.hint">
+              Bundle your config (lists, exclusions, scheduler, settings)
+              into a tar.gz you can carry to another machine.
+            </p>
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+              <button type="button" id="backup-export-btn" data-i18n="backup.btn_export">Export bundle</button>
+              <label class="secondary" style="display:inline-block;cursor:pointer;padding:0.5rem 0.85rem;border-radius:6px;background:var(--border);color:var(--text);font-weight:600">
+                <span data-i18n="backup.btn_import">Import bundle</span>
+                <input type="file" id="backup-import-file" accept=".tar.gz,application/gzip" style="display:none" />
+              </label>
+            </div>
+            <div id="backup-output" class="dim" style="margin-top:0.5rem;font-size:0.78rem"></div>
+          </div>
+          <div class="card">
             <h3 data-i18n="settings.scheduler">Scheduler (systemd timer)</h3>
             <label class="inline">
               <input type="checkbox" name="scheduler_enabled" disabled />
@@ -359,8 +463,8 @@
 
   <footer>
     <span id="status-line" data-i18n="footer.ready">ready</span>
-    <span id="sudo-indicator" class="dim" style="float:right"></span>
   </footer>
+  <script src="/icons.js"></script>
   <script src="/i18n.js"></script>
   <script src="/app.js"></script>
 </body>

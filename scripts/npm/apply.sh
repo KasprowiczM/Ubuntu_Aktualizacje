@@ -83,7 +83,7 @@ if [[ -f "$CONFIG_NPM" ]]; then
                 [[ $EXIT_RC -eq 0 ]] && EXIT_RC=1
             fi
         fi
-    done < <(parse_config_names "$CONFIG_NPM")
+    done < <(parse_config_names_filtered npm "$CONFIG_NPM")
 fi
 
 # ── 4. Force latest for priority AI CLIs ──────────────────────────────────────

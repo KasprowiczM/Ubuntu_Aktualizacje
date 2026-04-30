@@ -80,6 +80,9 @@ Environment=HOME=/home/%i
 Environment=DISPLAY=:0
 Environment=XDG_RUNTIME_DIR=/run/user/$(id -u "${CURRENT_USER}")
 Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u "${CURRENT_USER}")/bus
+# Optional pre-flight gate (battery, maintenance window, busy apt). Failure
+# (exit 75) causes systemd to skip this run; the timer fires again next tick.
+ExecStartPre=-/usr/bin/env bash ${SCRIPT_DIR}/scripts/scheduler/should-run.sh
 ExecStart=/usr/bin/env bash ${SCRIPT_DIR}/update-all.sh ${EXTRA_ARGS[*]}
 TimeoutStartSec=3600
 StandardOutput=append:${SCRIPT_DIR}/logs/systemd_update.log

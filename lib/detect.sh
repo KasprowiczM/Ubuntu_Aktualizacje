@@ -381,6 +381,45 @@ parse_config_lines() {
     grep -v '^[[:space:]]*#' "$file" | grep -v '^[[:space:]]*$' | sed 's/#.*//' | awk '{$1=$1};1'
 }
 
+# Parse + filter against per-user exclusion list (lib/exclusions.sh).
+# Usage:
+#   parse_config_names_filtered <category> <file>
+#   parse_config_lines_filtered <category> <file>
+parse_config_names_filtered() {
+    local cat="$1" file="$2"
+    # Lazy-load the exclusion library; fall through to plain parse if missing.
+    if ! declare -F excl_skip >/dev/null 2>&1; then
+        # SCRIPT_DIR may not yet be set; resolve relative to lib/ location.
+        local _libdir; _libdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        # shellcheck disable=SC1090,SC1091
+        [[ -f "${_libdir}/exclusions.sh" ]] && source "${_libdir}/exclusions.sh" || {
+            parse_config_names "$file"; return
+        }
+    fi
+    declare -F excl_category_skipped >/dev/null && excl_category_skipped "$cat" && return
+    parse_config_names "$file" | while IFS= read -r pkg; do
+        excl_skip "$cat" "$pkg" 2>/dev/null && continue
+        echo "$pkg"
+    done
+}
+
+parse_config_lines_filtered() {
+    local cat="$1" file="$2"
+    if ! declare -F excl_skip >/dev/null 2>&1; then
+        local _libdir; _libdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        # shellcheck disable=SC1090,SC1091
+        [[ -f "${_libdir}/exclusions.sh" ]] && source "${_libdir}/exclusions.sh" || {
+            parse_config_lines "$file"; return
+        }
+    fi
+    declare -F excl_category_skipped >/dev/null && excl_category_skipped "$cat" && return
+    parse_config_lines "$file" | while IFS= read -r line; do
+        local pkg; pkg=$(awk '{print $1}' <<< "$line")
+        excl_skip "$cat" "$pkg" 2>/dev/null && continue
+        echo "$line"
+    done
+}
+
 # ── /opt & Manual Installs Scanning ──────────────────────────────────────────
 
 scan_opt_apps() {
