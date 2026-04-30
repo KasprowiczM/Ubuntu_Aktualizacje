@@ -83,6 +83,85 @@ bash scripts/fresh-machine.sh --check-only --no-service   wykonane do końca, ex
 | Low | Migracje DB w `app/backend/db.py` (obecnie `IF NOT EXISTS`) | 0.5 dnia |
 | Low | Frontend testy (Playwright) | 1 dzień |
 
+### Roadmap rozwoju aplikacji (recommendations, 2026-04-30)
+
+Pełna analiza repo z perspektywy "co dołożyć żeby było produktem do
+dystrybucji / sprzedaży / łatwego onboardowania na nowych komputerach".
+Podzielone na **kategorie** z priorytetem (P0 = next sprint, P3 = nice-to-have)
+i **effort estimates**. Bazuje na obecnym stanie po commitach `3fd629b`+`d1d0030`.
+
+#### A. Onboarding & dystrybucja (najważniejsze dla "sprzedawalności")
+
+| # | Feature | Priorytet | Effort | Wartość |
+|---|---|---|---|---|
+| A1 | **Pakiet .deb** dla `update-all.sh` + dashboard. `dpkg-deb -b` z postinst który robi `bash scripts/fresh-machine.sh`. PPA na Launchpad. | P0 | 2-3 dni | enterprise install bez `git clone` |
+| A2 | **First-run wizard** w dashboardzie — modal "Welcome → host detection → choose profile → schedule timer → done". Wykrywa fresh state przez brak `~/.config/ubuntu-aktualizacje/onboarded.json`. | P0 | 1 dzień | non-tech userzy |
+| A3 | **Snap package** (`snapcraft.yaml`) — auto-update via Canonical Store. Dashboard działa jako classic snap. | P1 | 2 dni | wide distribution |
+| A4 | **AppImage** dla Tauri shell (już mamy Cargo target/) — drag & drop instalacja, bez zależności systemowych. | P2 | 0.5 dnia | testing/CI |
+| A5 | **Homebrew tap** `brew install KasprowiczM/tap/ubuntu-aktualizacje` — formula sourcing skrypty z GitHub Release tag. | P2 | 0.5 dnia | macOS-comfy operatorzy |
+
+#### B. UI/UX kompletność
+
+| # | Feature | Priorytet | Effort | Wartość |
+|---|---|---|---|---|
+| B1 | **Run diff view** — w History zaznacz dwa runy → "compare": które pakiety się zmieniły, kernelu, etc. SQL diff na phase_results. | P1 | 1 dzień | audyt zmian |
+| B2 | **Notification routing** — obecne `scripts/notify.sh` tylko desktop. Dodać `ntfy.sh`, Slack webhook, email (sendmail), Telegram bot. Konfig w Settings. | P1 | 1 dzień | unattended runs |
+| B3 | **Snapshot restore wired** — UI button "Rollback to snapshot" → `timeshift --restore --snapshot ID`. Obecnie tylko create. | P1 | 0.5 dnia | recovery story |
+| B4 | **Markdown export** — POST `/runs/{id}/report.md` zwraca self-contained report (run summary + per-phase details + diagnostics). Dla IT/compliance. | P2 | 0.5 dnia | reportowanie |
+| B5 | **Per-package live progress w apt:apply** — streaming `apt-get -o Debug::pkgDPkgPM=1`, parsing każdej linii `Setting up xxx`/`Unpacking yyy`, emit do log z licznikiem `[3/47] firefox 131→132`. | P1 | 1 dzień | zaufanie operatora podczas dłużej trwających apply |
+| B6 | **Toast/snackbar** zamiast `ui.status()` przy zdarzeniach (run started, sudo cached, snapshot taken). | P3 | 0.3 dnia | polish |
+| B7 | **Mobile-friendly layout** — dashboard ma sticky topbar, ale kategorie nie zwijają się na mobile. | P3 | 0.3 dnia | przegląd statusu z telefonu |
+
+#### C. Bezpieczeństwo & wieloużytkownikowość
+
+| # | Feature | Priorytet | Effort | Wartość |
+|---|---|---|---|---|
+| C1 | **Token auth** dla dashboardu — middleware z bearer token w `~/.config/ubuntu-aktualizacje/auth.token` (chmod 0600). Gdy plik istnieje, wszystkie endpointy wymagają `Authorization: Bearer …`. Zachowuje 127.0.0.1 default ale enable opt-in dla LAN access. | P0 | 0.5 dnia | wystawienie na LAN, multi-host central panel |
+| C2 | **libsecret/secret-tool** — `.env.local` + rclone token migracja. `lib/secrets.sh` już ma fallback path. | P1 | 0.5 dnia | portability bez plain-text secrets |
+| C3 | **Audit log** — każda akcja mutująca (POST /runs, /sync/export, /system/reboot) zapisuje wpis w `~/.local/state/ubuntu-aktualizacje/audit.log` z user/timestamp/IP/action. | P2 | 0.5 dnia | compliance |
+| C4 | **CSP/CORS hardening** — obecnie `*` na static assets; ograniczyć do origin localhost. | P3 | 0.2 dnia | security baseline |
+
+#### D. Observability & operability
+
+| # | Feature | Priorytet | Effort | Wartość |
+|---|---|---|---|---|
+| D1 | **Prometheus `/metrics`** — exportuje `update_run_duration_seconds`, `update_phase_status{cat,phase}`, `inventory_packages{cat,status}`, `reboot_required`. Pozwala podpiąć Grafana. | P1 | 1 dzień | central monitoring fleet |
+| D2 | **Log retention** — obecnie `logs/runs/<id>/` rośnie nieskończenie. Daemon: keep 30 days OR last 50 runs, whichever larger. `scripts/scheduler/install.sh` mógłby instalować drugi timer. | P1 | 0.5 dnia | dyskoochrona |
+| D3 | **Run timeline view** — Gantt chart po phase, pokazuje co trwało długo. Pure SVG (mamy już donut/bars). | P2 | 1 dzień | profiling |
+| D4 | **DB migrations versioned** — `app/backend/migrations.py` istnieje, ale obecny init używa CREATE IF NOT EXISTS bez sprawdzania schema_version. | P2 | 0.5 dnia | upgrades bez data loss |
+
+#### E. Multi-host / zarządzanie flotą
+
+| # | Feature | Priorytet | Effort | Wartość |
+|---|---|---|---|---|
+| E1 | **Push-mode SSH runs** — `hosts.toml` już ma read-only preflight; rozszerzyć o "Run profile X on all hosts". Backend SSH z BatchMode=yes, agreguje runy. | P1 | 2 dni | mała flota homelab/SOHO |
+| E2 | **Central history aggregation** — pojedynczy panel pokazuje runy z N hostów, kolory wg statusu. SQLite per-host + ETL script lub Postgres central. | P2 | 2 dni | enterprise |
+| E3 | **Drift detection** — porównaj `APPS.md` między hostami w klasie ("dev workstation", "media server"); alert gdy się różnią od baseline. | P3 | 1 dzień | compliance |
+
+#### F. Cross-distro parity
+
+| # | Feature | Priorytet | Effort | Wartość |
+|---|---|---|---|---|
+| F1 | **Fedora/RHEL** — `dnf` zamiast `apt`. `lib/detect.sh` już ma `detect_os`. Dodać `scripts/dnf/{check,plan,apply,verify,cleanup}.sh`. | P2 | 2 dni | rozszerzenie audience |
+| F2 | **Arch/Manjaro** — `pacman` + AUR. | P3 | 2 dni | enthusiasts |
+| F3 | **macOS** — `brew` już mamy; dodać `mas` (App Store CLI), `softwareupdate`. | P3 | 1 dzień | dev workstations |
+
+#### G. Testowanie & jakość
+
+| # | Feature | Priorytet | Effort | Wartość |
+|---|---|---|---|---|
+| G1 | **Frontend testy** — Playwright e2e: load dashboard, kliknij Quick check, czekaj na done, sprawdź badge. CI in headless. | P1 | 1 dzień | regresji |
+| G2 | **shellcheck** w CI dla wszystkich .sh — obecnie tylko `bash -n`. | P1 | 0.3 dnia | catch shell bugs |
+| G3 | **Coverage reporting** dla pythonowych testów. | P3 | 0.5 dnia | metric |
+
+### Top 5 rekomendacji do następnego sprintu (P0 + P1 high-leverage)
+
+1. **A2 first-run wizard** + **C1 token auth** — razem dają "share dashboard URL with team" story.
+2. **B5 per-package live progress** — najczęstsze user complaint, mamy plumbing (tee + JSON items).
+3. **D1 Prometheus metrics** — fundamenty pod fleet monitoring.
+4. **B2 notification routing** (ntfy.sh minimum) — unattended scheduler bez sprawdzania ręcznego.
+5. **A1 .deb package** — moment gdy projekt staje się "produktem".
+
 ### Komendy do następnej sesji
 
 Pełen quick smoke po pull:
