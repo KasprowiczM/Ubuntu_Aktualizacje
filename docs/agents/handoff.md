@@ -1,5 +1,63 @@
 # Handoff
 
+## 2026-04-30 (Etap 12) — Inventory false-positive outdated fix + unified title
+
+### Bug
+
+Dashboard Categories/Overview flagged npm packages as outdated whenever
+`npm outdated -g --json` returned a row, regardless of direction. Visible
+case: `@google/gemini-cli 0.40.0 → 0.1.9` and `npm 11.13.0 → 10.9.8`
+(both downgrades — `latest` dist-tag pointed at an older release line, npm
+itself installed via brew is newer than the registry's `latest`).
+
+Root cause: `app/backend/inventory.py::_classify` returned `outdated`
+whenever `candidate != installed`, without a direction check.
+
+### Fix
+
+- `_ver_key(v)` + `_version_gt(a, b)` — token-based version comparator,
+  splits on `.-_+`, separates numeric vs alpha runs.
+- `_classify` now requires strict `_version_gt(candidate, installed)`.
+- npm/pip/brew scanners null out `candidate` when not strictly newer — the
+  table no longer shows a phantom downgrade arrow.
+
+### Audit (other categories)
+
+- **apt** — `apt list --upgradable` is direction-aware, no fix needed.
+- **snap** — `snap refresh --list` store-side, OK.
+- **flatpak** — `flatpak remote-ls --updates` store-side, OK.
+- **drivers** — already used `dpkg --compare-versions … gt …`, OK.
+- **inventory** — pseudo-category, no version compare.
+
+### App title rename
+
+`Ubuntu_Aktualizacje` → `Ascendo - Unified Updates` everywhere:
+
+- `app/frontend/index.html` `<title>`
+- `app/backend/main.py` FastAPI `title=`
+- Repo desktop entries + `packaging/deb/usr/share/applications/`
+- `~/.local/share/applications/{ascendo,ascendo-desktop}.desktop`
+- `systemd/user/install-dashboard.sh` (banner + comments)
+- `scripts/fresh-machine.sh` welcome string
+- `app/README.md` heading
+
+### Validation
+
+```bash
+python3 -c "from app.backend.inventory import scan_npm; \
+  print([(i['name'],i['installed'],i['candidate'],i['status']) \
+  for i in scan_npm() if i['status']=='outdated'])"
+# []  (was 2 false-positives before fix)
+
+curl -s http://127.0.0.1:8765/inventory/summary | jq .totals
+# { ok: 340, outdated: 0, missing: 0 }
+
+curl -s http://127.0.0.1:8765/ | grep -o '<title>[^<]*</title>'
+# <title>Ascendo - Unified Updates</title>
+```
+
+---
+
 ## 2026-04-30 (late) — CRITICAL FIX: apt:apply EXIT trap override, JSON always dropped
 
 **BUG:** `scripts/apt/apply.sh:118` unconditionally overwrote the JSON exit trap registered by `json_register_exit_trap()`, causing `apply.json` to never be written. Symptom: user runs `./update-all.sh full`, sees "all green" in CLI, but `apt list --upgradable` still shows packages outdated—apply silently skipped and never logged.

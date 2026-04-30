@@ -59,7 +59,7 @@ if [[ -n "$LANG_OVERRIDE" ]]; then
 elif [[ ! -r "${XDG_CONFIG_HOME:-$HOME/.config}/ascendo/lang" && $CHECK_ONLY -eq 0 && -t 0 && -t 1 ]]; then
     [[ -f "${SCRIPT_DIR}/branding/banner.txt" ]] && cat "${SCRIPT_DIR}/branding/banner.txt"
     echo
-    echo "  $(t setup.welcome 'Welcome to Ascendo — unified system updates.')"
+    echo "  $(t setup.welcome 'Welcome to Ascendo - Unified Updates.')"
     echo
     echo "  $(t setup.lang_pick 'Pick the interface language for CLI and dashboard:')"
     echo "    1) English  (en)"

@@ -3,6 +3,23 @@
 Pełen przewodnik dla nowego operatora — od zera do działającego dashboardu.
 Wszystkie ścieżki względem `~/Dev_Env/Ubuntu_Aktualizacje`.
 
+## Co nowego (2026-04-30 — Etap 12: false-positive outdated fix + branded title)
+
+- **Inventory: `candidate < installed` więcej nie jest flagowany jako outdated.**
+  Naprawione `app/backend/inventory.py::_classify` — dodany helper
+  `_version_gt()` z token-based comparatorem (numeric/alpha runs splitowane
+  po `.-_+`). Status `outdated` wymaga teraz **strictly newer** candidate.
+  Dotyczyło npm (`@google/gemini-cli` 0.40.0 → 0.1.9, `npm` 11.13.0 → 10.9.8
+  — npm `latest` dist-tag wskazywał na starszą linię). Pozostałe kategorie
+  audytowane — apt/snap/flatpak korzystają z store-side update lists, więc
+  były OK; brew dodatkowo zabezpieczony defensive guardem.
+- **Tytuł aplikacji ujednolicony:** `Ascendo - Unified Updates`.
+  - Browser tab: `app/frontend/index.html` `<title>`.
+  - FastAPI: `main.py` `title=…`.
+  - Desktop entries (repo + `.deb` + `~/.local/share/applications/`):
+    `ascendo.desktop` → `Name=Ascendo - Unified Updates`,
+    `ascendo-desktop.desktop` → `Name=Ascendo - Unified Updates (Desktop)`.
+
 ## Co nowego (2026-05-04 — Etap 11: Ascendo desktop icon + CLI runs in history)
 
 - **Ikona aplikacji w menu Ubuntu = Ascendo „A"** (gradientowy kwadrat,

@@ -22,8 +22,8 @@ systemctl --user status ubuntu-aktualizacje-dashboard.service --no-pager || true
 
 # 3. Install Ascendo icon + desktop entries (user-level, no root)
 #    Two .desktop entries:
-#      ascendo.desktop          → "Ascendo (Web)"     opens default browser
-#      ascendo-desktop.desktop  → "Ascendo (Desktop)" standalone window
+#      ascendo.desktop          → "Ascendo - Unified Updates"           opens default browser
+#      ascendo-desktop.desktop  → "Ascendo - Unified Updates (Desktop)"  standalone window
 #    Both call the ascendo-launch shim (installed below).
 ICON_DIR="${HOME}/.local/share/icons/hicolor/scalable/apps"
 APPS_DIR="${HOME}/.local/share/applications"
@@ -55,8 +55,8 @@ if ss -lntp 2>/dev/null | grep -q ":8765"; then
     echo
     echo "✔ Dashboard listening at http://127.0.0.1:8765"
     echo "✔ Ascendo icons installed in app menu:"
-    echo "    • Ascendo (Web)     — opens dashboard in your default browser"
-    echo "    • Ascendo (Desktop) — opens dashboard in a standalone window"
+    echo "    • Ascendo - Unified Updates           — opens dashboard in your default browser"
+    echo "    • Ascendo - Unified Updates (Desktop) — opens dashboard in a standalone window"
 else
     echo
     echo "⚠ Dashboard not listening on :8765 — check journalctl --user -u ubuntu-aktualizacje-dashboard.service"
