@@ -4,7 +4,7 @@ Version: 0.3.0
 Section: admin
 Priority: optional
 Architecture: all
-Depends: bash (>= 5.0), python3 (>= 3.11), python3-venv, git, flock, sudo, apt
+Depends: bash (>= 5.0), python3 (>= 3.11), python3-venv, git, util-linux, sudo, apt
 Recommends: timeshift | etckeeper, snapd, fwupd, libsecret-tools
 Maintainer: Mateusz Kasprowicz <gaipro.mk@gmail.com>
 Homepage: https://github.com/KasprowiczM/Ubuntu_Aktualizacje
