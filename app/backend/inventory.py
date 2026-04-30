@@ -457,6 +457,101 @@ CATEGORY_SCANNERS = {
 }
 
 
+def scan_drivers() -> list[dict]:
+    """Pseudo-inventory for drivers: lists detected GPU + NVIDIA driver pkg
+    + firmware (fwupd) state. Nothing is installed via this category's
+    apply path automatically — drivers are intentionally manual."""
+    import shutil, subprocess, re
+    items: list[dict] = []
+    # NVIDIA — installed driver + candidate.
+    try:
+        nv_pkg = subprocess.check_output(
+            ["bash", "-c", "dpkg -l 'nvidia-driver-*' 2>/dev/null | awk '/^ii/{print $2}' | head -1"],
+            text=True).strip()
+        if nv_pkg:
+            inst = subprocess.check_output(
+                ["bash", "-c", f"dpkg -s {nv_pkg} 2>/dev/null | awk '/^Version:/{{print $2; exit}}'"],
+                text=True).strip()
+            cand = ""
+            try:
+                cand_out = subprocess.check_output(
+                    ["bash", "-c", f"apt-cache policy {nv_pkg} 2>/dev/null | awk '/Candidate:/{{print $2; exit}}'"],
+                    text=True).strip()
+                if cand_out and cand_out != "(none)":
+                    cand = cand_out
+            except Exception:
+                pass
+            status = "outdated" if cand and cand != inst else "ok"
+            # If candidate is older (security pocket pin), it's not really outdated.
+            if cand and cand != inst:
+                cmp_rc = subprocess.call(["dpkg", "--compare-versions", cand, "gt", inst])
+                if cmp_rc != 0:
+                    status = "ok"
+            items.append({"name": nv_pkg, "installed": inst, "candidate": cand or inst,
+                          "status": status, "source": "apt (held — use --nvidia)",
+                          "in_config": True})
+    except Exception:
+        pass
+    # nvidia-smi runtime
+    if shutil.which("nvidia-smi"):
+        try:
+            smi = subprocess.check_output(
+                ["nvidia-smi", "--query-gpu=name,driver_version", "--format=csv,noheader"],
+                text=True, timeout=4).strip().split("\n")[0]
+            items.append({"name": "nvidia-smi (runtime)", "installed": smi,
+                          "candidate": "", "status": "ok",
+                          "source": "kernel/runtime", "in_config": False})
+        except Exception:
+            items.append({"name": "nvidia-smi (runtime)", "installed": "",
+                          "candidate": "", "status": "missing",
+                          "source": "kernel/runtime", "in_config": False})
+    # Firmware via fwupdmgr
+    if shutil.which("fwupdmgr"):
+        try:
+            chk = subprocess.run(["fwupdmgr", "get-updates"], capture_output=True,
+                                 text=True, timeout=10)
+            avail = bool(re.search(r"upgrade available|updates available", chk.stdout, re.I))
+            items.append({"name": "firmware (fwupd)", "installed": "current",
+                          "candidate": "available" if avail else "current",
+                          "status": "outdated" if avail else "ok",
+                          "source": "fwupd", "in_config": False})
+        except Exception:
+            items.append({"name": "firmware (fwupd)", "installed": "?",
+                          "candidate": "?", "status": "unknown",
+                          "source": "fwupd", "in_config": False})
+    return items
+
+
+def scan_inventory_meta() -> list[dict]:
+    """Pseudo-inventory for the 'inventory' category — lists the APPS.md
+    artefact and last regeneration time. This category is a regen step,
+    not a package manager."""
+    import os, time
+    from pathlib import Path
+    from . import config as _cfg
+    repo = _cfg.repo_root()
+    items = []
+    apps = repo / "APPS.md"
+    if apps and apps.exists():
+        mtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(os.path.getmtime(apps)))
+        size_kb = os.path.getsize(apps) // 1024
+        items.append({
+            "name": "APPS.md", "installed": f"{size_kb}KB", "candidate": "",
+            "status": "ok", "source": f"regenerated {mtime}", "in_config": False,
+        })
+    else:
+        items.append({
+            "name": "APPS.md", "installed": "", "candidate": "",
+            "status": "missing", "source": "run `--only inventory` to generate",
+            "in_config": False,
+        })
+    return items
+
+
+CATEGORY_SCANNERS["drivers"]   = scan_drivers
+CATEGORY_SCANNERS["inventory"] = scan_inventory_meta
+
+
 def scan_category(category: str) -> list[dict]:
     fn = CATEGORY_SCANNERS.get(category)
     if not fn:

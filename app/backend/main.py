@@ -886,6 +886,42 @@ def sync_provider_set(req: SyncProviderRequest) -> dict[str, Any]:
     return s["sync"]
 
 
+@app.get("/sync/remotes")
+def sync_remotes() -> dict[str, Any]:
+    """List rclone-configured remotes (one per line, name + colon)."""
+    import subprocess
+    try:
+        res = subprocess.run(["rclone", "listremotes"], capture_output=True,
+                             text=True, timeout=5)
+        names = [L.rstrip(":").strip() for L in res.stdout.splitlines() if L.strip()]
+        return {"ok": res.returncode == 0, "remotes": names}
+    except FileNotFoundError:
+        return {"ok": False, "remotes": [], "error": "rclone not installed"}
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "remotes": [], "error": "rclone listremotes timed out"}
+
+
+@app.get("/sync/browse")
+def sync_browse(path: str) -> dict[str, Any]:
+    """Browse a remote folder. `path` is an rclone-style remote path
+    (e.g. 'proton:/' or 'proton:/Backups'). Returns directories only — we
+    pick a folder, never a file."""
+    import subprocess
+    if not path or ":" not in path:
+        raise HTTPException(status_code=400, detail="path must include rclone remote name (remote:path)")
+    try:
+        res = subprocess.run(["rclone", "lsf", "--dirs-only", path],
+                             capture_output=True, text=True, timeout=12)
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="rclone not installed")
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "path": path, "dirs": [], "error": "rclone lsf timed out"}
+    if res.returncode != 0:
+        return {"ok": False, "path": path, "dirs": [], "error": res.stderr.strip()[-500:]}
+    dirs = [d.rstrip("/") for d in res.stdout.splitlines() if d.strip()]
+    return {"ok": True, "path": path, "dirs": dirs}
+
+
 @app.post("/sync/provider/test")
 def sync_provider_test() -> dict[str, Any]:
     """Best-effort connectivity test against the configured rclone remote.

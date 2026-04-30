@@ -24,3 +24,4 @@ keepassxc                   # KeePassXC password manager
 # ── System Utilities ──────────────────────────────────────────────────────────
 htop                        # Interactive process viewer
 firmware-updater            # GNOME firmware updater
+snap-store

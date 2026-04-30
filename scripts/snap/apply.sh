@@ -43,14 +43,30 @@ refresh_out=$(sudo snap refresh 2>&1) || refresh_rc=$? || true
 echo "${refresh_out}" >> "${LOG_FILE}"
 
 if echo "${refresh_out}" | grep -q "All snaps up to date"; then
-    print_ok "all up to date"
+    if (( n_pre > 0 )); then
+        # snapd auto-refresh happened between our check and apply, OR a snap
+        # was held back without telling us. Either way, surface it clearly.
+        print_warn "snap reported 'all up to date' but check found ${n_pre} pending: ${_to_refresh[*]}"
+        print_info "Most likely snapd's automatic refresh already applied them in the background."
+        print_info "Verify with: snap changes  |  snap list ${_to_refresh[*]}"
+        json_add_diag info SNAP-AUTO-REFRESHED "snapd appears to have auto-refreshed ${n_pre} snap(s): ${_to_refresh[*]} (snap reported up-to-date in apply)"
+    else
+        print_ok "all up to date"
+    fi
     json_add_item id="snap:refresh" action="refresh" result="noop"
     json_count_ok
 elif echo "${refresh_out}" | grep -qi "running apps"; then
     blocked=$(echo "${refresh_out}" | grep -oE 'running apps \([^)]*\)' | head -1)
-    print_warn "blocked by running apps ${blocked:-}; retrying with --ignore-running"
-    print_info "If you're using a snap right now (e.g. Firefox), close it for cleanest results."
-    json_add_diag warn SNAP-RUNNING "initial refresh blocked by running apps: ${blocked}"
+    blocked_snap=$(echo "${refresh_out}" | grep -oE '"[^"]*" has running apps' | head -1 | tr -d '"' | awk '{print $1}')
+    print_warn "Snap refresh blocked: ${blocked:-running apps}"
+    if [[ -n "$blocked_snap" ]]; then
+        print_warn "→ '${blocked_snap}' is running. Close it for a clean refresh, or wait for --ignore-running fallback."
+        json_add_diag warn SNAP-APP-RUNNING "Close '${blocked_snap}' to allow a clean snap refresh; falling back to --ignore-running"
+    else
+        print_info "If you're using a snap right now (e.g. Firefox), close it for cleanest results."
+        json_add_diag warn SNAP-RUNNING "initial refresh blocked by running apps: ${blocked}"
+    fi
+    print_step "snap refresh --ignore-running (fallback)"
     refresh_out2=$(sudo snap refresh --ignore-running 2>&1) || true
     echo "${refresh_out2}" >> "${LOG_FILE}"
     if echo "${refresh_out2}" | grep -qi "error:"; then

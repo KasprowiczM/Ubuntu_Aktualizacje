@@ -25,7 +25,6 @@
       <button id="lang-switcher"  class="icon-btn" aria-label="Language" title="Language"></button>
       <button id="theme-switcher" class="icon-btn" aria-label="Theme"    title="Theme"></button>
       <button id="font-switcher"  class="icon-btn" aria-label="Font size" title="Font size"></button>
-      <span id="sudo-indicator" class="dim"></span>
     </div>
   </header>
 
@@ -41,6 +40,7 @@
       </svg>
       <div class="brand-text">
         <span class="brand-name">Ascendo</span>
+        <span class="brand-divider" aria-hidden="true"></span>
         <span class="brand-tagline" data-i18n="brand.tagline">unified updates</span>
       </div>
     </div>
@@ -289,15 +289,28 @@
         <div class="card">
           <h3 data-i18n="sync.git">Git</h3>
           <div id="sync-git">…</div>
-          <button id="git-fetch-btn" data-i18n="sync.btn_fetch">Fetch</button>
-          <button id="git-pull-btn"  data-i18n="sync.btn_pull">Pull (ff-only)</button>
-          <button id="git-push-btn" class="secondary" data-i18n="sync.btn_push">Push</button>
+          <p class="dim" style="font-size:0.82rem;margin:0.4rem 0">
+            <b data-i18n="sync.hint_fetch_b">Fetch</b><span data-i18n="sync.hint_fetch"> — pobiera zmiany z origin bez modyfikacji Twojej kopii. Bezpieczne, czytelne info.</span><br>
+            <b data-i18n="sync.hint_pull_b">Pull (ff-only)</b><span data-i18n="sync.hint_pull"> — fetch + fast-forward merge tylko gdy local jest czysty. Zatrzymuje się przy konflikcie.</span><br>
+            <b data-i18n="sync.hint_push_b">Push</b><span data-i18n="sync.hint_push"> — wysyła Twoje commity do origin (nigdy --force). Wymaga remote write access.</span>
+          </p>
+          <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+            <button id="git-fetch-btn" data-i18n="sync.btn_fetch">Fetch</button>
+            <button id="git-pull-btn"  data-i18n="sync.btn_pull">Pull (ff-only)</button>
+            <button id="git-push-btn" class="secondary" data-i18n="sync.btn_push">Push</button>
+          </div>
         </div>
         <div class="card">
           <h3 data-i18n="sync.cloud">Cloud overlay (dev-sync)</h3>
           <div id="sync-cloud">…</div>
-          <button id="sync-export-dry-btn" data-i18n="sync.btn_export_dry">Export (dry-run)</button>
-          <button id="sync-export-btn" class="secondary" data-i18n="sync.btn_export_real">Export (real)</button>
+          <p class="dim" style="font-size:0.82rem;margin:0.4rem 0">
+            <b data-i18n="sync.hint_dry_b">Export (dry-run)</b><span data-i18n="sync.hint_dry"> — pokazuje co zostałoby zapisane do chmury, BEZ wpływu na pliki.</span><br>
+            <b data-i18n="sync.hint_real_b">Export (real)</b><span data-i18n="sync.hint_real"> — wykonuje rzeczywisty zapis prywatnego overlay (.env.local, klucze) do skonfigurowanej chmury.</span>
+          </p>
+          <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+            <button id="sync-export-dry-btn" data-i18n="sync.btn_export_dry">Export (dry-run)</button>
+            <button id="sync-export-btn" class="secondary" data-i18n="sync.btn_export_real">Export (real)</button>
+          </div>
         </div>
         <div class="card">
           <h3 data-i18n="sync.provider">Cloud provider</h3>
@@ -320,10 +333,18 @@
               </select>
             </label>
             <label><span data-i18n="sync.remote_name">rclone remote name</span>
-              <input type="text" name="remote_name" placeholder="proton" autocomplete="off" />
+              <div style="display:flex;gap:0.3rem">
+                <select name="remote_name" id="sync-remote-name" style="flex:1">
+                  <option value="">(pick a configured remote)</option>
+                </select>
+                <button type="button" id="sync-remote-refresh" class="secondary" title="Re-list rclone remotes" style="padding:0.4rem 0.6rem">↻</button>
+              </div>
             </label>
             <label><span data-i18n="sync.remote_path">Remote path</span>
-              <input type="text" name="remote_path" placeholder="proton:/Ubuntu_Aktualizacje" autocomplete="off" />
+              <div style="display:flex;gap:0.3rem">
+                <input type="text" name="remote_path" id="sync-remote-path" placeholder="proton:/Ubuntu_Aktualizacje" autocomplete="off" style="flex:1" />
+                <button type="button" id="sync-remote-browse" class="secondary" data-i18n="sync.browse" style="padding:0.4rem 0.6rem">Browse…</button>
+              </div>
             </label>
             <label class="inline">
               <input type="checkbox" name="copy_only" />
@@ -334,6 +355,21 @@
               <button type="button" id="sync-provider-test" class="secondary" data-i18n="sync.test_provider">Test connection</button>
             </div>
           </form>
+          <!-- Browse modal target for picking a remote folder -->
+          <div id="sync-browse-modal" class="modal hidden" role="dialog" aria-modal="true">
+            <div class="modal-card" style="max-width:560px">
+              <h3 data-i18n="sync.browse_title">Browse remote</h3>
+              <div class="dim" style="font-size:0.82rem;margin-bottom:0.4rem">
+                <span id="sync-browse-pwd" class="mono"></span>
+              </div>
+              <div id="sync-browse-list" style="max-height:38vh;overflow:auto;border:1px solid var(--border);border-radius:6px;padding:0.4rem">…</div>
+              <div class="modal-actions" style="margin-top:0.5rem;display:flex;gap:0.4rem">
+                <button type="button" id="sync-browse-up" class="secondary">↑ up</button>
+                <button type="button" id="sync-browse-pick" data-i18n="sync.browse_use">Use this folder</button>
+                <button type="button" id="sync-browse-close" class="secondary" data-i18n="sync.browse_close">Cancel</button>
+              </div>
+            </div>
+          </div>
           <pre id="sync-provider-output" class="dim" style="font-size:0.78rem"></pre>
         </div>
       </div>
@@ -727,6 +763,7 @@ UA_RESPECT_FOCUS=1</code></pre>
   </div>
 
   <footer>
+    <span id="sudo-indicator" class="dim" style="margin-right:1rem"></span>
     <span id="status-line" data-i18n="footer.ready">ready</span>
   </footer>
   <script src="/icons.js"></script>

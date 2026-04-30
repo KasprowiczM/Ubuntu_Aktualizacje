@@ -3,6 +3,21 @@
 Pełen przewodnik dla nowego operatora — od zera do działającego dashboardu.
 Wszystkie ścieżki względem `~/Dev_Env/Ubuntu_Aktualizacje`.
 
+## Co nowego (2026-05-03 — Etap 9: PL i18n parity, pie chart, sync UX, drivers/inventory categories)
+
+- **PL i18n parity.** Wszystkie nowe sekcje (Help, About, Sync hints, Hosts edit, Suggest AI, Logs viewer) mają komplet kluczy PL+EN. Język przełączany ikoną w topbar (auto/en/pl) lub Settings.
+- **Theme switcher: monitor icon w trybie auto** (zamiast globe). Cycle: monitor → sun → moon → monitor. Preferencja w `localStorage` + `settings.ui.theme`.
+- **Sudo cache wraca do footera** (lewy dolny obok status-line). Topbar ma teraz tylko ikony: język, motyw, font-size.
+- **Slogan obok logo** w sidebar: `Ascendo | unified updates` w jednej linii (większy, czytelniejszy w obu językach).
+- **Pie chart przepisany.** Większy donut (180px), rounded-cap segments, central total + % ok pod liczbą, legend pod wykresem z nagłówkami i procentami. Brak ukrytego napisu pod chart.
+- **Sync UX.** Każdy guzik ma opis tooltipowy: Fetch/Pull/Push, Export-dry/Export-real co dokładnie robi. Provider chmury: dropdown remote-name z `rclone listremotes` + przycisk **Browse…** otwiera modal z folder-pickerem (`/sync/browse?path=…` używa `rclone lsf --dirs-only`).
+- **Categories: drivers + inventory** teraz pokazują dane: nvidia-driver pkg + smi runtime + fwupd state, oraz APPS.md z mtime/size. (Wcześniej puste — bo brak `config/*.list`.)
+- **Snap UX fix.** Gdy check zwraca N pending, ale apply odpowiada "All snaps up to date" (snapd auto-refresh w tle): emitujemy advisory `SNAP-AUTO-REFRESHED`. Gdy "running apps" blokuje refresh, log pokazuje *konkretny snap* + jasne info "close it for cleanest results". Fallback `--ignore-running` zawsze.
+- **Help section** — pełna dokumentacja operatora z TOC, większymi czcionkami (1rem zamiast 0.85rem), wszystkie skrypty wyjaśnione w tabeli, troubleshooting, snapshots, dev-sync, AI, scheduler.
+- **About section** — wersja + git head + system info + render Markdown release notes z większymi nagłówkami i listami.
+- **Hosts edit UI** — Add/Edit/Delete buttons + inline form + zapis do `config/hosts.toml` z `.bak_<ts>` przed każdym zapisem.
+- **AI providers** — Anthropic / OpenAI / Google Gemini / Ollama (local) / LM Studio (local) / OpenAI-compatible. Lokalne nie wymagają API key; wystarczy Base URL. Test connection button.
+
 ## Co nowego (2026-05-02 — Etap 6: Ascendo brand + i18n + apps)
 
 - **Rebrand: Ascendo.** Wordmark + ikona w `branding/`, ASCII banner

@@ -288,11 +288,14 @@ const ui = {
   // ── SVG donut + bar charts (pure DOM, no chart libs) ─────────────────
   renderDonut(elId, segments) {
     const total = segments.reduce((a, s) => a + (s.value||0), 0);
+    const host = $("#"+elId);
     if (total === 0) {
-      $("#"+elId).innerHTML = `<p class="dim">—</p>`;
+      host.innerHTML = `<p class="dim" style="text-align:center;padding:2rem">—</p>`;
       return;
     }
-    const r = 60, cx = 80, cy = 80, sw = 22;
+    // Bigger, anti-aliased donut with rounded line caps + visible center
+    // total + always-visible legend below the SVG (no negative margins).
+    const r = 64, cx = 80, cy = 80, sw = 18;
     const C = 2 * Math.PI * r;
     let off = 0, arcs = "";
     for (const seg of segments) {
@@ -300,22 +303,32 @@ const ui = {
       const len = (seg.value / total) * C;
       arcs += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
                        stroke="${seg.color}" stroke-width="${sw}"
-                       stroke-dasharray="${len.toFixed(2)} ${C.toFixed(2)}"
+                       stroke-linecap="round"
+                       stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}"
                        stroke-dashoffset="${(-off).toFixed(2)}" />`;
       off += len;
     }
-    $("#"+elId).innerHTML = `
-      <svg viewBox="0 0 160 160" width="180" height="180" role="img"
-           aria-label="status donut" style="transform:rotate(-90deg)">
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
-                stroke="var(--border)" stroke-width="${sw}" />
-        ${arcs}
-      </svg>
-      <div style="text-align:center;margin-top:-2.6rem;font-size:1.4rem;font-weight:600;">${total}</div>
+    const okPct = Math.round(((segments.find(s=>s.label==="ok")||{}).value||0) * 100 / total);
+    host.innerHTML = `
+      <div class="donut-wrap">
+        <svg viewBox="0 0 160 160" width="180" height="180" role="img"
+             aria-label="status donut">
+          <g transform="rotate(-90 80 80)">
+            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
+                    stroke="var(--border)" stroke-width="${sw}" />
+            ${arcs}
+          </g>
+          <text x="80" y="76" text-anchor="middle" font-size="30" font-weight="700"
+                fill="currentColor">${total}</text>
+          <text x="80" y="98" text-anchor="middle" font-size="11" fill="var(--dim)">
+                ${okPct}% ok</text>
+        </svg>
+      </div>
       <div class="donut-legend">
-        ${segments.filter(s => s.value).map(s =>
-          `<span><span class="swatch" style="background:${s.color}"></span>${s.label}: ${s.value}</span>`
-        ).join("")}
+        ${segments.filter(s => s.value).map(s => {
+          const pct = Math.round(s.value * 100 / total);
+          return `<span><span class="swatch" style="background:${s.color}"></span>${s.label}: <b>${s.value}</b> <span class="dim">(${pct}%)</span></span>`;
+        }).join("")}
       </div>`;
   },
 
@@ -1014,14 +1027,84 @@ document.addEventListener("submit", async e => {
 async function _loadSyncProvider() {
   const f = $("#sync-provider-form");
   if (!f) return;
+  // Populate remote name dropdown from `rclone listremotes`.
+  await _loadRemotes();
   try {
     const s = await api.get("/sync/provider");
-    f.elements.provider.value    = s.provider || "";
-    f.elements.remote_name.value = s.remote_name || "";
+    f.elements.provider.value = s.provider || "";
+    if (s.remote_name) {
+      // If the saved name isn't in the list (e.g. rclone not yet configured),
+      // append it as a placeholder.
+      const sel = f.elements.remote_name;
+      if (![...sel.options].some(o => o.value === s.remote_name)) {
+        const o = document.createElement("option"); o.value = s.remote_name;
+        o.textContent = s.remote_name + " (not in rclone)"; sel.appendChild(o);
+      }
+      sel.value = s.remote_name;
+    }
     f.elements.remote_path.value = s.remote_path || "";
     f.elements.copy_only.checked = s.copy_only !== false;
   } catch {}
 }
+async function _loadRemotes() {
+  const sel = $("#sync-remote-name");
+  if (!sel) return;
+  try {
+    const r = await api.get("/sync/remotes");
+    sel.innerHTML = '<option value="">(pick a configured remote)</option>';
+    (r.remotes || []).forEach(name => {
+      const o = document.createElement("option"); o.value = name; o.textContent = name;
+      sel.appendChild(o);
+    });
+    if (r.error) sel.title = r.error;
+  } catch (e) { sel.innerHTML = `<option value="">${e}</option>`; }
+}
+
+// Browse modal: list folders, support up/in navigation, pick current path.
+async function _browseAt(path) {
+  $("#sync-browse-pwd").textContent = path;
+  const list = $("#sync-browse-list");
+  list.innerHTML = '<span class="spinner"></span> listing…';
+  try {
+    const r = await api.get(`/sync/browse?path=${encodeURIComponent(path)}`);
+    if (!r.ok) {
+      list.innerHTML = `<p class="badge fail">${r.error||"failed"}</p>`;
+      return;
+    }
+    list.innerHTML = (r.dirs.length
+      ? r.dirs.map(d => `<div data-browse-into="${d}" style="padding:0.3rem 0.4rem;cursor:pointer;border-radius:4px"><span class="dim">📁</span> ${d}</div>`).join("")
+      : '<p class="dim">(empty folder)</p>');
+  } catch (e) { list.innerHTML = `<p class="badge fail">${e}</p>`; }
+}
+document.addEventListener("click", async e => {
+  if (e.target.id === "sync-remote-refresh") _loadRemotes();
+  if (e.target.id === "sync-remote-browse") {
+    const sel = $("#sync-remote-name");
+    const remote = sel?.value;
+    if (!remote) { ui.status("pick a remote first"); return; }
+    $("#sync-browse-modal").classList.remove("hidden");
+    _browseAt(`${remote}:/`);
+  }
+  if (e.target.id === "sync-browse-close") $("#sync-browse-modal").classList.add("hidden");
+  if (e.target.id === "sync-browse-up") {
+    const cur = $("#sync-browse-pwd").textContent || "";
+    const m = cur.match(/^([^:]+):\/(.*)$/);
+    if (!m) return;
+    const remote = m[1]; let p = m[2].replace(/\/$/, "");
+    p = p.includes("/") ? p.replace(/\/[^/]+$/, "") : "";
+    _browseAt(`${remote}:/${p}`);
+  }
+  if (e.target.id === "sync-browse-pick") {
+    $("#sync-remote-path").value = $("#sync-browse-pwd").textContent;
+    $("#sync-browse-modal").classList.add("hidden");
+  }
+  const into = e.target.closest("[data-browse-into]");
+  if (into && into.closest("#sync-browse-list")) {
+    const cur = $("#sync-browse-pwd").textContent || "";
+    const next = cur.replace(/\/$/, "") + "/" + into.dataset.browseInto;
+    _browseAt(next);
+  }
+});
 document.addEventListener("submit", async e => {
   if (e.target && e.target.id === "sync-provider-form") {
     e.preventDefault();
@@ -1030,7 +1113,7 @@ document.addEventListener("submit", async e => {
     try {
       const r = await api.post("/sync/provider", {
         provider:    f.elements.provider.value,
-        remote_name: f.elements.remote_name.value.trim(),
+        remote_name: (f.elements.remote_name.value || "").trim(),
         remote_path: f.elements.remote_path.value.trim(),
         copy_only:   f.elements.copy_only.checked,
       });
@@ -1400,7 +1483,8 @@ function bindSwitchers() {
   // localStorage so the next click cycles correctly.
   const repaintThemeIcon = (pref) => {
     if (!window.ICONS) return;
-    const k = pref === "dark" ? "moon" : pref === "light" ? "sun" : "globe";
+    // auto = monitor (follows OS), light = sun, dark = moon.
+    const k = pref === "dark" ? "moon" : pref === "light" ? "sun" : "monitor";
     const b = $("#theme-switcher"); if (b) b.innerHTML = window.ICONS[k];
     if (b) b.title = `Theme: ${pref}`;
   };
