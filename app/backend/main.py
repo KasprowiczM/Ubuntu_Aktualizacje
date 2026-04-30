@@ -33,7 +33,7 @@ from . import (
 )
 from .runner import get_runner
 
-app = FastAPI(title="Ubuntu_Aktualizacje Dashboard", version="0.1.0")
+app = FastAPI(title="Ascendo - Unified Updates", version="0.1.0")
 app.add_middleware(auth_mod.TokenAuthMiddleware)
 
 

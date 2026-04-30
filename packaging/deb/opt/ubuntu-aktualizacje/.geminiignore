@@ -1,0 +1,10 @@
+node_modules/
+.git/
+.github/
+logs/
+APPS.md
+.env.local
+secrets/
+*.log
+*.sqlite
+__pycache__/

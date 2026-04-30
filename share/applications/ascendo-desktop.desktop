@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Ascendo (Desktop)
+Name=Ascendo - Unified Updates (Desktop)
 GenericName=System Update Manager
 Comment=Standalone Ascendo desktop window (no browser tab)
 Exec=ascendo-launch desktop

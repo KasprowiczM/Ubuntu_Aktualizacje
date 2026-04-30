@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Ascendo (Web)
+Name=Ascendo - Unified Updates
 GenericName=System Update Manager
 Comment=Open the Ascendo dashboard in your default browser
 Exec=ascendo-launch web
