@@ -29,6 +29,13 @@ source "${SCRIPT_DIR}/lib/common.sh"
 source "${SCRIPT_DIR}/lib/detect.sh"
 # shellcheck source=lib/orchestrator.sh
 source "${SCRIPT_DIR}/lib/orchestrator.sh"
+# shellcheck source=lib/i18n.sh
+source "${SCRIPT_DIR}/lib/i18n.sh"
+
+# Print Ascendo ASCII banner once per run (skip when ORCH_QUIET=1).
+if [[ "${ORCH_QUIET:-0}" != "1" && -f "${SCRIPT_DIR}/branding/banner.txt" ]]; then
+    cat "${SCRIPT_DIR}/branding/banner.txt"
+fi
 
 # Suppress per-script inventory calls — orchestrator runs inventory once.
 export INVENTORY_SILENT=1

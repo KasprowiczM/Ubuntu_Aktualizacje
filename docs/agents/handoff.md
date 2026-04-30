@@ -1,5 +1,124 @@
 # Handoff
 
+## 2026-05-02 — Ascendo brand + i18n + apps (Etap 6)
+
+### Stan na koniec sesji
+
+| Obszar | Status |
+|---|---|
+| Branding **Ascendo** | ✅ logo.svg + icon.svg + banner.txt w `branding/`, favicon, tytuł SPA, banner CLI, header `<svg>` |
+| CLI i18n (EN/PL) | ✅ `lib/i18n.sh` + `i18n/{en,pl}.txt`, `t`/`tn`, `~/.config/ascendo/lang` |
+| CLI tabele kolorowe | ✅ `lib/tables.sh` z `@ok @warn @err @skip @info` pillami, unicode box-drawing |
+| App registration CLI | ✅ `scripts/apps/{detect,add,remove,list,install-missing}.sh` |
+| App registration UI | ✅ `Apps` tab w dashboardzie z tabelą + przyciskami add/remove |
+| Backend `/apps/*` + `/i18n/*` | ✅ 3 nowe endpointy w `app/backend/main.py` |
+| fresh-machine.sh: język 0-tym krokiem | ✅ pierwszy prompt to EN/PL, potem `t setup.*` przez całą resztę |
+| fresh-machine.sh: nigdy nie instaluje | ✅ apps detect read-only przed setupem; install-missing osobno |
+| Wizard step 0 = język | ✅ radio EN/PL na górze modala; `applyI18n()` natychmiast |
+| Dev-sync TTY pretty output | ✅ box z tabelą + ✔ pill; non-TTY = stary format (CI parser działa) |
+| User Journey docs (EN+PL) | ✅ `docs/{en,pl}/user-journey.md` — 6 ścieżek |
+| `bin/ascendo` shim z auto-resolve ROOT | ✅ działa z repo i z `/opt/...` po `dpkg -i` |
+| `.deb` rebrand | ✅ Package: ascendo, Source: ubuntu-aktualizacje, Version: 0.3.0 |
+
+### Nowe pliki
+
+```
+branding/{logo.svg,icon.svg,banner.txt,README.md}
+app/frontend/favicon.svg                   (= branding/icon.svg)
+lib/i18n.sh                                (catalog loader, t/tn)
+lib/tables.sh                              (unicode tables + status pills)
+i18n/en.txt                                (EN catalog)
+i18n/pl.txt                                (PL catalog)
+scripts/apps/detect.sh                     (compare config/*.list ↔ system)
+scripts/apps/add.sh                        (append to .list, .bak_<ts>)
+scripts/apps/remove.sh                     (remove from .list)
+scripts/apps/list.sh                       (show all configured)
+scripts/apps/install-missing.sh            (install state=missing items)
+docs/en/user-journey.md                    (6 personas EN)
+docs/pl/user-journey.md                    (6 personas PL)
+bin/ascendo                                (symlink → packaging/.../ubuntu-aktualizacje)
+```
+
+### Zmodyfikowane
+
+```
+update-all.sh                              (banner + i18n source)
+scripts/fresh-machine.sh                   (lang pick step 0, apps detect, t-keys)
+dev-sync/dev_sync_export.py                (TTY pretty box, plain CI fallback)
+app/backend/main.py                        (+/apps/{detect,add,remove}, /i18n/{lang})
+app/frontend/index.html                    (Ascendo brand, Apps tab, wizard step 0)
+app/frontend/app.js                        (loadApps, appsAdd/Remove, lang switch in wizard)
+app/frontend/style.css                     (.brand, .tbl, .st-pill)
+app/frontend/i18n.js                       (apps.*, wizard.* PL+EN)
+packaging/deb/DEBIAN/control               (Package: ascendo, 0.3.0)
+packaging/deb/usr/bin/ubuntu-aktualizacje  (auto-resolve ROOT, apps subcommand)
+.github/workflows/validate.yml             (+15 required files)
+README.md                                  (Ascendo header)
+RUN.md                                     (Etap 6 changelog)
+```
+
+### Walidacje
+
+```text
+bash -n na wszystkich .sh                              OK
+python3 ast parse na wszystkich .py                    OK
+TestClient: 16 GET endpoints (incl. /apps/detect, /i18n/en, /i18n/pl)  → 200
+python3 tests/validate_phase_json.py                   266/266 PASS
+test_dev_sync_safety.py                                9/9 OK
+dev-sync export dry-run                                Files selected: 8
+bin/ascendo apps detect                                tracked=38, detected=308, missing=0
+bin/ascendo apps list                                  total: 38
+i18n: tn apps.summary 38 308 0 (PL)                    "38 śledzonych · 308 wykrytych (poza configiem) · 0 brakuje"
+fresh-machine --lang en --check-only --no-service     OK do końca
+```
+
+### Ryzyka / co warto sprawdzić
+
+1. **`dpkg-deb --build`** — packaging fizycznie nie testowany na czystej
+   maszynie; build-deb.sh ma dobrze zdefiniowane perms ale wymaga
+   physical install/uninstall test (tak jak Etap 5).
+2. **Wizard language switch** — `applyI18n()` zakłada że i18n.js jest
+   zsynchronizowany z `i18n/{en,pl}.txt`; jeśli backend katalog ma klucz
+   którego nie ma w i18n.js, dashboard pokaże fallback EN.
+3. **Apps detect** — pierwsze uruchomienie na maszynie z dużym `pipx
+   list` może być wolne (>2s). Cache nie wpięty — TODO follow-up.
+4. **Symlink `bin/ascendo`** — działa tylko z repo. Po `dpkg -i` używamy
+   `/usr/bin/ubuntu-aktualizacje` (planowany rename na `/usr/bin/ascendo`).
+
+### Zostało (nie ruszane / niskoryzykowne deferred)
+
+| ID | Zadanie | Effort |
+|---|---|---|
+| A3 | Snap package (snapcraft.yaml) | 2 dni |
+| A4 | AppImage dla Tauri shell | 0.5 dnia |
+| A5 | Homebrew tap | 0.5 dnia |
+| B6 | Toast/snackbar zamiast `ui.status()` | 0.3 dnia |
+| B7 | Mobile-friendly layout | 0.3 dnia |
+| C4 | CSP/CORS hardening | 0.2 dnia |
+| D3 | Run timeline Gantt view | 1 dzień |
+| E1 | Push-mode SSH multi-host runs | 2 dni |
+| E2 | Central history aggregation | 2 dni |
+| F1 | Fedora/RHEL `dnf` adapter | 2 dni |
+| G1 | Frontend Playwright e2e | 1 dzień |
+| Apps | Cache `apps detect` (60s TTL) | 0.3 dnia |
+| Apps | UI confirm modal for install-missing | 0.3 dnia |
+| Brand | Rename `/usr/bin/ubuntu-aktualizacje` → `/usr/bin/ascendo` | 0.2 dnia |
+| i18n | Rozszerzyć catalogs do wszystkich `print_*` w lib/common.sh | 0.5 dnia |
+
+### Komendy do następnej sesji
+
+```bash
+git pull
+bash scripts/fresh-machine.sh --check-only --lang en
+bin/ascendo apps detect
+bin/ascendo apps list
+./update-all.sh --profile quick --no-notify
+python3 tests/validate_phase_json.py | tail -3
+python3 dev-sync/dev_sync_export.py --dry-run
+```
+
+---
+
 ## 2026-05-01 — Roadmap implementation (Etap 5)
 
 ### Stan na koniec sesji

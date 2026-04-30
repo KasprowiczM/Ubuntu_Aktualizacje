@@ -28,12 +28,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=lib/common.sh
 source "${SCRIPT_DIR}/lib/common.sh"
+# shellcheck source=lib/i18n.sh
+source "${SCRIPT_DIR}/lib/i18n.sh"
 
 DRY_RUN=0
 CHECK_ONLY=0
 NO_DASHBOARD=0
 NO_SERVICE=0
 NO_SYNC=0
+LANG_OVERRIDE=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -42,6 +45,7 @@ while [[ $# -gt 0 ]]; do
         --no-dashboard)  NO_DASHBOARD=1 ;;
         --no-service)    NO_SERVICE=1 ;;
         --no-sync)       NO_SYNC=1 ;;
+        --lang)          shift; LANG_OVERRIDE="${1:-}" ;;
         -h|--help)
             sed -n '4,18p' "$0"; exit 0 ;;
         *) print_error "Unknown argument: $1"; exit 2 ;;
@@ -49,19 +53,39 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-print_header "Fresh-machine onboarding — Ubuntu_Aktualizacje"
+# ── Step 0: language selection (interactive unless --lang or already set) ────
+if [[ -n "$LANG_OVERRIDE" ]]; then
+    ascendo_set_lang "$LANG_OVERRIDE" || true
+elif [[ ! -r "${XDG_CONFIG_HOME:-$HOME/.config}/ascendo/lang" && $CHECK_ONLY -eq 0 && -t 0 && -t 1 ]]; then
+    [[ -f "${SCRIPT_DIR}/branding/banner.txt" ]] && cat "${SCRIPT_DIR}/branding/banner.txt"
+    echo
+    echo "  $(t setup.welcome 'Welcome to Ascendo — unified system updates.')"
+    echo
+    echo "  $(t setup.lang_pick 'Pick the interface language for CLI and dashboard:')"
+    echo "    1) English  (en)"
+    echo "    2) Polski   (pl)"
+    read -rp "  $(t setup.lang_choose 'Choose [%s]:' | sed 's/%s/1/'): " ans
+    case "$ans" in
+        2|pl|PL) ascendo_set_lang pl ;;
+        *)       ascendo_set_lang en ;;
+    esac
+    printf "  $(t setup.lang_set 'Language set to: %s')\n" "$ASCENDO_LANG_RESOLVED"
+fi
+
+[[ -f "${SCRIPT_DIR}/branding/banner.txt" ]] && cat "${SCRIPT_DIR}/branding/banner.txt"
+print_header "Ascendo — fresh-machine onboarding"
 print_info "Repo : ${SCRIPT_DIR}"
 print_info "Mode : $([[ $CHECK_ONLY -eq 1 ]] && echo 'check-only' || ([[ $DRY_RUN -eq 1 ]] && echo 'dry-run' || echo 'apply'))"
 echo
 
 # ── 1. Preflight (always) ─────────────────────────────────────────────────────
-print_section "Step 1/5 — preflight host audit"
+print_section "$(t setup.preflight 'Step 1/5 — preflight host audit')"
 bash "${SCRIPT_DIR}/scripts/preflight.sh" || {
     print_warn "preflight reported issues — continuing, address before mutating runs"
 }
 
 # ── 2. Bootstrap: overlay restore + setup.sh ──────────────────────────────────
-print_section "Step 2/5 — bootstrap (overlay + setup)"
+print_section "$(t setup.bootstrap 'Step 2/5 — overlay restore + setup')"
 bootstrap_args=()
 [[ $DRY_RUN     -eq 1 ]] && bootstrap_args+=(--dry-run)
 [[ $CHECK_ONLY  -eq 1 ]] && bootstrap_args+=(--check-only)
@@ -75,9 +99,17 @@ if ! bash "${SCRIPT_DIR}/scripts/bootstrap.sh" "${bootstrap_args[@]}"; then
     fi
 fi
 
+# ── 2b. Apps detect (read-only report; never auto-installs) ──────────────────
+print_section "Apps detect (read-only)"
+print_info "$(t setup.ask_apps 'Run \`ascendo apps detect\` to compare your installed apps with this configuration.')"
+bash "${SCRIPT_DIR}/scripts/apps/detect.sh" 2>&1 | tail -n +1 | sed -n '1,40p'
+echo
+print_info "Use 'ascendo apps add <pkg> --category <cat>' to track a detected package."
+print_info "Use 'ascendo apps install-missing' to install configured-but-missing entries."
+
 # ── 3. Dashboard venv ─────────────────────────────────────────────────────────
 if [[ $NO_DASHBOARD -eq 0 ]]; then
-    print_section "Step 3/5 — dashboard Python venv"
+    print_section "$(t setup.dashboard 'Step 3/5 — dashboard Python venv')"
     if [[ $CHECK_ONLY -eq 1 ]]; then
         if [[ -x "${SCRIPT_DIR}/app/.venv/bin/python" ]]; then
             print_ok "venv present at app/.venv/"
@@ -93,7 +125,7 @@ fi
 
 # ── 4. Dashboard user-service ─────────────────────────────────────────────────
 if [[ $NO_DASHBOARD -eq 0 && $NO_SERVICE -eq 0 ]]; then
-    print_section "Step 4/5 — dashboard user-service (systemd --user)"
+    print_section "$(t setup.service 'Step 4/5 — dashboard user-service (systemd --user)')"
     if [[ $CHECK_ONLY -eq 1 || $DRY_RUN -eq 1 ]]; then
         if systemctl --user is-enabled ubuntu-aktualizacje-dashboard.service >/dev/null 2>&1; then
             print_ok "service enabled"
@@ -110,13 +142,13 @@ else
 fi
 
 # ── 5. State verification ─────────────────────────────────────────────────────
-print_section "Step 5/5 — state verification"
+print_section "$(t setup.verify 'Step 5/5 — state verification')"
 bash "${SCRIPT_DIR}/scripts/verify-state.sh" || {
     print_warn "verify-state reported issues"
 }
 
 echo
-print_section "Next steps"
+print_section "$(t setup.next_steps 'Next steps')"
 echo
 echo -e "  ${BOLD}CLI run:${RESET}     ./update-all.sh --profile quick --no-notify"
 echo -e "  ${BOLD}Dashboard:${RESET}   xdg-open http://127.0.0.1:8765"

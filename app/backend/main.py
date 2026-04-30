@@ -433,6 +433,66 @@ def sync_export(dry_run: bool = True) -> dict[str, Any]:
     }
 
 
+@app.get("/apps/detect")
+def apps_detect() -> dict[str, Any]:
+    import subprocess
+    res = subprocess.run(
+        ["bash", str(config.repo_root() / "scripts" / "apps" / "detect.sh"), "--json"],
+        capture_output=True, text=True,
+    )
+    if res.returncode != 0:
+        raise HTTPException(status_code=500, detail=res.stderr.strip())
+    return json.loads(res.stdout)
+
+
+class AppEditRequest(BaseModel):
+    package: str
+    category: str
+
+
+@app.post("/apps/add")
+def apps_add(req: AppEditRequest) -> dict[str, Any]:
+    import subprocess
+    res = subprocess.run(
+        ["bash", str(config.repo_root() / "scripts" / "apps" / "add.sh"),
+         req.package, "--category", req.category],
+        capture_output=True, text=True,
+    )
+    audit_mod.log("apps.add", details={"package": req.package, "category": req.category, "rc": res.returncode})
+    return {"ok": res.returncode == 0, "stdout": res.stdout, "stderr": res.stderr}
+
+
+@app.post("/apps/remove")
+def apps_remove(req: AppEditRequest) -> dict[str, Any]:
+    import subprocess
+    res = subprocess.run(
+        ["bash", str(config.repo_root() / "scripts" / "apps" / "remove.sh"),
+         req.package, "--category", req.category],
+        capture_output=True, text=True,
+    )
+    audit_mod.log("apps.remove", details={"package": req.package, "category": req.category, "rc": res.returncode})
+    return {"ok": res.returncode == 0, "stdout": res.stdout, "stderr": res.stderr}
+
+
+@app.get("/i18n/{lang}")
+def i18n_catalog(lang: str) -> dict[str, Any]:
+    """Read i18n/<lang>.txt and return as flat key→value JSON. Used by the
+    dashboard to load CLI-side translations for the wizard's language pick."""
+    if lang not in {"en", "pl"}:
+        raise HTTPException(status_code=404, detail="unsupported lang")
+    p = config.repo_root() / "i18n" / f"{lang}.txt"
+    if not p.exists():
+        return {"lang": lang, "strings": {}}
+    out: dict[str, str] = {}
+    for line in p.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        out[k.strip()] = v.strip()
+    return {"lang": lang, "strings": out}
+
+
 @app.get("/metrics", response_class=FileResponse)
 def prometheus_metrics() -> Any:
     """Prometheus text-format metrics for fleet monitoring."""

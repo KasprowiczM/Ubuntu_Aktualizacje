@@ -3,12 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ubuntu_Aktualizacje Dashboard</title>
+  <title>Ascendo — unified system updates</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
   <header>
-    <h1>Ubuntu_Aktualizacje</h1>
+    <h1 class="brand">
+      <svg viewBox="0 0 64 64" width="28" height="28" aria-hidden="true">
+        <defs><linearGradient id="ag" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#22c55e"/>
+          <stop offset="100%" stop-color="#0ea5e9"/>
+        </linearGradient></defs>
+        <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#ag)"/>
+        <path d="M16 44 L32 22 L48 44" fill="none" stroke="white"
+              stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>Ascendo</span>
+    </h1>
     <nav id="nav">
       <a href="#overview"   data-view="overview"   class="active" data-i18n="nav.overview">Overview</a>
       <a href="#categories" data-view="categories" data-i18n="nav.categories">Categories</a>
@@ -16,6 +28,7 @@
       <a href="#history"    data-view="history"    data-i18n="nav.history">History</a>
       <a href="#logs"       data-view="logs"       data-i18n="nav.logs">Logs</a>
       <a href="#sync"       data-view="sync"       data-i18n="nav.sync">Sync</a>
+      <a href="#apps"       data-view="apps"       data-i18n="nav.apps">Apps</a>
       <a href="#hosts"      data-view="hosts"      data-i18n="nav.hosts">Hosts</a>
       <a href="#settings"   data-view="settings"   data-i18n="nav.settings">Settings</a>
     </nav>
@@ -26,8 +39,14 @@
     <!-- First-run wizard modal -->
     <div id="wizard-modal" class="modal hidden" role="dialog" aria-modal="true">
       <div class="modal-card" style="max-width:520px">
-        <h3 data-i18n="wizard.title">Welcome to Ubuntu_Aktualizacje</h3>
+        <h3 data-i18n="wizard.title">Welcome to Ascendo</h3>
         <p class="dim" data-i18n="wizard.intro">A few quick choices and you're done.</p>
+        <div id="wizard-step0">
+          <h4 data-i18n="wizard.lang_q">Pick your language</h4>
+          <label><input type="radio" name="wiz-lang" value="en" checked> English</label>
+          &nbsp;
+          <label><input type="radio" name="wiz-lang" value="pl"> Polski</label>
+        </div>
         <div id="wizard-step1">
           <h4 data-i18n="wizard.profile_q">Pick your default profile</h4>
           <label><input type="radio" name="wiz-profile" value="quick"> <b>quick</b> — read-only check (~15s)</label><br>
@@ -106,6 +125,23 @@
           <div id="inv-updates">…</div>
         </div>
       </div>
+    </section>
+
+    <!-- Apps (detected vs configured) -->
+    <section id="view-apps" class="view hidden">
+      <h2 style="display:flex;align-items:center;gap:0.5rem">
+        <span data-i18n="apps.title">Apps</span>
+        <button id="apps-refresh-btn" class="secondary"
+                style="margin-left:auto;font-size:0.8rem"
+                data-i18n="overview.refresh">Refresh</button>
+      </h2>
+      <p class="dim" data-i18n="apps.hint">
+        Compare what is installed on this machine with what's tracked in
+        config/*.list. Add detected packages to make them part of every
+        future update; install missing packages with one click.
+      </p>
+      <div id="apps-summary" class="dim" style="margin-bottom:0.5rem">…</div>
+      <div id="apps-table-wrap">…</div>
     </section>
 
     <!-- Categories -->

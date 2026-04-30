@@ -3,6 +3,41 @@
 Pełen przewodnik dla nowego operatora — od zera do działającego dashboardu.
 Wszystkie ścieżki względem `~/Dev_Env/Ubuntu_Aktualizacje`.
 
+## Co nowego (2026-05-02 — Etap 6: Ascendo brand + i18n + apps)
+
+- **Rebrand: Ascendo.** Wordmark + ikona w `branding/`, ASCII banner
+  pokazywany na starcie `update-all.sh` i `fresh-machine.sh`. Favicon
+  `app/frontend/favicon.svg`. Tytuł aplikacji: "Ascendo — unified system
+  updates". Pakiet `.deb` → `Package: ascendo`, Source: `ubuntu-aktualizacje`.
+- **CLI i18n bez gettexta.** `lib/i18n.sh` + katalogi `i18n/{en,pl}.txt`
+  (klucz=wartość). Helpery `t KEY [FALLBACK]` i `tn KEY ARG…` dla
+  printf-style. Persisted w `~/.config/ascendo/lang`. Pierwsze pytanie
+  `fresh-machine.sh` to wybór języka (EN/PL).
+- **CLI tabele.** `lib/tables.sh` renderuje unicode box-drawing tabele z
+  kolorystycznymi pillami `@ok`/`@warn`/`@err`/`@skip`/`@info`. Używane
+  przez `apps detect`, `apps list`, dev-sync export podsumowanie. Identyczna
+  semantyka kolorów co dashboard CSS (.st-pill).
+- **App registration**: `bin/ascendo apps {detect|add|remove|list|install-missing}`.
+  `detect` porównuje system z `config/*.list` i pokazuje 3 stany:
+  `tracked` (zielony), `detected` (żółty, kandydat do dodania), `missing`
+  (czerwony, kandydat do instalacji). Endpoint `GET /apps/detect`
+  zwraca JSON. Panel **Apps** w dashboardzie pokazuje kolorową tabelę z
+  przyciskami **+ Add to config** / **Remove**.
+- **Fresh-machine NIE instaluje pakietów.** Po preflight i overlay
+  restore odpala `apps detect` (read-only); decyzję o instalacji
+  podejmuje user przez `bash scripts/apps/install-missing.sh`.
+- **Endpoint `GET /i18n/{en,pl}`** — backend serwuje katalogi CLI tak,
+  by dashboard mógł re-użyć tych samych tłumaczeń (np. apps.* w wizardzie).
+- **Wizard krok 0 = język.** Modal pyta najpierw o EN/PL, potem profil,
+  schedule, snapshot. Zmiana języka aplikuje się natychmiast (UI + CLI
+  config).
+- **Dev-sync export TTY view.** Gdy stdout jest TTY: sformatowane
+  pudełko z tabelą Provider/Transport/Files/Log + zielony ✔ status.
+  Tryb non-TTY (CI, pipe) zachowuje stary format (parsery działają dalej).
+- **User Journey docs.** `docs/{en,pl}/user-journey.md` — 6 ścieżek
+  (fresh clone, daily update, add app, detect untracked, migration,
+  recovery) z komendami i wyjściami awaryjnymi. README linkuje.
+
 ## Co nowego (2026-05-01 — Etap 5)
 
 - **Roadmap zrealizowany**: Top 5 + większość P1 z handoffu wdrożone.

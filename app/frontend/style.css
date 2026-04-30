@@ -236,3 +236,43 @@ footer {
   background: transparent; border: none; color: rgba(255,255,255,0.85);
   font-size: 1.4rem; cursor: pointer; padding: 0 0.3rem;
 }
+
+/* ── Brand header ──────────────────────────────────────────────────────── */
+header h1.brand {
+  display: flex; align-items: center; gap: 0.55rem;
+  font-size: 1.15rem; font-weight: 700; margin: 0;
+  letter-spacing: -0.01em;
+}
+header h1.brand svg { flex: 0 0 auto; }
+
+/* ── Status table (used by Apps, Sync results, Audit, Snapshots) ───────── */
+.tbl {
+  width: 100%; border-collapse: collapse; font-size: 0.85rem;
+  border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+}
+.tbl thead th {
+  background: var(--panel); padding: 0.45rem 0.7rem;
+  text-align: left; font-weight: 600; color: var(--dim);
+  border-bottom: 1px solid var(--border);
+}
+.tbl tbody td { padding: 0.4rem 0.7rem; border-top: 1px solid var(--border); }
+.tbl tbody tr:hover { background: var(--panel); }
+.tbl .col-mono { font-family: var(--mono); }
+.tbl .col-num  { text-align: right; font-variant-numeric: tabular-nums; }
+
+.st-pill {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.1rem 0.55rem; border-radius: 999px;
+  font-size: 0.72rem; font-weight: 600; line-height: 1.4;
+}
+.st-pill::before { content: ""; width: 0.5em; height: 0.5em; border-radius: 50%; }
+.st-ok    { background: rgba(34,197,94,0.15);  color: #15803d; }
+.st-ok::before    { background: #22c55e; }
+.st-warn  { background: rgba(245,158,11,0.18); color: #b45309; }
+.st-warn::before  { background: #f59e0b; }
+.st-err   { background: rgba(239,68,68,0.18);  color: #b91c1c; }
+.st-err::before   { background: #ef4444; }
+.st-skip  { background: rgba(100,116,139,0.18);color: #475569; }
+.st-skip::before  { background: #64748b; }
+.st-info  { background: rgba(14,165,233,0.18); color: #0369a1; }
+.st-info::before  { background: #0ea5e9; }

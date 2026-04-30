@@ -12,7 +12,10 @@ Obsługuje APT, Snap, Homebrew, npm, pip/pipx, Flatpak, sterowniki NVIDIA i firm
 ```bash
 ./update-all.sh                        # pełna aktualizacja (full profile, NVIDIA held)
                                        # sudo password ONCE — askpass dla wszystkich faz
-bash packaging/build-deb.sh            # buduje dist/ubuntu-aktualizacje_<ver>_all.deb
+bin/ascendo apps detect                # raport: tracked/detected/missing (kolorowa tabela)
+bin/ascendo apps add <pkg> --category <cat>   # dodaj do config/*.list
+bin/ascendo apps install-missing       # zainstaluj wszystko z .list co brak na dysku
+bash packaging/build-deb.sh            # buduje dist/ascendo_<ver>_all.deb
 bash scripts/maintenance/prune-logs.sh --keep 50 --days 30  # log retention
 curl -X POST http://127.0.0.1:8765/auth/generate-token       # opt-in token auth
 curl http://127.0.0.1:8765/metrics                           # Prometheus

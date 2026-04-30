@@ -79,6 +79,7 @@ const ui = {
     if (view === "sync"       && !ui._loaded.sync)       { ui._loaded.sync = true;       ui.loadSync(); }
     if (view === "settings"   && !ui._loaded.settings)   { ui._loaded.settings = true;   ui.loadSettings(); }
     if (view === "hosts"      && !ui._loaded.hosts)      { ui._loaded.hosts = true;      ui.loadHosts(); }
+    if (view === "apps"       && !ui._loaded.apps)       { ui._loaded.apps = true;       ui.loadApps(); }
     // Run Center is special: must always (re)bind active-stream subscription.
     if (view === "run") ui.loadRunCenter();
   },
@@ -98,11 +99,18 @@ const ui = {
 
   async finishWizard(skip) {
     const modal = $("#wizard-modal");
+    const langPick = (document.querySelector("input[name=wiz-lang]:checked") || {}).value || "en";
     const choices = skip ? {skipped: true} : {
+      language:        langPick,
       default_profile: (document.querySelector("input[name=wiz-profile]:checked") || {}).value || "safe",
       schedule:        $("#wiz-schedule").checked,
       snapshot_before_apply: $("#wiz-snapshot").checked,
     };
+    if (!skip) {
+      // Apply language change immediately so the rest of the dashboard switches.
+      window.UI_LANG = langPick;
+      try { window.applyI18n(); } catch {}
+    }
     try {
       await api.post("/onboarding/complete", choices);
       if (!skip) {
@@ -242,6 +250,61 @@ const ui = {
         <span style="color:var(--warn)">█ outdated</span> /
         <span style="color:var(--err)">█ missing</span>
       </p>`;
+  },
+
+  async loadApps() {
+    const wrap = $("#apps-table-wrap");
+    const summary = $("#apps-summary");
+    wrap.innerHTML = `<span class="spinner"></span> ${tr("overview.scanning") || "Scanning…"}`;
+    summary.textContent = "";
+    try {
+      const data = await api.get("/apps/detect");
+      const s = data.summary || {tracked:0, detected:0, missing:0};
+      summary.innerHTML = `
+        <span class="st-pill st-info">tracked ${s.tracked}</span>
+        <span class="st-pill st-warn">detected ${s.detected}</span>
+        <span class="st-pill st-err">missing ${s.missing}</span>`;
+      const items = data.items || [];
+      // Sort: missing → detected → tracked, then alphabetical
+      const rank = {missing:0, detected:1, tracked:2};
+      items.sort((a,b) =>
+        (rank[a.state]??9) - (rank[b.state]??9) ||
+        a.category.localeCompare(b.category) ||
+        a.package.localeCompare(b.package));
+      const stCls = {tracked:"st-info", detected:"st-warn", missing:"st-err"};
+      const rows = items.map(it => `
+        <tr>
+          <td>${it.category}</td>
+          <td class="col-mono">${it.package}</td>
+          <td><span class="st-pill ${stCls[it.state]||"st-skip"}">${it.state}</span></td>
+          <td>
+            ${it.state === "detected"
+              ? `<button class="secondary" data-apps-add data-pkg="${it.package}" data-cat="${it.category}">+ Add to config</button>`
+              : it.state === "tracked"
+              ? `<button class="secondary" data-apps-rm data-pkg="${it.package}" data-cat="${it.category}">Remove</button>`
+              : `<span class="dim">${it.suggested||""}</span>`}
+          </td>
+        </tr>`).join("");
+      wrap.innerHTML = `
+        <table class="tbl">
+          <thead><tr><th>Category</th><th>Package</th><th>State</th><th>Action</th></tr></thead>
+          <tbody>${rows||"<tr><td colspan='4' class='dim'>—</td></tr>"}</tbody>
+        </table>`;
+    } catch (e) {
+      wrap.textContent = String(e);
+    }
+  },
+
+  async appsAdd(pkg, cat) {
+    try { await api.post("/apps/add", {package: pkg, category: cat}); }
+    catch (e) { ui.status(String(e)); return; }
+    ui._loaded.apps = false; ui.show("apps");
+  },
+  async appsRemove(pkg, cat) {
+    if (!confirm(`Remove ${pkg} from ${cat} config? (does NOT uninstall)`)) return;
+    try { await api.post("/apps/remove", {package: pkg, category: cat}); }
+    catch (e) { ui.status(String(e)); return; }
+    ui._loaded.apps = false; ui.show("apps");
   },
 
   async loadInventoryDashboard() {
@@ -697,6 +760,13 @@ document.addEventListener("click", e => {
     ui.loadOverview();
     ui.checkRebootBanner();
   }
+  if (e.target.id === "apps-refresh-btn") {
+    ui._loaded.apps = false; ui.loadApps();
+  }
+  const addBtn = e.target.closest("[data-apps-add]");
+  if (addBtn) ui.appsAdd(addBtn.dataset.pkg, addBtn.dataset.cat);
+  const rmBtn = e.target.closest("[data-apps-rm]");
+  if (rmBtn) ui.appsRemove(rmBtn.dataset.pkg, rmBtn.dataset.cat);
   if (e.target.id === "inv-refresh-btn") {
     // Inventory-only refresh: clears the backend cache too.
     api.post("/inventory/refresh", {}).catch(()=>{});

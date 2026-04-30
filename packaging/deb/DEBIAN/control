@@ -1,5 +1,6 @@
-Package: ubuntu-aktualizacje
-Version: 0.2.0
+Package: ascendo
+Source: ubuntu-aktualizacje
+Version: 0.3.0
 Section: admin
 Priority: optional
 Architecture: all

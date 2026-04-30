@@ -1,6 +1,12 @@
-# Ubuntu_Aktualizacje
+# Ascendo
 
-Automated Ubuntu 24.04 maintenance for this machine (Dell Precision 5520), with one master command, consistent logs, and machine-local inventory generation.
+> One-command Ubuntu update suite — CLI + local dashboard, multilingual,
+> snapshot-aware, audit-logged, and packageable as `.deb`.
+
+Repo legacy name: `Ubuntu_Aktualizacje` (kept for git history).
+Product / brand: **Ascendo** (Latin *I ascend* — "things go up, never down").
+
+User journeys: [English](docs/en/user-journey.md) · [Polski](docs/pl/user-journey.md)
 
 [![Validate Config](https://github.com/KasprowiczM/Ubuntu_Aktualizacje/actions/workflows/validate.yml/badge.svg)](https://github.com/KasprowiczM/Ubuntu_Aktualizacje/actions/workflows/validate.yml)
 
