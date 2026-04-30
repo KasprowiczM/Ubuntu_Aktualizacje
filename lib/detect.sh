@@ -102,6 +102,79 @@ detect_package_managers() {
 
 # ── APT Scanning ──────────────────────────────────────────────────────────────
 
+# Bulk in-memory cache for apt-cache policy results (Candidate + first http
+# source line). Populated lazily by apt_inventory_cache_init. Without this
+# cache, scan_apt_third_party_manual would invoke `apt-cache policy` 250+
+# times (≈30 s on this host); one batched call cuts that to ~2 s.
+declare -gA APT_CACHE_VERSION=()
+declare -gA APT_CACHE_CANDIDATE=()
+declare -gA APT_CACHE_SOURCE=()
+APT_CACHE_INIT=0
+
+apt_inventory_cache_init() {
+    [[ "${APT_CACHE_INIT:-0}" == "1" ]] && return 0
+    # 1) Installed versions for ALL packages — single dpkg-query call.
+    local pkg ver status_str
+    while IFS='|' read -r pkg ver status_str; do
+        [[ -z "$pkg" ]] && continue
+        if [[ "$status_str" == *" installed" ]]; then
+            APT_CACHE_VERSION[$pkg]="$ver"
+        fi
+    done < <(dpkg-query -W -f='${binary:Package}|${Version}|${Status}\n' 2>/dev/null \
+        | sed 's/:amd64|/|/; s/:i386|/|/')
+
+    # 2) Candidate version + source line for the manual set — single
+    #    apt-cache policy call (handles N package args in one shot).
+    local manual=()
+    mapfile -t manual < <(apt-mark showmanual 2>/dev/null)
+    if (( ${#manual[@]} > 0 )); then
+        # apt-cache policy ignores unknown packages silently.
+        apt-cache policy "${manual[@]}" 2>/dev/null \
+        | awk '
+            BEGIN { pkg="" }
+            # Package header lines: "<name>:" with no leading whitespace.
+            /^[A-Za-z0-9.+-]+:$/ {
+                pkg = $1
+                sub(/:$/, "", pkg)
+                src_emitted = 0
+                next
+            }
+            /^[[:space:]]+Candidate:[[:space:]]/ {
+                cand = $2
+                if (pkg != "") print "C|" pkg "|" cand
+                next
+            }
+            # First http(s) source line wins.
+            /^[[:space:]]+[0-9]+[[:space:]]+https?:\/\// {
+                if (!src_emitted && pkg != "") {
+                    line = $0
+                    sub(/^[[:space:]]+/, "", line)
+                    print "S|" pkg "|" line
+                    src_emitted = 1
+                }
+            }
+        ' | while IFS='|' read -r tag p val; do
+            case "$tag" in
+                C) APT_CACHE_CANDIDATE[$p]="$val" ;;
+                S) APT_CACHE_SOURCE[$p]="$val" ;;
+            esac
+            # Re-emit so caller (parent shell) can rebuild the assoc arrays —
+            # the while-pipe runs in a subshell, so we serialize back via stdout.
+            printf '%s|%s|%s\n' "$tag" "$p" "$val"
+        done > /tmp/.ua_apt_cache.$$
+        # Re-read in current shell (avoids subshell-scope assoc-array loss).
+        while IFS='|' read -r tag p val; do
+            case "$tag" in
+                C) APT_CACHE_CANDIDATE[$p]="$val" ;;
+                S) APT_CACHE_SOURCE[$p]="$val" ;;
+            esac
+        done < /tmp/.ua_apt_cache.$$
+        rm -f /tmp/.ua_apt_cache.$$
+    fi
+    APT_CACHE_INIT=1
+    export APT_CACHE_INIT
+}
+
 # Returns manually-installed apt packages (non-automatic)
 scan_apt_manual() {
     apt-mark showmanual 2>/dev/null | sort
@@ -116,19 +189,32 @@ scan_apt_external() {
         2>/dev/null || true
 }
 
-# Returns version of an installed apt package (empty if not installed)
+# Returns version of an installed apt package (empty if not installed).
+# Uses bulk cache when initialised; falls back to dpkg-query otherwise.
 apt_pkg_version() {
-    dpkg -l "$1" 2>/dev/null | awk '/^ii/{print $3}' | head -1 || true
+    if [[ "${APT_CACHE_INIT:-0}" == "1" ]]; then
+        printf '%s' "${APT_CACHE_VERSION[$1]:-}"
+        return 0
+    fi
+    dpkg-query -W -f='${Version}' "$1" 2>/dev/null || true
 }
 
 # Returns apt candidate version (empty if package not known)
 apt_pkg_candidate() {
+    if [[ "${APT_CACHE_INIT:-0}" == "1" ]]; then
+        printf '%s' "${APT_CACHE_CANDIDATE[$1]:-}"
+        return 0
+    fi
     apt-cache policy "$1" 2>/dev/null | awk '/Candidate:/{print $2; exit}' || true
 }
 
 # Returns first non-status policy source line for an installed package
 # Example: "500 https://packages.microsoft.com/repos/vscode stable/main amd64 Packages"
 apt_pkg_source_line() {
+    if [[ "${APT_CACHE_INIT:-0}" == "1" ]]; then
+        printf '%s' "${APT_CACHE_SOURCE[$1]:-}"
+        return 0
+    fi
     apt-cache policy "$1" 2>/dev/null | awk '
         /^[[:space:]]+[0-9]+[[:space:]]+/ {
             if ($2 ~ /^https?:\/\//) {
@@ -141,7 +227,11 @@ apt_pkg_source_line() {
 
 # Returns true if apt package is installed
 apt_installed() {
-    dpkg -l "$1" 2>/dev/null | grep -q '^ii'
+    if [[ "${APT_CACHE_INIT:-0}" == "1" ]]; then
+        [[ -n "${APT_CACHE_VERSION[$1]:-}" ]]
+        return $?
+    fi
+    dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q "install ok installed"
 }
 
 # Returns list of ALL externally-managed packages with their source repo

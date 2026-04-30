@@ -145,7 +145,20 @@ APT_OPTS=(
     -o APT::Get::Show-Versions=true
 )
 
+# Show what's about to be upgraded (live progress feedback) before the
+# silent batch run. Helps the operator understand WHY apt-get takes long.
 print_section "Upgrading packages"
+print_step "scanning upgradable list"
+_upgradable=()
+mapfile -t _upgradable < <(apt list --upgradable 2>/dev/null | awk -F'/' 'NR>1 && NF>1 {print $1}' | sort -u || true)
+print_ok "${#_upgradable[@]} package(s) outdated"
+if (( ${#_upgradable[@]} > 0 )); then
+    echo
+    printf '     %s\n' "${_upgradable[@]:0:30}"
+    (( ${#_upgradable[@]} > 30 )) && echo "     … and $(( ${#_upgradable[@]} - 30 )) more"
+    echo
+fi
+
 upgrade_rc=0
 print_step "apt-get upgrade"
 if sudo apt-get upgrade "${APT_OPTS[@]}" >> "${LOG_FILE}" 2>&1; then

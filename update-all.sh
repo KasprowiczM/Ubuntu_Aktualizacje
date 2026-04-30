@@ -188,29 +188,58 @@ for p in "${PHASES[@]}"; do
         apply|cleanup) needs_sudo=1 ;;
     esac
 done
+UA_ASKPASS_HELPER=""
+_ua_cleanup_askpass() {
+    [[ -n "${UA_ASKPASS_HELPER}" && -e "${UA_ASKPASS_HELPER}" ]] && rm -f "${UA_ASKPASS_HELPER}"
+    UA_ASKPASS_HELPER=""
+}
+
 if [[ "$DRY_RUN" -eq 0 && "$needs_sudo" -eq 1 ]]; then
-    echo -e "${YELLOW}  Authenticating sudo (needed for apt/snap/drivers)...${RESET}"
-    if sudo -n -v 2>/dev/null; then
-        echo -e "${DIM}  sudo cache already warm${RESET}"
-    elif [[ -n "${SUDO_ASKPASS:-}" ]]; then
-        sudo -A -v || { echo -e "${RED}  sudo askpass failed — aborting${RESET}"; exit 1; }
-    elif [[ -t 0 && -t 1 ]]; then
-        sudo -v || { echo -e "${RED}  sudo failed — aborting${RESET}"; exit 1; }
+    if [[ -n "${SUDO_ASKPASS:-}" ]] && sudo -A -n -v 2>/dev/null; then
+        # Inherit askpass from caller (dashboard / systemd) and trust it.
+        :
+    elif sudo -n -v 2>/dev/null && [[ -n "${SUDO_ASKPASS:-}" ]]; then
+        :
     else
-        cat >&2 <<'EOF'
+        # Build an in-memory askpass helper so every sudo invocation in every
+        # phase script can authenticate without re-prompting. Prompt password
+        # ONCE here and never again for the whole run.
+        if [[ -n "${SUDO_ASKPASS:-}" ]]; then
+            sudo -A -v || { echo -e "${RED}  sudo askpass failed — aborting${RESET}"; exit 1; }
+        elif [[ -t 0 && -t 1 ]]; then
+            echo -e "${YELLOW}  Sudo password (asked ONCE for the whole run):${RESET}"
+            UA_PW=""
+            while [[ -z "$UA_PW" ]]; do
+                read -r -s -p "  [sudo] password for ${USER}: " UA_PW; echo
+                if ! printf '%s\n' "$UA_PW" | sudo -S -p '' -v 2>/dev/null; then
+                    echo -e "${RED}  Wrong password, try again.${RESET}"; UA_PW=""
+                fi
+            done
+            ASKPASS_DIR="${XDG_RUNTIME_DIR:-/tmp}/ubuntu-aktualizacje"
+            mkdir -p "$ASKPASS_DIR"; chmod 0700 "$ASKPASS_DIR"
+            UA_ASKPASS_HELPER=$(mktemp "${ASKPASS_DIR}/askpass-XXXXXX.sh")
+            chmod 0700 "$UA_ASKPASS_HELPER"
+            # Embed password as single-quoted shell literal (escape ' as '"'"').
+            UA_ESC=${UA_PW//\'/\'\"\'\"\'}
+            printf '#!/usr/bin/env bash\nprintf %%s '"'"'%s'"'"'\n' "$UA_ESC" > "$UA_ASKPASS_HELPER"
+            unset UA_PW UA_ESC
+            export SUDO_ASKPASS="$UA_ASKPASS_HELPER"
+            sudo -A -n -v >/dev/null 2>&1 || true
+        else
+            cat >&2 <<'EOF'
   sudo cache empty and no terminal/askpass available.
-  This usually means update-all.sh was started without warming sudo first.
   Options:
     • CLI:        sudo -v   (then re-run this script)
     • Dashboard:  click "Authenticate sudo" / POST /sudo/auth
     • Headless:   export SUDO_ASKPASS=/path/to/askpass.sh
 EOF
-        exit 1
+            exit 1
+        fi
     fi
     export UPDATE_ALL_SUDO_READY=1
-    (while true; do sudo -n -v 2>/dev/null || break; sleep 50; done) &
+    (while true; do sudo -A -n -v >/dev/null 2>&1 || sudo -n -v >/dev/null 2>&1 || break; sleep 50; done) &
     SUDO_KEEP_PID=$!
-    trap 'kill "${SUDO_KEEP_PID}" 2>/dev/null; true' INT TERM EXIT
+    trap 'kill "${SUDO_KEEP_PID}" 2>/dev/null; _ua_cleanup_askpass; true' INT TERM EXIT
 fi
 
 # ── Pre-apply snapshot (opt-in) ──────────────────────────────────────────────
@@ -259,8 +288,17 @@ orch_summary || orch_summary_rc=$?
 REBOOT_FLAG=0
 if [[ -f /var/run/reboot-required ]]; then
     REBOOT_FLAG=1
+    REBOOT_PKGS=""
+    [[ -f /var/run/reboot-required.pkgs ]] && \
+        REBOOT_PKGS=$(paste -sd', ' /var/run/reboot-required.pkgs 2>/dev/null || true)
     echo
-    echo -e "${YELLOW}  ⚠  REBOOT REQUIRED — run: sudo reboot${RESET}"
+    echo -e "${YELLOW}╔══════════════════════════════════════════════════════════╗${RESET}"
+    echo -e "${YELLOW}║  ⚠  RESTART REQUIRED                                     ║${RESET}"
+    echo -e "${YELLOW}╚══════════════════════════════════════════════════════════╝${RESET}"
+    [[ -n "$REBOOT_PKGS" ]] && echo -e "${DIM}  Pending packages: ${REBOOT_PKGS}${RESET}"
+    echo -e "${BOLD}  Run now:${RESET}    sudo systemctl reboot"
+    echo -e "${BOLD}  Or later:${RESET}   sudo shutdown -r +5"
+    echo -e "${DIM}  Dashboard: open http://127.0.0.1:8765 — banner shows a one-click 'Restart now' button.${RESET}"
     echo
 fi
 

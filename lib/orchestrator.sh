@@ -83,13 +83,29 @@ orch_run_phase() {
         return 0
     fi
 
-    (
-        # Run phase script in subshell so its `set -e` and traps don't kill us.
-        export JSON_OUT="${json_out}"
-        export LOG_FILE="${log_out}"
-        export ORCH_RUN_ID ORCH_RUN_DIR ORCH_DRY_RUN ORCH_PROFILE
-        bash "$script" "$@"
-    ) >>"$log_out" 2>&1 || rc=$?
+    # Live-tee phase script output to both terminal and per-phase log so the
+    # operator sees real-time progress. Each line is also indented for
+    # readability inside the master pipeline view. Set ORCH_QUIET=1 to fall
+    # back to log-file-only (used by dashboard runner where SSE captures
+    # the master stream).
+    if [[ "${ORCH_QUIET:-0}" == "1" ]]; then
+        (
+            export JSON_OUT="${json_out}"
+            export LOG_FILE="${log_out}"
+            export ORCH_RUN_ID ORCH_RUN_DIR ORCH_DRY_RUN ORCH_PROFILE
+            bash "$script" "$@"
+        ) >>"$log_out" 2>&1 || rc=$?
+    else
+        set +e
+        (
+            export JSON_OUT="${json_out}"
+            export LOG_FILE="${log_out}"
+            export ORCH_RUN_ID ORCH_RUN_DIR ORCH_DRY_RUN ORCH_PROFILE
+            bash "$script" "$@"
+        ) 2>&1 | tee -a "$log_out"
+        rc=${PIPESTATUS[0]}
+        set -e
+    fi
 
     local end_ts; end_ts=$(date +%s)
     ORCH_DURATION[$key]=$(( end_ts - start_ts ))

@@ -26,6 +26,10 @@ detect_gpu
 detect_package_managers
 detect_docker
 
+# Bulk-fetch dpkg + apt-cache policy data ONCE upfront. This collapses
+# 250+ apt-cache policy invocations (≈30 s) into one call (~2 s).
+apt_inventory_cache_init
+
 # ── Build APPS.md ─────────────────────────────────────────────────────────────
 {
 

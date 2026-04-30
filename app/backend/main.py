@@ -423,6 +423,42 @@ def sync_export(dry_run: bool = True) -> dict[str, Any]:
     }
 
 
+@app.post("/system/reboot")
+def system_reboot(delay: int = 5) -> dict[str, Any]:
+    """Schedule a reboot in `delay` seconds. Requires sudo cache (POST
+    /sudo/auth first). Always returns 200 with the action taken — the actual
+    reboot kills the dashboard mid-flight, so the client should not wait
+    for the reboot to complete."""
+    import subprocess, os
+    st = sudo_mod.status()
+    if not st.cached:
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "SUDO-REQUIRED", "msg": "POST /sudo/auth first"},
+        )
+    delay = max(0, min(int(delay), 300))
+    helper = sudo_mod.make_askpass()
+    env = os.environ.copy()
+    env["SUDO_ASKPASS"] = str(helper)
+    # `shutdown -r +0` reboots immediately; we use `at`-style scheduling via
+    # `sleep && shutdown` so the HTTP response can fly out before init kills us.
+    cmd = ["bash", "-c", f"(sleep {delay} && sudo -A /sbin/shutdown -r now 'ubuntu-aktualizacje dashboard reboot') >/dev/null 2>&1 &"]
+    subprocess.Popen(cmd, env=env, start_new_session=True)
+    return {"ok": True, "scheduled_in_seconds": delay}
+
+
+@app.post("/system/cancel-reboot")
+def system_cancel_reboot() -> dict[str, Any]:
+    import subprocess, os
+    helper = sudo_mod.make_askpass() if sudo_mod.have_password() else None
+    env = os.environ.copy()
+    if helper:
+        env["SUDO_ASKPASS"] = str(helper)
+    res = subprocess.run(["sudo", "-A", "/sbin/shutdown", "-c"], env=env,
+                         capture_output=True, text=True)
+    return {"ok": res.returncode == 0, "stderr": res.stderr.strip()}
+
+
 # ── Static frontend ──────────────────────────────────────────────────────────
 _FRONT = Path(__file__).resolve().parent.parent / "frontend"
 if _FRONT.exists():

@@ -3,6 +3,33 @@
 Pełen przewodnik dla nowego operatora — od zera do działającego dashboardu.
 Wszystkie ścieżki względem `~/Dev_Env/Ubuntu_Aktualizacje`.
 
+## Co nowego (2026-04-30)
+
+- **Sudo: jedno hasło na cały run.** `update-all.sh` pyta o hasło raz, tworzy
+  ephemeralny askpass helper (`$XDG_RUNTIME_DIR/ubuntu-aktualizacje/askpass-*.sh`,
+  chmod 0700) i eksportuje `SUDO_ASKPASS` dla wszystkich faz. Helper jest
+  usuwany przy `EXIT/INT/TERM`. `lib/common.sh` wraps `sudo` → `sudo -A`,
+  więc wszystkie sub-sudo (apt, snap, drivers) korzystają automatycznie.
+- **Live progress.** Output skryptów fazowych jest teraz teeowany do konsoli
+  + log per-faza (`logs/runs/<id>/<cat>/<phase>.log`). Widzisz na żywo:
+  apt-get updates, apt list --upgradable preview, snap refresh per package,
+  brew cleanup steps. `ORCH_QUIET=1` przywraca poprzednie zachowanie.
+- **Inventory 85s → ~11s** (8× szybciej). `lib/detect.sh::apt_inventory_cache_init`
+  bulk-fetchuje `dpkg-query` + jedno wywołanie `apt-cache policy` dla całego
+  manual setu zamiast 250 wywołań per-package.
+- **Brew cleanup** — proaktywnie chownuje `${BREW_PREFIX}/Cellar` przed
+  pruningiem (znana awaria pipx pycache).
+- **Snap verify** — drobne refreshy między fazami apply/verify już nie
+  generują warna (klasyfikacja info `SNAP-NEW-REVISION`).
+- **Dashboard Overview** nie odświeża się przy każdej zmianie zakładki —
+  tylko raz na sesję, plus przycisk **Refresh** (i automatycznie po końcu
+  runu via `ui.invalidateCaches()`).
+- **Reboot banner** w dashboardzie + endpoint `POST /system/reboot` z
+  potwierdzeniem (5s delay, używa SUDO_ASKPASS). CLI runs kończą się
+  rozbudowanym pudełkiem z komendą reboot i listą pakietów.
+- **dev-sync overlay**: 3527 → 8 plików (Cargo `target/`, Tauri bundle,
+  Gradle, *.db itd. dodane do `DEFAULT_EXCLUDE_PATTERNS`).
+
 ---
 
 ## 0. Wymagania systemowe

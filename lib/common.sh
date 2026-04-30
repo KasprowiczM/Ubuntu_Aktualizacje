@@ -88,6 +88,21 @@ print_result() {
     fi
 }
 
+# ── Sudo wrapper: route every `sudo` through SUDO_ASKPASS when present ────────
+# Phase scripts call plain `sudo apt-get …` etc.; without this wrapper sudo
+# would fall back to TTY prompts after the cached timestamp expires (default
+# 5–15 min). With SUDO_ASKPASS exported by the master, all sudos auto-fill the
+# password from the in-memory askpass helper. No effect when SUDO_ASKPASS is
+# unset — plain `sudo` keeps its standard semantics.
+sudo() {
+    if [[ -n "${SUDO_ASKPASS:-}" ]]; then
+        command sudo -A "$@"
+    else
+        command sudo "$@"
+    fi
+}
+export -f sudo 2>/dev/null || true
+
 # ── Run a command silently, capture output to log ─────────────────────────────
 # Returns the command's exit code.
 run_silent() {
@@ -133,20 +148,20 @@ run_silent_as_user() {
 # ── Require root or sudo ───────────────────────────────────────────────────────
 require_sudo() {
     if [[ $EUID -eq 0 ]]; then return 0; fi
-    if ! sudo -n true 2>/dev/null; then
-        if [[ "${UPDATE_ALL_SUDO_READY:-0}" == "1" ]]; then
-            print_info "Sudo cache expired — re-authentication required"
-        else
-            echo -e "${YELLOW}  Sudo password required for privileged operations:${RESET}"
-        fi
-        sudo -v || { print_error "sudo authentication failed"; exit 1; }
-    fi
-    # Master script already keeps sudo alive for the whole run.
+    # Master script already prompted once and either warmed the cache or set
+    # SUDO_ASKPASS — phase scripts must never re-prompt.
     if [[ "${UPDATE_ALL_SUDO_READY:-0}" == "1" ]]; then
         return 0
     fi
-    # Keep sudo alive during the script
-    (while true; do sudo -n true; sleep 50; done) &
+    # Standalone phase script: ensure auth.
+    if sudo -n true 2>/dev/null; then return 0; fi
+    if [[ -n "${SUDO_ASKPASS:-}" ]]; then
+        sudo -A -v || { print_error "sudo askpass failed"; exit 1; }
+    else
+        echo -e "${YELLOW}  Sudo password required for privileged operations:${RESET}"
+        sudo -v || { print_error "sudo authentication failed"; exit 1; }
+    fi
+    (while true; do sudo -n true 2>/dev/null || break; sleep 50; done) &
     SUDO_KEEP_ALIVE_PID=$!
     trap 'kill ${SUDO_KEEP_ALIVE_PID} 2>/dev/null' EXIT
 }

@@ -11,10 +11,12 @@ Obsługuje APT, Snap, Homebrew, npm, pip/pipx, Flatpak, sterowniki NVIDIA i firm
 ## Komendy
 ```bash
 ./update-all.sh                        # pełna aktualizacja (full profile, NVIDIA held)
-./update-all.sh --profile quick        # tylko check (read-only sweep)
+                                       # sudo password ONCE — askpass dla wszystkich faz
+./update-all.sh --profile quick        # tylko check (read-only sweep, ~15s)
 ./update-all.sh --profile safe         # bez drivers/firmware
 ./update-all.sh --dry-run              # podgląd bez wykonania
 ./update-all.sh --only brew --phase apply
+ORCH_QUIET=1 ./update-all.sh ...       # zakneblowany output (tylko sumaryczny)
 bash -n update-all.sh && bash -n scripts/*/*.sh && bash -n lib/*.sh
 python3 tests/validate_phase_json.py   # walidacja sidecarów JSON v1
 bats tests/bash/test_json_emit.bats    # testy emittera (jeśli bats zainstalowany)

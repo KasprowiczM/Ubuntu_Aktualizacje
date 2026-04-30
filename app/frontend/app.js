@@ -68,14 +68,48 @@ const ui = {
     $(`#view-${view}`).classList.remove("hidden");
     $$("nav a").forEach(a => a.classList.toggle("active", a.dataset.view === view));
     location.hash = view;
-    // Lazy-load on view switch
-    if (view === "overview")   ui.loadOverview();
-    if (view === "categories") ui.loadCategories();
-    if (view === "history")    ui.loadHistory();
-    if (view === "run")        ui.loadRunCenter();
-    if (view === "sync")       ui.loadSync();
-    if (view === "settings")   ui.loadSettings();
-    if (view === "hosts")      ui.loadHosts();
+    // Lazy-load on first visit only. Subsequent tab switches reuse the cached
+    // data — user explicitly clicks "Refresh" (or finishes a run, which calls
+    // ui.invalidateCaches()) to re-fetch. This avoids the per-visit spinner
+    // for slow scans (inventory takes seconds).
+    ui._loaded = ui._loaded || {};
+    if (view === "overview"   && !ui._loaded.overview)   { ui._loaded.overview = true;   ui.loadOverview(); }
+    if (view === "categories" && !ui._loaded.categories) { ui._loaded.categories = true; ui.loadCategories(); }
+    if (view === "history"    && !ui._loaded.history)    { ui._loaded.history = true;    ui.loadHistory(); }
+    if (view === "sync"       && !ui._loaded.sync)       { ui._loaded.sync = true;       ui.loadSync(); }
+    if (view === "settings"   && !ui._loaded.settings)   { ui._loaded.settings = true;   ui.loadSettings(); }
+    if (view === "hosts"      && !ui._loaded.hosts)      { ui._loaded.hosts = true;      ui.loadHosts(); }
+    // Run Center is special: must always (re)bind active-stream subscription.
+    if (view === "run") ui.loadRunCenter();
+  },
+  invalidateCaches() {
+    // Called after a run completes or when the user hits "Refresh".
+    ui._loaded = {};
+    window.INV_SUMMARY = null;
+  },
+
+  async checkRebootBanner() {
+    try {
+      const p = await api.get("/preflight");
+      const banner = $("#reboot-banner");
+      if (p.needs_reboot) banner.classList.remove("hidden");
+      else                banner.classList.add("hidden");
+    } catch {}
+  },
+
+  async rebootNow() {
+    if (!confirm(
+      tr("overview.reboot_confirm")
+      || "Restart the computer now? Any unsaved work will be lost."
+    )) return;
+    const ok = await sudoMgr.ensure();
+    if (!ok) { ui.status(tr("overview.reboot_no_sudo") || "sudo required"); return; }
+    try {
+      await api.post("/system/reboot?delay=5", {});
+      ui.status(tr("overview.reboot_scheduled") || "reboot scheduled in 5s — saving your work now is recommended");
+      $("#reboot-banner").innerHTML =
+        `<span class="reboot-banner-icon">⏻</span> rebooting in 5 seconds…`;
+    } catch (e) { ui.status(String(e)); }
   },
   status(msg) { $("#status-line").textContent = msg; },
   badge(status) {
@@ -512,6 +546,10 @@ const ui = {
       ui.status(`run ${runId} done (exit ${m.exit_code})`);
       $("#stop-btn").disabled = true;
       es.close();
+      // Run finished — invalidate cached data so user gets fresh stats
+      // when they go back to Overview/Categories. Also re-check reboot flag.
+      ui.invalidateCaches();
+      ui.checkRebootBanner();
     });
     es.onerror = () => { es.close(); };
   },
@@ -607,6 +645,24 @@ $("#sudo-cancel").addEventListener("click", () => sudoMgr.close(false));
 sudoMgr.refreshIndicator();
 setInterval(() => sudoMgr.refreshIndicator(), 30000);
 
+// Reboot banner
+document.addEventListener("click", e => {
+  if (e.target.id === "reboot-now-btn")     ui.rebootNow();
+  if (e.target.id === "reboot-dismiss-btn") $("#reboot-banner").classList.add("hidden");
+  if (e.target.id === "overview-refresh-btn") {
+    ui.invalidateCaches();
+    ui._loaded.overview = true;
+    ui.loadOverview();
+    ui.checkRebootBanner();
+  }
+  if (e.target.id === "inv-refresh-btn") {
+    // Inventory-only refresh: clears the backend cache too.
+    api.post("/inventory/refresh", {}).catch(()=>{});
+    window.INV_SUMMARY = null;
+    ui.loadInventoryDashboard();
+  }
+});
+
 // Hosts refresh
 document.addEventListener("click", e => {
   if (e.target.id === "hosts-refresh-btn") ui.loadHosts();
@@ -684,6 +740,7 @@ async function bootstrap() {
   }
   const start = location.hash.replace("#", "") || "overview";
   ui.show(start);
+  ui.checkRebootBanner();
   // React to OS theme switch when user picks "auto"
   if (window.matchMedia) {
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
