@@ -41,7 +41,8 @@ find "$STAGE" -name '*.sh' -exec chmod +x {} +
 
 echo "── Setting DEBIAN/* perms"
 chmod 0755 "${PKG_DIR}/DEBIAN/postinst" "${PKG_DIR}/DEBIAN/prerm"
-chmod 0755 "${PKG_DIR}/usr/bin/ubuntu-aktualizacje"
+chmod 0755 "${PKG_DIR}/usr/bin/ubuntu-aktualizacje" \
+           "${PKG_DIR}/usr/bin/ascendo-launch"
 
 OUT="${DIST}/${PKG_NAME}_${VERSION}_all.deb"
 echo "── Building $OUT"

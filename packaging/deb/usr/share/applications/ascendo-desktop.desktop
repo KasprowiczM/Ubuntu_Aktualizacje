@@ -1,12 +1,12 @@
 [Desktop Entry]
 Type=Application
-Name=Ascendo (Web)
+Name=Ascendo (Desktop)
 GenericName=System Update Manager
-Comment=Open the Ascendo dashboard in your default browser
-Exec=ascendo-launch web
+Comment=Standalone Ascendo desktop window (no browser tab)
+Exec=ascendo-launch desktop
 Icon=ascendo
 Terminal=false
 Categories=System;Settings;PackageManager;
 Keywords=update;apt;snap;flatpak;brew;npm;ascendo;
-StartupNotify=false
-StartupWMClass=Ascendo
+StartupNotify=true
+StartupWMClass=AscendoDesktop
