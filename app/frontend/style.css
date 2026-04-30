@@ -395,6 +395,25 @@ header h1.brand .brand-tagline {
 .run-progress-recent .warn  { color: var(--warn); }
 .run-progress-recent .err   { color: var(--err); }
 
+/* ── Help doc styling ──────────────────────────────────────────────────── */
+.help-toc { display: flex; flex-wrap: wrap; gap: 0.4rem 0.8rem; font-size: 0.85rem; }
+.help-toc a { color: var(--accent); text-decoration: none; }
+.help-toc a:hover { text-decoration: underline; }
+.help-doc h3 { margin-top: 1.6rem; padding-top: 0.6rem; border-top: 1px solid var(--border); color: var(--accent); }
+.help-doc h3:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.help-doc pre { background: var(--bg); padding: 0.7rem 0.9rem; border-radius: 6px;
+  font-family: var(--mono); font-size: 0.78rem; overflow-x: auto; }
+.help-doc code { background: var(--bg); padding: 0.05em 0.35em; border-radius: 3px; font-family: var(--mono); }
+.help-doc ul { padding-left: 1.4rem; }
+.help-doc li { margin: 0.2rem 0; }
+
+/* ── About markdown render ─────────────────────────────────────────────── */
+#about-release h2 { font-size: 1rem; color: var(--accent); margin-top: 1rem; }
+#about-release h3 { font-size: 0.9rem; margin-top: 0.5rem; }
+#about-release h4 { font-size: 0.82rem; color: var(--dim); margin: 0.4rem 0 0.2rem; }
+#about-release ul { padding-left: 1.4rem; }
+#about-release li { margin: 0.15rem 0; font-size: 0.85rem; }
+
 /* ── Per-category add widget ──────────────────────────────────────────── */
 .cats-add-widget {
   display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;

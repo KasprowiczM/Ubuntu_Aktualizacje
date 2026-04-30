@@ -191,13 +191,19 @@ def _heuristics() -> list[dict[str, Any]]:
 
 def _ai_enrich(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Optional AI step: ask the configured LLM to rewrite rationales and add
-    extra suggestions. Strict-budget, fail-soft, never edits files."""
+    extra suggestions. Strict-budget, fail-soft, never edits files.
+    Supported providers: anthropic, openai, gemini, ollama, lmstudio,
+    openai_compat. Local providers (ollama, lmstudio) need no api_key."""
     s = settings_mod.load() or {}
     ai = s.get("ai") or {}
     provider = (ai.get("provider") or "").lower()
     api_key = ai.get("api_key") or ""
     model = ai.get("model") or ""
-    if not provider or not api_key or provider == "off":
+    base_url = (ai.get("base_url") or "").rstrip("/")
+    local = provider in ("ollama", "lmstudio", "openai_compat")
+    if not provider or provider == "off":
+        return items
+    if not local and not api_key:
         return items
     # Strictly read-only: we send a compressed summary, get text back, no
     # tool-use. Limited time budget so a misconfigured key never stalls UI.
@@ -232,23 +238,52 @@ def _ai_enrich(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
             resp = urllib.request.urlopen(req, timeout=10)
             j = json.loads(resp.read().decode("utf-8"))
             text = "".join(b.get("text", "") for b in j.get("content", []) if b.get("type") == "text")
-        elif provider == "openai":
-            req = urllib.request.Request(
-                "https://api.openai.com/v1/chat/completions",
-                method="POST",
-                headers={
-                    "authorization": f"Bearer {api_key}",
-                    "content-type": "application/json",
-                },
+        elif provider in ("openai", "openai_compat", "lmstudio"):
+            url = (
+                base_url + "/chat/completions" if base_url
+                else "http://127.0.0.1:1234/v1/chat/completions" if provider == "lmstudio"
+                else "https://api.openai.com/v1/chat/completions"
+            )
+            headers = {"content-type": "application/json"}
+            if api_key:
+                headers["authorization"] = f"Bearer {api_key}"
+            req = urllib.request.Request(url, method="POST", headers=headers,
                 data=json.dumps({
-                    "model": model or "gpt-4o-mini",
+                    "model": model or ("local-model" if provider == "lmstudio" else "gpt-4o-mini"),
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.2,
-                }).encode("utf-8"),
-            )
-            resp = urllib.request.urlopen(req, timeout=10)
+                }).encode("utf-8"))
+            resp = urllib.request.urlopen(req, timeout=15)
             j = json.loads(resp.read().decode("utf-8"))
             text = j["choices"][0]["message"]["content"]
+        elif provider == "gemini":
+            # Google AI Studio v1beta REST.
+            mdl = model or "gemini-1.5-flash"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{mdl}:generateContent?key={api_key}"
+            req = urllib.request.Request(url, method="POST",
+                headers={"content-type": "application/json"},
+                data=json.dumps({
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 1024},
+                }).encode("utf-8"))
+            resp = urllib.request.urlopen(req, timeout=15)
+            j = json.loads(resp.read().decode("utf-8"))
+            cand = (j.get("candidates") or [{}])[0]
+            parts = ((cand.get("content") or {}).get("parts") or [])
+            text = "".join(p.get("text", "") for p in parts)
+        elif provider == "ollama":
+            # Ollama native /api/chat (default port 11434).
+            url = (base_url or "http://127.0.0.1:11434") + "/api/chat"
+            req = urllib.request.Request(url, method="POST",
+                headers={"content-type": "application/json"},
+                data=json.dumps({
+                    "model": model or "llama3",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "stream": False,
+                }).encode("utf-8"))
+            resp = urllib.request.urlopen(req, timeout=20)
+            j = json.loads(resp.read().decode("utf-8"))
+            text = ((j.get("message") or {}).get("content") or "")
         else:
             return items  # unknown provider — fall back to heuristics only
         # Extract JSON array (be lenient about surrounding prose)
@@ -265,6 +300,20 @@ def _ai_enrich(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return items
     except Exception:
         return items
+
+
+def test_provider() -> dict[str, Any]:
+    """Send a tiny ping to the configured provider and return success/error.
+    Used by the UI's 'Test connection' button."""
+    sample = [{"id": "ping", "title": "ping", "rationale": "test"}]
+    try:
+        out = _ai_enrich(sample)
+    except Exception as exc:  # pragma: no cover - defensive
+        return {"ok": False, "error": str(exc)[:300]}
+    s = settings_mod.load() or {}
+    ai = s.get("ai") or {}
+    return {"ok": True, "provider": ai.get("provider"), "model": ai.get("model"),
+            "rationale_changed": out and out[0].get("rationale") != "test"}
 
 
 def list_all() -> list[dict[str, Any]]:

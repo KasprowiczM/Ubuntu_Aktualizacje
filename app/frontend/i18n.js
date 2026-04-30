@@ -14,6 +14,8 @@ window.I18N = {
       hosts:      "Hosts",
       suggest:    "Suggestions",
       settings:   "Settings",
+      help:       "Help",
+      about:      "About",
     },
     suggest: {
       title:        "Smart Suggestions",
@@ -215,6 +217,8 @@ window.I18N = {
       hosts:      "Hosty",
       suggest:    "Sugestie",
       settings:   "Ustawienia",
+      help:       "Pomoc",
+      about:      "O aplikacji",
     },
     suggest: {
       title:        "Inteligentne sugestie",

@@ -24,9 +24,17 @@ DEFAULTS: dict[str, Any] = {
     },
     # Optional AI provider for Smart Suggestions enrichment.
     "ai": {
-        "provider": "",     # "" | "anthropic" | "openai"
+        "provider": "",     # "" | anthropic | openai | gemini | ollama | lmstudio | openai_compat
         "api_key": "",
         "model": "",
+        "base_url": "",     # for ollama / lmstudio / openai_compat
+    },
+    # dev-sync cloud provider (rclone-driven). Configured via UI Sync tab.
+    "sync": {
+        "provider": "",      # protondrive | googledrive | dropbox | onedrive | webdav | s3 | local
+        "remote_name": "",
+        "remote_path": "",
+        "copy_only": True,
     },
     # GitHub releases auto-update notifier (opt-in, read-only).
     "updates": {

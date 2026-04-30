@@ -29,6 +29,7 @@ from . import (
     backup as backup_mod,
     telemetry as telem_mod,
     exclusions as excl_mod,
+    hosts_edit as hosts_edit_mod,
 )
 from .runner import get_runner
 
@@ -761,6 +762,149 @@ def exclusions_remove(req: ExclusionEdit) -> dict[str, Any]:
     res = excl_mod.remove(req.category, req.package)
     audit_mod.log("exclusion.remove", details={"category": req.category, "package": req.package})
     return res
+
+
+# ── Hosts edit (write to config/hosts.toml) ──────────────────────────────────
+@app.get("/hosts/list")
+def hosts_list_full() -> dict[str, Any]:
+    return hosts_edit_mod.list_hosts()
+
+
+class HostUpsert(BaseModel):
+    id: str
+    display_name: str = ""
+    ssh_alias: str = ""
+    repo_path: str = ""
+    description: str = ""
+    orig_id: str | None = None
+
+
+@app.post("/hosts/upsert")
+def hosts_upsert(req: HostUpsert) -> dict[str, Any]:
+    try:
+        res = hosts_edit_mod.upsert_host(
+            req.id, {
+                "display_name": req.display_name,
+                "ssh_alias": req.ssh_alias,
+                "repo_path": req.repo_path,
+                "description": req.description,
+            }, orig_id=req.orig_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    audit_mod.log("hosts.upsert", details={"id": req.id})
+    return res
+
+
+@app.post("/hosts/delete")
+def hosts_delete(payload: dict[str, Any]) -> dict[str, Any]:
+    hid = (payload or {}).get("id")
+    if not hid:
+        raise HTTPException(status_code=400, detail="id required")
+    res = hosts_edit_mod.delete_host(hid)
+    audit_mod.log("hosts.delete", details={"id": hid})
+    return res
+
+
+# ── AI provider test connection ──────────────────────────────────────────────
+@app.post("/suggestions/test")
+def suggestions_test() -> dict[str, Any]:
+    return sugg_mod.test_provider()
+
+
+# ── About: version + system + release notes ────────────────────────────────
+@app.get("/about")
+def about() -> dict[str, Any]:
+    import os, platform, subprocess
+    repo = config.repo_root()
+    rn = repo / "RELEASE_NOTES.md"
+    rn_text = rn.read_text(encoding="utf-8") if rn.exists() else ""
+    # Version from RELEASE_NOTES top heading or from packaging/deb/DEBIAN/control
+    ver = ""
+    if rn_text:
+        for L in rn_text.splitlines():
+            if L.startswith("## v"):
+                ver = L.split()[1]; break
+    if not ver:
+        ctrl = repo / "packaging" / "deb" / "DEBIAN" / "control"
+        if ctrl.exists():
+            for L in ctrl.read_text(encoding="utf-8").splitlines():
+                if L.startswith("Version:"):
+                    ver = L.split(":", 1)[1].strip(); break
+    git_head = ""
+    try:
+        git_head = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "--short", "HEAD"], text=True).strip()
+    except Exception:
+        pass
+    distro = ""
+    try:
+        if Path("/etc/os-release").exists():
+            for L in Path("/etc/os-release").read_text().splitlines():
+                if L.startswith("PRETTY_NAME="):
+                    distro = L.split("=", 1)[1].strip().strip('"')
+                    break
+    except Exception:
+        pass
+    return {
+        "name": "Ascendo",
+        "tagline": "unified updates",
+        "version": ver or "0.0.0-dev",
+        "git_head": git_head,
+        "host": platform.node(),
+        "kernel": platform.release(),
+        "arch": platform.machine(),
+        "python": platform.python_version(),
+        "distro": distro,
+        "release_notes_md": rn_text,
+    }
+
+
+# ── Sync provider config ─────────────────────────────────────────────────────
+@app.get("/sync/provider")
+def sync_provider_get() -> dict[str, Any]:
+    s = settings_mod.load() or {}
+    return s.get("sync") or {}
+
+
+class SyncProviderRequest(BaseModel):
+    provider: str = ""
+    remote_name: str = ""
+    remote_path: str = ""
+    copy_only: bool = True
+
+
+@app.post("/sync/provider")
+def sync_provider_set(req: SyncProviderRequest) -> dict[str, Any]:
+    s = settings_mod.load() or {}
+    s["sync"] = {
+        "provider": req.provider,
+        "remote_name": req.remote_name,
+        "remote_path": req.remote_path,
+        "copy_only": bool(req.copy_only),
+    }
+    settings_mod.save(s)
+    audit_mod.log("sync.provider.set", details=s["sync"])
+    return s["sync"]
+
+
+@app.post("/sync/provider/test")
+def sync_provider_test() -> dict[str, Any]:
+    """Best-effort connectivity test against the configured rclone remote.
+    Just runs `rclone lsd <remote_path>` with a 10s timeout and reports."""
+    import subprocess
+    s = settings_mod.load() or {}
+    sp = s.get("sync") or {}
+    remote = sp.get("remote_path", "")
+    if not remote:
+        raise HTTPException(status_code=400, detail="remote_path not configured")
+    try:
+        res = subprocess.run(["rclone", "lsd", remote], capture_output=True,
+                             text=True, timeout=12)
+        return {"ok": res.returncode == 0, "stdout": res.stdout[-2000:],
+                "stderr": res.stderr[-2000:], "exit_code": res.returncode}
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="rclone not installed")
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "stderr": "timed out (12s) — auth or network issue"}
 
 
 # ── Static frontend ──────────────────────────────────────────────────────────

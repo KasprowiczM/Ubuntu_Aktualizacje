@@ -81,6 +81,8 @@ const ui = {
     if (view === "hosts"      && !ui._loaded.hosts)      { ui._loaded.hosts = true;      ui.loadHosts(); }
     if (view === "apps"       && !ui._loaded.apps)       { ui._loaded.apps = true;       ui.loadApps(); }
     if (view === "suggest"    && !ui._loaded.suggest)    { ui._loaded.suggest = true;    ui.loadSuggestions(); }
+    if (view === "logs"       && !ui._loaded.logs)       { ui._loaded.logs = true;       ui.loadLogsList(); }
+    if (view === "about"      && !ui._loaded.about)      { ui._loaded.about = true;      ui.loadAbout(); }
     // Run Center is special: must always (re)bind active-stream subscription.
     if (view === "run") ui.loadRunCenter();
   },
@@ -849,6 +851,254 @@ const ui = {
   },
 };
 
+// ── Logs tab: dropdown of runs + per-phase plain log viewer ─────────────────
+ui.loadLogsList = async function() {
+  const sel = $("#logs-run-select");
+  const runs = (await api.get("/runs?limit=100")).runs || [];
+  sel.innerHTML = `<option value="">— pick a run —</option>` +
+    runs.map(r => `<option value="${r.id}">${ui.fmtTime(r.started_at)} · ${r.profile||"?"} · ${r.status||"?"} · ${r.id}</option>`).join("");
+};
+ui.openPhaseLog = async function(runId, cat, phase) {
+  const v = $("#phase-log-viewer");
+  v.textContent = "loading…";
+  try {
+    const r = await fetch(`/runs/${runId}/phase/${cat}/${phase}/log`);
+    if (!r.ok) { v.textContent = `404: log not found for ${cat}/${phase}`; return; }
+    v.textContent = await r.text();
+    v.scrollTop = 0;
+  } catch (e) { v.textContent = String(e); }
+};
+document.addEventListener("change", e => {
+  if (e.target && e.target.id === "logs-run-select") {
+    const id = e.target.value;
+    if (!id) return;
+    ui.loadRunDetail(id);
+  }
+});
+document.addEventListener("click", e => {
+  if (e.target.id === "logs-refresh-btn") { ui._loaded.logs = false; ui.loadLogsList(); }
+  // Phase row → load plain log into the bottom viewer.
+  const a = e.target.closest("[data-phase-log]");
+  if (a) {
+    e.preventDefault();
+    const [runId, cat, phase] = a.dataset.phaseLog.split("|");
+    ui.openPhaseLog(runId, cat, phase);
+  }
+});
+
+// Patch loadRunDetail to add data-phase-log buttons (so user can view inline)
+const _origLoadRunDetail = ui.loadRunDetail;
+ui.loadRunDetail = async function(runId) {
+  // Reuse existing renderer, then post-process the HTML to add inline buttons.
+  await _origLoadRunDetail.call(this, runId);
+  const det = $("#run-detail");
+  if (!det) return;
+  // For every phase row, inject an inline "view log" button.
+  det.querySelectorAll("tr").forEach(tr => {
+    const cells = tr.querySelectorAll("td");
+    if (cells.length < 7) return;
+    const cat = cells[0]?.textContent?.trim();
+    const ph  = cells[1]?.textContent?.trim();
+    if (!cat || !ph) return;
+    const btn = document.createElement("button");
+    btn.className = "secondary"; btn.style.fontSize = "0.75rem"; btn.style.padding = "0.15rem 0.45rem";
+    btn.dataset.phaseLog = `${runId}|${cat}|${ph}`;
+    btn.textContent = "view log";
+    cells[6].appendChild(document.createTextNode(" "));
+    cells[6].appendChild(btn);
+  });
+};
+
+// ── About tab: version + system + release notes ─────────────────────────────
+ui.loadAbout = async function() {
+  try {
+    const a = await api.get("/about");
+    $("#about-app").innerHTML = `
+      <div><b>${a.name}</b> <span class="dim">— ${a.tagline}</span></div>
+      <div>Version: <code>${a.version}</code> <span class="dim">git ${a.git_head||"?"}</span></div>
+      <div class="dim">Python: ${a.python}</div>
+    `;
+    $("#about-system").innerHTML = `
+      <div>Host: <code>${a.host}</code></div>
+      <div>OS: <code>${a.distro||"?"}</code></div>
+      <div>Kernel: <code>${a.kernel}</code></div>
+      <div>Arch: <code>${a.arch}</code></div>
+    `;
+    // Render markdown release notes minimally (no full md parser to keep it light).
+    const md = a.release_notes_md || "";
+    const html = md
+      .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+      .replace(/^- (.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>.+<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
+    $("#about-release").innerHTML = html || "<p class='dim'>No release notes file found (RELEASE_NOTES.md).</p>";
+  } catch (e) {
+    $("#about-app").textContent = String(e);
+  }
+};
+
+// ── Hosts tab: add/edit/delete + form binding ───────────────────────────────
+const _origLoadHosts = ui.loadHosts;
+ui.loadHosts = async function() {
+  await _origLoadHosts.call(this);
+  // Append edit/delete buttons in last column.
+  const tb = $("#hosts-table tbody");
+  tb.querySelectorAll("tr").forEach(tr => {
+    const idEl = tr.querySelector("td b");
+    if (!idEl) return;
+    const id = idEl.textContent.trim();
+    const lastTd = tr.querySelector("td:last-child");
+    if (!lastTd || lastTd.querySelector("[data-host-edit]")) return;
+    const wrap = document.createElement("div");
+    wrap.style.marginTop = "0.3rem";
+    wrap.innerHTML =
+      `<button class="secondary" data-host-edit="${id}" style="font-size:0.72rem;padding:0.15rem 0.4rem">edit</button>
+       <button class="secondary" data-host-del="${id}" style="font-size:0.72rem;padding:0.15rem 0.4rem">delete</button>`;
+    lastTd.appendChild(wrap);
+  });
+};
+
+function _showHostForm(host) {
+  const f = $("#hosts-form");
+  f.classList.remove("hidden");
+  f.elements.id.value           = host?.id || "";
+  f.elements.display_name.value = host?.display_name || "";
+  f.elements.ssh_alias.value    = host?.ssh_alias || "";
+  f.elements.repo_path.value    = host?.repo_path || "~/Dev_Env/Ubuntu_Aktualizacje";
+  f.elements.description.value  = host?.description || "";
+  f.elements.orig_id.value      = host?.id || "";
+  f.elements.id.focus();
+}
+document.addEventListener("click", async e => {
+  if (e.target.id === "hosts-add-btn") _showHostForm(null);
+  if (e.target.id === "hosts-cancel-btn") $("#hosts-form").classList.add("hidden");
+  const ed = e.target.closest("[data-host-edit]");
+  if (ed) {
+    const list = await api.get("/hosts/list");
+    const h = (list.items||[]).find(x => x.id === ed.dataset.hostEdit);
+    _showHostForm(h);
+  }
+  const dl = e.target.closest("[data-host-del]");
+  if (dl) {
+    if (!confirm(`Delete host '${dl.dataset.hostDel}' from config/hosts.toml?`)) return;
+    try {
+      await api.post("/hosts/delete", {id: dl.dataset.hostDel});
+      ui._loaded.hosts = false; ui.loadHosts();
+    } catch (err) { ui.status(String(err)); }
+  }
+});
+document.addEventListener("submit", async e => {
+  if (e.target && e.target.id === "hosts-form") {
+    e.preventDefault();
+    const f = e.target;
+    const body = {
+      id:           f.elements.id.value.trim(),
+      display_name: f.elements.display_name.value.trim(),
+      ssh_alias:    f.elements.ssh_alias.value.trim(),
+      repo_path:    f.elements.repo_path.value.trim(),
+      description:  f.elements.description.value.trim(),
+      orig_id:      f.elements.orig_id.value.trim() || null,
+    };
+    try {
+      await api.post("/hosts/upsert", body);
+      f.classList.add("hidden");
+      ui._loaded.hosts = false; ui.loadHosts();
+      ui.status(`saved host ${body.id}`);
+    } catch (err) { ui.status(String(err)); }
+  }
+});
+
+// ── Sync provider form ──────────────────────────────────────────────────────
+async function _loadSyncProvider() {
+  const f = $("#sync-provider-form");
+  if (!f) return;
+  try {
+    const s = await api.get("/sync/provider");
+    f.elements.provider.value    = s.provider || "";
+    f.elements.remote_name.value = s.remote_name || "";
+    f.elements.remote_path.value = s.remote_path || "";
+    f.elements.copy_only.checked = s.copy_only !== false;
+  } catch {}
+}
+document.addEventListener("submit", async e => {
+  if (e.target && e.target.id === "sync-provider-form") {
+    e.preventDefault();
+    const f = e.target;
+    const out = $("#sync-provider-output");
+    try {
+      const r = await api.post("/sync/provider", {
+        provider:    f.elements.provider.value,
+        remote_name: f.elements.remote_name.value.trim(),
+        remote_path: f.elements.remote_path.value.trim(),
+        copy_only:   f.elements.copy_only.checked,
+      });
+      out.textContent = "saved: " + JSON.stringify(r, null, 2);
+    } catch (err) { out.textContent = String(err); }
+  }
+});
+document.addEventListener("click", async e => {
+  if (e.target.id === "sync-provider-test") {
+    const out = $("#sync-provider-output");
+    out.textContent = "testing rclone connection (12s timeout)…";
+    try {
+      const r = await api.post("/sync/provider/test", {});
+      out.textContent = (r.ok ? "OK\n" : "FAIL\n") + (r.stderr || r.stdout || "");
+    } catch (err) { out.textContent = String(err); }
+  }
+  // AI provider Test connection
+  if (e.target.id === "ai-test-btn") {
+    const out = $("#ai-output");
+    out.textContent = "testing AI provider…";
+    try {
+      const r = await api.post("/suggestions/test", {});
+      out.textContent = JSON.stringify(r, null, 2);
+    } catch (err) { out.textContent = String(err); }
+  }
+});
+
+// AI form: persist base_url too
+const _origLoadSuggestions = ui.loadSuggestions;
+ui.loadSuggestions = async function() {
+  await _origLoadSuggestions.call(this);
+  try {
+    const s = await api.get("/settings");
+    const f = $("#ai-form");
+    if (f && f.elements.ai_base_url) f.elements.ai_base_url.value = (s.ai && s.ai.base_url) || "";
+  } catch {}
+};
+
+// Patch AI form save handler to include base_url
+document.addEventListener("submit", async e => {
+  if (e.target && e.target.id === "ai-form") {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const f = e.target;
+    const out = $("#ai-output");
+    try {
+      const cur = await api.get("/settings");
+      const merged = {...cur, ai: {
+        provider: f.elements.ai_provider.value,
+        api_key:  f.elements.ai_api_key.value,
+        model:    f.elements.ai_model.value,
+        base_url: f.elements.ai_base_url ? f.elements.ai_base_url.value : "",
+      }};
+      const r = await fetch("/settings", {method:"PUT",
+        headers:{"content-type":"application/json"}, body: JSON.stringify(merged)});
+      out.textContent = r.ok ? "saved" : `error ${r.status}`;
+      ui._loaded.suggest = false; ui.loadSuggestions();
+    } catch (err) { out.textContent = String(err); }
+  }
+}, true);  // capture phase so this runs before the older one
+
+// Hook into Sync tab loader
+const _origLoadSync = ui.loadSync;
+ui.loadSync = async function() {
+  await _origLoadSync.call(this);
+  _loadSyncProvider();
+};
+
 // Hook nav (works for both old top-nav and new sidebar nav-link)
 document.addEventListener("click", e => {
   const a = e.target.closest("a[data-view]");
@@ -1106,10 +1356,13 @@ document.addEventListener("click", async e => {
 // ── Inject inline icons into nav + topbar buttons ──────────────────────
 function injectIcons() {
   if (!window.ICONS) return;
+  // Map data-icon values to ICONS keys (handles aliases / hyphens).
+  const map = { "help": "help", "about": "about" };
   document.querySelectorAll("[data-icon]").forEach(el => {
     const slot = el.querySelector(".nav-icon");
     const target = slot || el;
-    const ic = window.ICONS[el.dataset.icon];
+    const key = map[el.dataset.icon] || el.dataset.icon;
+    const ic = window.ICONS[key];
     if (ic) target.innerHTML = ic;
   });
   // Topbar buttons get icons that reflect current state.
@@ -1141,20 +1394,36 @@ function bindSidebar() {
 // ── Topbar switchers: theme / language / font-size ─────────────────────
 function bindSwitchers() {
   const root = document.documentElement;
-  // Theme cycle: auto → light → dark → auto
+  // Theme cycle: auto → light → dark → auto. We must track the *preference*
+  // (which can be "auto"), not the resolved data-theme attribute (always
+  // "dark" or "light" after applyTheme). Store in dataset.themePref +
+  // localStorage so the next click cycles correctly.
+  const repaintThemeIcon = (pref) => {
+    if (!window.ICONS) return;
+    const k = pref === "dark" ? "moon" : pref === "light" ? "sun" : "globe";
+    const b = $("#theme-switcher"); if (b) b.innerHTML = window.ICONS[k];
+    if (b) b.title = `Theme: ${pref}`;
+  };
   $("#theme-switcher")?.addEventListener("click", () => {
     const order = ["auto", "light", "dark"];
-    const cur = root.dataset.theme || "auto";
+    const cur = root.dataset.themePref || (window.SETTINGS_CACHE?.ui?.theme) || "auto";
     const next = order[(order.indexOf(cur) + 1) % order.length];
+    root.dataset.themePref = next;
+    try { localStorage.setItem("ui-theme", next); } catch {}
     window.applyTheme(next);
-    // Persist into settings.
+    // Update cache + persist (fire-and-forget)
+    window.SETTINGS_CACHE = window.SETTINGS_CACHE || {};
+    window.SETTINGS_CACHE.ui = {...(window.SETTINGS_CACHE.ui || {}), theme: next};
     fetch("/settings", {method:"PUT", headers:{"content-type":"application/json"},
-      body: JSON.stringify({...(window.SETTINGS_CACHE||{}), ui:{...((window.SETTINGS_CACHE||{}).ui||{}), theme: next}})}).catch(()=>{});
-    // Repaint icon (sun/moon/auto).
-    const k = next === "dark" ? "moon" : next === "light" ? "sun" : "globe";
-    if (window.ICONS) $("#theme-switcher").innerHTML = window.ICONS[k];
+      body: JSON.stringify(window.SETTINGS_CACHE)}).catch(()=>{});
+    repaintThemeIcon(next);
     ui.status(`theme: ${next}`);
   });
+  // Restore initial theme icon.
+  const initial = root.dataset.themePref
+    || (() => { try { return localStorage.getItem("ui-theme") || "auto"; } catch { return "auto"; } })();
+  root.dataset.themePref = initial;
+  repaintThemeIcon(initial);
   // Language cycle: en ↔ pl
   $("#lang-switcher")?.addEventListener("click", () => {
     const cur = window.UI_LANG || "en";
@@ -1199,14 +1468,22 @@ async function bindCatsAddWidget() {
     }
   } catch {}
 }
-// Inline +add / remove buttons inside Categories detail
+// Inline +add / remove buttons inside Categories detail.
+// IMPORTANT: inventory.py keeps a 60s cache; without an explicit refresh the
+// detail row won't show the new in_config=true state until the cache expires.
+async function _refreshAfterCfgEdit(cat) {
+  try {
+    await api.post(`/inventory/refresh?category=${encodeURIComponent(cat)}`, {});
+  } catch {}
+  ui._loaded.apps = false; ui._loaded.categories = false;
+}
 document.addEventListener("click", async e => {
   const ad = e.target.closest("[data-cat-add]");
   if (ad) {
     try {
-      await api.post("/apps/add", {package: ad.dataset.pkg, category: ad.dataset.cat});
-      ui.status(`added ${ad.dataset.cat}:${ad.dataset.pkg}`);
-      // Refresh just this expanded detail.
+      const r = await api.post("/apps/add", {package: ad.dataset.pkg, category: ad.dataset.cat});
+      ui.status(r.ok ? `added ${ad.dataset.cat}:${ad.dataset.pkg}` : `error: ${(r.stderr||"").slice(0,120)}`);
+      await _refreshAfterCfgEdit(ad.dataset.cat);
       ui.loadCategoryDetail(ad.dataset.cat);
     } catch (err) { ui.status(String(err)); }
   }
@@ -1214,8 +1491,9 @@ document.addEventListener("click", async e => {
   if (rm) {
     if (!confirm(`Remove ${rm.dataset.pkg} from ${rm.dataset.cat} config?\n(does NOT uninstall the package itself)`)) return;
     try {
-      await api.post("/apps/remove", {package: rm.dataset.pkg, category: rm.dataset.cat});
-      ui.status(`removed ${rm.dataset.cat}:${rm.dataset.pkg}`);
+      const r = await api.post("/apps/remove", {package: rm.dataset.pkg, category: rm.dataset.cat});
+      ui.status(r.ok ? `removed ${rm.dataset.cat}:${rm.dataset.pkg}` : `error: ${(r.stderr||"").slice(0,120)}`);
+      await _refreshAfterCfgEdit(rm.dataset.cat);
       ui.loadCategoryDetail(rm.dataset.cat);
     } catch (err) { ui.status(String(err)); }
   }
@@ -1232,8 +1510,9 @@ document.addEventListener("click", async e => {
       const r = await api.post("/apps/add", {package: pkg, category: cat});
       out.textContent = r.ok ? `added ${cat}:${pkg}` : `error: ${(r.stderr||"").slice(0,200)}`;
       $("#cats-add-pkg").value = "";
+      // Bust the 60s inventory cache so the change is visible immediately.
+      try { await api.post(`/inventory/refresh?category=${encodeURIComponent(cat)}`, {}); } catch {}
       ui._loaded.categories = false; ui._loaded.apps = false;
-      // Re-render Categories so the new package shows in the detail expand.
       ui.show("categories");
     } catch (err) { out.textContent = String(err); }
   }
