@@ -13,6 +13,14 @@ chmod +x "$INSTALL_DIR"/update-all.sh \
 # /usr/bin/ubuntu-aktualizacje shim is already installed by dpkg from the
 # package tree (see usr/bin/ubuntu-aktualizacje below).
 
+# Refresh icon + desktop databases so the Ascendo entry shows in app menus.
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -t /usr/share/icons/hicolor >/dev/null 2>&1 || true
+fi
+
 cat <<EOF
 ─────────────────────────────────────────────────────────────────
   Ubuntu_Aktualizacje installed at $INSTALL_DIR

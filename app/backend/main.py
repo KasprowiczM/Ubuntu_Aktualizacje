@@ -54,6 +54,13 @@ class SudoAuthRequest(BaseModel):
 @app.on_event("startup")
 def _startup() -> None:
     db.init_db(config.db_path())
+    # Pull in any runs created from the CLI / scheduler so they appear in
+    # history immediately on dashboard boot.
+    try:
+        with db.connect(config.db_path()) as con:
+            db.import_disk_runs(con, config.runs_dir())
+    except Exception as exc:  # pragma: no cover — never block startup
+        print(f"warning: import_disk_runs failed: {exc}")
 
 
 @app.get("/health")
@@ -97,7 +104,9 @@ def preflight() -> dict[str, Any]:
 @app.get("/runs")
 def runs(limit: int = 100) -> dict[str, Any]:
     with db.connect(config.db_path()) as con:
-        return {"runs": db.list_runs(con, limit=limit)}
+        # Reconcile filesystem-only runs (CLI / scheduler) before listing.
+        imported = db.import_disk_runs(con, config.runs_dir())
+        return {"runs": db.list_runs(con, limit=limit), "imported": imported}
 
 
 @app.post("/runs")
@@ -263,8 +272,12 @@ async def stream_active_run() -> StreamingResponse:
 def get_run(run_id: str) -> dict[str, Any]:
     with db.connect(config.db_path()) as con:
         r = db.get_run(con, run_id)
+        if r is None:
+            # Lazy reconcile: the run may have been created from CLI after
+            # the last `/runs` listing. Importing it inserts the row + phases.
+            db.import_disk_runs(con, config.runs_dir())
+            r = db.get_run(con, run_id)
     if r is None:
-        # Fallback: synthesise from on-disk run.json (for runs created via CLI)
         run_dir = config.runs_dir() / run_id
         rj = run_dir / "run.json"
         if rj.exists():

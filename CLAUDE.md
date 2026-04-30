@@ -42,7 +42,9 @@ bash scripts/verify-state.sh           # repo/dev-sync/systemd verification
 # Dashboard (Etap 2)
 pip install --user fastapi uvicorn pydantic
 python3 -m app.backend                 # http://127.0.0.1:8765
-bash systemd/user/install-dashboard.sh # instaluje user-service
+bash systemd/user/install-dashboard.sh # instaluje user-service + ikonę Ascendo + .desktop
+# CLI runs (./update-all.sh) automatycznie pojawiają się w History — backend
+# reconciluje logs/runs/<id>/run.json z SQLite przy każdym /runs i na startup.
 
 # Snapshot / scheduler / pluginy (Etap 3)
 bash scripts/snapshot/create.sh "before apt apply"

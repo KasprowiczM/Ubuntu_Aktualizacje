@@ -1,5 +1,87 @@
 # Handoff
 
+## 2026-05-04 (late) — Ascendo desktop icon + CLI runs in dashboard history (Etap 11)
+
+### Stan na koniec sesji
+
+| Obszar | Status |
+|---|---|
+| **Ikona Ubuntu desktop = Ascendo logo** | ✅ `share/icons/hicolor/scalable/apps/ascendo.svg` + `share/applications/ubuntu-aktualizacje.desktop` (`Name=Ascendo`, `Icon=ascendo`, `StartupWMClass=Ascendo`); poprzednio używało systemowego `software-update-available` |
+| **User-level instalator ikony** | ✅ `systemd/user/install-dashboard.sh` instaluje ikonę i `.desktop` do `~/.local/share/{icons,applications}`, woła `update-desktop-database` + `gtk-update-icon-cache`, kasuje stare `ubuntu-aktualizacje.desktop` |
+| **System-wide ikona w `.deb`** | ✅ `packaging/deb/usr/share/icons/hicolor/scalable/apps/ascendo.svg` + `packaging/deb/usr/share/applications/ascendo.desktop`, postinst odświeża bazy |
+| **CLI runs widoczne w historii dashboard/web** | ✅ `db.import_disk_runs()` reconciliuje `logs/runs/<id>/run.json` z SQLite; wpięte w startup oraz w `/runs` i `/runs/{id}` |
+| **Migracja `004 run_source`** | ✅ kolumna `runs.source` (`'cli'` vs `'dashboard'`); `insert_run` przyjmuje source; UI dorzuca pill **cli** w History |
+| **Inferencja profilu z faz** | ✅ tylko `check` → `quick`; brak `drivers` → `safe`; reszta → `full`. `only_cat`/`only_phase` ustawiane gdy single-cat / single-kind |
+
+### Pliki dotknięte
+
+```
+share/icons/hicolor/scalable/apps/ascendo.svg            (NEW; copy of branding/icon.svg)
+share/applications/ubuntu-aktualizacje.desktop           (rebrand → Ascendo)
+systemd/user/install-dashboard.sh                        (icon+desktop install + cache refresh)
+packaging/deb/usr/share/icons/hicolor/scalable/apps/ascendo.svg   (NEW)
+packaging/deb/usr/share/applications/ascendo.desktop     (NEW)
+packaging/deb/DEBIAN/postinst                            (update-desktop-database, gtk-update-icon-cache)
+app/backend/migrations.py                                (+_m004_run_source)
+app/backend/db.py                                        (import_disk_runs, source field, insert_run signature)
+app/backend/main.py                                      (startup reconcile, /runs reconcile, /runs/{id} lazy reconcile)
+app/frontend/app.js                                      (cli pill in History table)
+RUN.md                                                   (Etap 11 changelog)
+docs/agents/handoff.md                                   (this section)
+```
+
+### Walidacja
+
+```text
+bash -n update-all.sh + scripts/*/*.sh + lib/*.sh + systemd/user/*.sh + DEBIAN/postinst   OK
+python3 ast parse na app/backend/{main,runner,db,migrations,config}.py                    OK
+import_disk_runs (clean DB, prod logs/runs/) → 28 imported                                OK
+TestClient: GET /runs?limit=10 → 200, imported=14 (already-merged subset), source=cli/dashboard mix   OK
+TestClient: GET /runs/<cli-only-id> → 200, run found po lazy reconcile                    OK
+```
+
+### Mechanika importu
+
+- `_RUN_ID_RE` parsuje `YYYYMMDDTHHMMSSZ-xxxxxx` → `started_at` ISO 8601.
+- `ended_at`, `status`, `needs_reboot`, `phases` z `run.json`.
+- `summary_json` = pełen `run.json` (do diff/raportu).
+- `phase_results` upsertowane per faza (`category`, `kind`, `exit_code`,
+  `summary`, `json` ścieżka).
+- Idempotentne: porównuje `id` w `runs` przed insert.
+
+### Ryzyka / known limitations
+
+1. **Race przy uruchomionym CLI runie.** Gdy CLI run trwa, `run.json`
+   jeszcze nie istnieje (master pisze go dopiero w finalize). Wtedy
+   filesystem-runs nie pojawi się w `/runs` aż do końca runa. Aktywny
+   dashboard run pokazuje się normalnie via `/runs/active`.
+2. **Brak hot-reload jeśli backend działa stabilnie.** Reconcile w
+   `/runs` robi import on-demand, więc każde przeładowanie History
+   pokaże nowe CLI runy. Jeśli ktoś trzyma stronę otwartą, musi
+   kliknąć Refresh.
+3. **Profil heurystyką.** CLI run `--profile safe` z manualnym `--only
+   apt` zostanie zarejestrowany jako `only_cat=apt`, `profile=null`
+   (bo `infer_profile` używa głównie obecności `drivers`). Akceptowalne
+   — Profile w History i tak jest informacyjne.
+
+### Komendy do weryfikacji
+
+```bash
+# 1. Po pull, restart dashboard żeby migracja 004 się odpaliła:
+systemctl --user restart ubuntu-aktualizacje-dashboard.service
+
+# 2. Sprawdź czy CLI run pojawia się w historii:
+./update-all.sh --profile quick --no-notify
+curl -s 'http://127.0.0.1:8765/runs?limit=5' | jq '.runs[] | {id, source, profile, status}'
+
+# 3. Sprawdź ikonę:
+ls -la ~/.local/share/icons/hicolor/scalable/apps/ascendo.svg
+ls -la ~/.local/share/applications/ascendo.desktop
+# W Activities wpisz "Ascendo" — powinna być pojedyncza ikona z gradientem
+```
+
+---
+
 ## 2026-05-04 — Final UX polish + profile templates + apt rollback + GH releases (Etap 10 — release v0.5)
 
 ### Stan na koniec sesji (oddajemy do użytkowników)

@@ -60,10 +60,18 @@ def _m003_run_label(con: sqlite3.Connection) -> None:
         con.execute("ALTER TABLE runs ADD COLUMN label TEXT")
 
 
+def _m004_run_source(con: sqlite3.Connection) -> None:
+    """Distinguish dashboard-launched runs from CLI runs imported from disk."""
+    cols = {row[1] for row in con.execute("PRAGMA table_info(runs)")}
+    if "source" not in cols:
+        con.execute("ALTER TABLE runs ADD COLUMN source TEXT NOT NULL DEFAULT 'dashboard'")
+
+
 MIGRATIONS: list[tuple[int, str, Migration]] = [
     (1, "baseline",     _m001_baseline),
     (2, "snapshot_id",  _m002_snapshot_id),
     (3, "run_label",    _m003_run_label),
+    (4, "run_source",   _m004_run_source),
 ]
 
 

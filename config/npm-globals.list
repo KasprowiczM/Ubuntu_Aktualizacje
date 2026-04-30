@@ -19,3 +19,4 @@
 @anthropic-ai/claude-code   # Claude Code CLI
 @google/gemini-cli          # Gemini CLI
 @openai/codex               # OpenAI Codex CLI
+npm

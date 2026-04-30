@@ -643,9 +643,12 @@ const ui = {
           durStr = sec >= 60 ? `${Math.floor(sec/60)}m${sec%60}s` : `${sec}s`;
         } catch {}
       }
+      const srcTag = r.source === "cli"
+        ? ` <span class="st-pill st-info" title="Imported from CLI run">cli</span>`
+        : "";
       tr.innerHTML = `
         <td>${ui.fmtTime(r.started_at)}</td>
-        <td>${r.profile || "—"}${r.dry_run ? " <span class='dim'>(dry)</span>":""}</td>
+        <td>${r.profile || "—"}${r.dry_run ? " <span class='dim'>(dry)</span>":""}${srcTag}</td>
         <td>${ui.badge(r.status)}</td>
         <td class="duration">${durStr}</td>
         <td>${phaseSummary}</td>

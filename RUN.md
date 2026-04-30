@@ -3,6 +3,30 @@
 Pełen przewodnik dla nowego operatora — od zera do działającego dashboardu.
 Wszystkie ścieżki względem `~/Dev_Env/Ubuntu_Aktualizacje`.
 
+## Co nowego (2026-05-04 — Etap 11: Ascendo desktop icon + CLI runs in history)
+
+- **Ikona aplikacji w menu Ubuntu = Ascendo „A"** (gradientowy kwadrat,
+  `branding/icon.svg`). Wcześniej `software-update-available` z systemu —
+  teraz markowy logotyp w panelu i Activities.
+- **`share/icons/hicolor/scalable/apps/ascendo.svg`** + zaktualizowany
+  `share/applications/ubuntu-aktualizacje.desktop` (`Name=Ascendo`,
+  `Icon=ascendo`, `StartupWMClass=Ascendo`).
+- `systemd/user/install-dashboard.sh` instaluje ikonę i `.desktop` do
+  `~/.local/share/{icons,applications}` i odświeża cache (
+  `update-desktop-database`, `gtk-update-icon-cache`).
+- `.deb` ships ikonę i `.desktop` w `/usr/share/...`; postinst odświeża
+  obie bazy.
+- **CLI runs widoczne w historii.** `./update-all.sh` (z terminala lub
+  scheduler-a) zapisuje `logs/runs/<id>/run.json`, ale dotąd nie trafiało
+  do SQLite — przez to History w dashboardzie pokazywało tylko runy
+  uruchomione z UI. Dodaliśmy `db.import_disk_runs()` (migracja `004
+  run_source` + kolumna `runs.source`); `/runs` i `/runs/{id}` reconciliują
+  filesystem przy każdym wywołaniu, a `startup` robi pierwszy import.
+  CLI runy mają tag **cli** w historii.
+- Profile dla CLI runów inferowany z fazy: tylko `check` → `quick`,
+  brak `drivers` → `safe`, w przeciwnym wypadku `full`. `--only` runs
+  zapisują się z `only_cat`/`only_phase` z run.json.
+
 ## Co nowego (2026-05-03 — Etap 9: PL i18n parity, pie chart, sync UX, drivers/inventory categories)
 
 - **PL i18n parity.** Wszystkie nowe sekcje (Help, About, Sync hints, Hosts edit, Suggest AI, Logs viewer) mają komplet kluczy PL+EN. Język przełączany ikoną w topbar (auto/en/pl) lub Settings.
@@ -292,13 +316,17 @@ ss -lntp | grep 8765
 Service używa `%h/Dev_Env/Ubuntu_Aktualizacje/app/.venv/bin/python` —
 tj. nigdy nie tknie systemowego/brew Pythona.
 
-Po instalacji wpis menu Ubuntu (`share/applications/ubuntu-aktualizacje.desktop`):
+`bash systemd/user/install-dashboard.sh` instaluje też ikonę i wpis menu:
+
 ```bash
-install -m 0644 share/applications/ubuntu-aktualizacje.desktop \
-        ~/.local/share/applications/
-update-desktop-database ~/.local/share/applications/
+~/.local/share/icons/hicolor/scalable/apps/ascendo.svg
+~/.local/share/applications/ascendo.desktop
 ```
-W Activities pojawi się ikona "Ubuntu_Aktualizacje" otwierająca dashboard w przeglądarce.
+
+W Activities pojawi się ikona **Ascendo** (logo „A" w gradientowym
+kwadracie) otwierająca dashboard w przeglądarce. Po `dpkg -i` pakietu
+`.deb` ikona ląduje w `/usr/share/icons/hicolor/scalable/apps/ascendo.svg`
+i `/usr/share/applications/ascendo.desktop` (system-wide).
 
 ### 4.3 Sprawdzenie endpointów (curl)
 
