@@ -15,6 +15,12 @@ Obsługuje APT, Snap, Homebrew, npm, pip/pipx, Flatpak, sterowniki NVIDIA i firm
 bin/ascendo apps detect                # raport: tracked/detected/missing (kolorowa tabela)
 bin/ascendo apps add <pkg> --category <cat>   # dodaj do config/*.list
 bin/ascendo apps install-missing       # zainstaluj wszystko z .list co brak na dysku
+bin/ascendo profile list               # dostępne szablony profili (dev/media/minimal)
+bin/ascendo profile import <name> [--dry-run]  # zaimportuj szablon do config/*.list
+bin/ascendo health --json              # post-run audit: failed units, dmesg, disk, reboot
+bin/ascendo settings export <file>     # tar.gz konfiguracji do przeniesienia
+bin/ascendo settings import <file>     # przywróć konfigurację z tar.gz
+bin/ascendo exclusions {list|add|remove} <cat:pkg>   # per-user opt-out z apply
 bash packaging/build-deb.sh            # buduje dist/ascendo_<ver>_all.deb
 bash scripts/maintenance/prune-logs.sh --keep 50 --days 30  # log retention
 curl -X POST http://127.0.0.1:8765/auth/generate-token       # opt-in token auth

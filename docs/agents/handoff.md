@@ -1,5 +1,117 @@
 # Handoff
 
+## 2026-05-04 — Final UX polish + profile templates + apt rollback + GH releases (Etap 10 — release v0.5)
+
+### Stan na koniec sesji (oddajemy do użytkowników)
+
+| Obszar | Status |
+|---|---|
+| **Slogan vertical pod logo** (zgodnie z prośbą) | ✅ powrót do `Ascendo` + tagline w drugiej linii, font 0.7rem |
+| **Sudo cache** w status barze po **prawej** | ✅ `<span id="sudo-indicator" style="float:right">` w footer |
+| **Theme switcher** auto = monitor icon | ✅ cycle monitor → sun → moon, persist localStorage + settings.ui.theme |
+| **Pie chart** czytelny: total + % ok wewnątrz, legend pod | ✅ `renderDonut` przepisany, rounded-cap segments, brak ukrytych napisów |
+| **Sync hints PL/EN** każdy guzik z opisem co robi | ✅ `sync.hint_fetch/pull/push/dry/real` |
+| **Sync remote name dropdown** z `rclone listremotes` + **Browse…** modal pickera folderów | ✅ `/sync/remotes` + `/sync/browse` (`rclone lsf --dirs-only`) |
+| **Categories: drivers + inventory** pokazują dane (nie puste) | ✅ `scan_drivers`: NVIDIA dpkg + smi + fwupd; `scan_inventory_meta`: APPS.md mtime/size |
+| **Snap UX** advisory gdy snapd auto-refresh wyprzedził, "running apps" pokazuje konkretny snap | ✅ `SNAP-AUTO-REFRESHED` diag + parser blocked snap name |
+| **Help section** pełna dokumentacja, większe czcionki (1rem) | ✅ 11 sekcji + TOC, tabela skryptów, troubleshooting |
+| **About section** version + system + Markdown release notes | ✅ `/about` endpoint + render |
+| **Hosts edit UI** add/edit/delete `config/hosts.toml` | ✅ form + `/hosts/upsert` + `.bak_<ts>` |
+| **AI providers**: Anthropic, OpenAI, Gemini, Ollama, LM Studio, OpenAI-compat | ✅ baseUrl field, lokalne bez api key, /suggestions/test |
+| **Cloud sync providers** (Proton/GDrive/Dropbox/OneDrive/WebDAV/S3/local) | ✅ dropdown + browse picker + `/sync/provider/test` |
+| **Logs detail viewer** dropdown + per-phase plain log + sidecar links | ✅ `loadLogsList` + inline view-log buttons |
+| **Per-package apt rollback** (downgrade) | ✅ `/apt/downgrade` + `↓ rollback` button per row w Categories detail (apt only) |
+| **Profile templates** dev-workstation / media-server / minimal-laptop | ✅ `config/profiles/*.list` + `scripts/apps/profile-import.sh` + UI panel w Settings (Preview/Apply) + CLI `ascendo profile {list\|import}` |
+| **GH Releases auto-update notifier** | ✅ Settings → Update notifier; `/updates/check` z 4s timeout, settings.updates.check_repo |
+| **i18n parity PL+EN** dla wszystkich nowych sekcji | ✅ help/about/sync.hint*/sync.browse*/hosts.f*/profiles_*/updates_* w obu językach |
+| **Stale .bak files cleanup** | ✅ usunięte `snap-packages.list.bak_*`, `hosts.toml.bak_*` |
+
+### Nowe pliki (tej sesji)
+
+```
+config/profiles/dev-workstation.list                   (curated dev set)
+config/profiles/media-server.list                      (headless server)
+config/profiles/minimal-laptop.list                    (light footprint)
+scripts/apps/profile-import.sh                         (idempotent profile importer)
+```
+
+### Zmodyfikowane (tej sesji)
+
+```
+app/backend/main.py                                    (+/apt/downgrade, /profiles/templates, /profiles/import, /updates/check, /sync/remotes, /sync/browse)
+app/backend/inventory.py                               (scan_drivers, scan_inventory_meta)
+app/backend/settings.py                                (ai.base_url, sync.*, updates.check_repo)
+app/backend/hosts_edit.py                              (NEW — write hosts.toml)
+app/frontend/index.html                                (sidebar, Help, About, profiles panel, updates notifier, downgrade button)
+app/frontend/app.js                                    (theme cycle fix, monitor icon, profiles UI, downgrade prompt, browse modal, hosts CRUD)
+app/frontend/style.css                                 (sidebar layout, donut redesign, help font 1rem, slogan vertical)
+app/frontend/i18n.js                                   (full PL/EN parity)
+app/frontend/icons.js                                  (monitor, folder added)
+packaging/deb/usr/bin/ubuntu-aktualizacje              (settings/health/exclusions/profile subcommands)
+scripts/snap/apply.sh                                  (SNAP-AUTO-REFRESHED diag, blocked-snap parser)
+scripts/drivers/check.sh                               (dpkg --compare-versions)
+scripts/snapshot/create.sh                             (timeout 300s, askpass-aware)
+update-all.sh                                          (--budget, --no-health, CHECK-ONLY banner, detailed summary)
+RUN.md / RELEASE_NOTES.md / docs/agents/handoff.md     (this section)
+```
+
+### Walidacja końcowa (release-gate)
+
+```text
+bash -n na wszystkich .sh                              OK
+python3 ast parse na wszystkich .py (10 modułów)       OK
+JS parse (icons.js, i18n.js, app.js)                   OK
+TestClient: 31 GET endpoints                           31/31 → 200
+POST /profiles/import (dry-run)                        200 ok
+POST /apt/downgrade                                    schema OK (sudo-gated)
+SPA: slogan vertical, sudo float:right                 confirmed
+python3 tests/validate_phase_json.py                   PASS (266+)
+test_dev_sync_safety.py                                9/9 OK
+./update-all.sh --profile quick --no-notify            6/6 ok, post-run health 100/100
+ascendo profile import dev-workstation --dry-run       added=22, skipped=10
+```
+
+### Jak testować na innym hoście Ubuntu (po dev-sync export)
+
+```bash
+# Na nowej maszynie:
+git clone https://github.com/KasprowiczM/Ubuntu_Aktualizacje ~/Dev_Env/Ubuntu_Aktualizacje
+cd ~/Dev_Env/Ubuntu_Aktualizacje
+bash scripts/fresh-machine.sh           # preflight + restore overlay z Proton + setup + dashboard
+
+# Otwórz dashboard:
+xdg-open http://127.0.0.1:8765
+
+# Sanity:
+./update-all.sh --profile quick --no-notify    # ~15s, czyste 6/6
+ascendo profile list                            # dev-workstation, media-server, minimal-laptop
+ascendo profile import dev-workstation --dry-run
+ascendo health --json
+ascendo apps detect
+ascendo settings export ~/ascendo-backup.tar.gz
+
+# Dashboard tour:
+# Overview → quick check, donut z % ok
+# Categories → drivers (3 wiersze, NVIDIA + smi + fwupd), inventory (APPS.md)
+# Sync → wybierz provider, Browse… → folder picker
+# Suggestions → wybierz Ollama/LM Studio, Test connection
+# Settings → Profile templates → Preview, Update notifier → Check now
+# Help → 11 sekcji dokumentacji
+# About → wersja + 175 linii release notes
+```
+
+### Co celowo zostało (nie do release v0.5)
+
+| Priorytet | Zadanie |
+|---|---|
+| P3 | Frontend Playwright e2e tests |
+| P3 | Per-package rollback dla snap/brew (obecnie tylko apt) |
+| P3 | Run timeline Gantt SVG |
+| P3 | Multi-host PUSH-mode runs (dziś tylko read-only preflight) |
+| P3 | Cross-platform: Windows winget, macOS softwareupdate |
+
+---
+
 ## 2026-05-03 (late) — Sidebar redesign + verbose progress + NVIDIA fix (Etap 8)
 
 ### Stan na koniec sesji

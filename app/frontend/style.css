@@ -66,28 +66,20 @@ html, body {
   display: flex; flex-direction: column; padding: 1rem 0.75rem;
 }
 .sidebar-brand {
-  display: flex; align-items: center; gap: 0.55rem;
-  padding: 0.45rem 0.4rem 0.95rem; border-bottom: 1px solid var(--border);
-  margin-bottom: 0.7rem; flex-wrap: nowrap;
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.4rem 0.6rem 1rem; border-bottom: 1px solid var(--border);
+  margin-bottom: 0.7rem;
 }
-.sidebar-brand .brand-text {
-  display: flex; align-items: baseline; gap: 0.55rem;
-  flex: 1; min-width: 0;
-}
+.sidebar-brand .brand-text { display: flex; flex-direction: column; line-height: 1.05; }
 .sidebar-brand .brand-name {
-  font-size: 1.25rem; font-weight: 700; line-height: 1;
+  font-size: 1.25rem; font-weight: 700;
   background: linear-gradient(90deg, #22c55e 0%, #0ea5e9 100%);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent;
 }
-.sidebar-brand .brand-divider {
-  display: inline-block; width: 1px; align-self: stretch;
-  background: var(--border); margin: 0 0.1rem;
-}
 .sidebar-brand .brand-tagline {
-  font-size: 0.78rem; font-weight: 500; color: var(--dim);
-  letter-spacing: 0.02em; text-transform: lowercase;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 0.7rem; font-weight: 500; color: var(--dim);
+  letter-spacing: 0.04em; text-transform: lowercase; margin-top: 2px;
 }
 .sidebar-nav { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; }
 .sidebar-nav .nav-link {

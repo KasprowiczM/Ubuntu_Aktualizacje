@@ -41,6 +41,11 @@ case "${1:-}" in
                       create) shift; exec bash "$ROOT/scripts/snapshot/create.sh" "$@" ;;
                       restore) shift; exec bash "$ROOT/scripts/snapshot/restore.sh" "$@" ;;
                   esac ;;
+    profile)      shift; case "${1:-list}" in
+                      list)   ls "$ROOT/config/profiles/" 2>/dev/null | sed 's/\.list$//' ;;
+                      import) shift; exec bash "$ROOT/scripts/apps/profile-import.sh" "$@" ;;
+                      *) echo "ascendo profile {list|import <name> [--dry-run]}"; exit 2 ;;
+                  esac ;;
     settings)     shift; case "${1:-help}" in
                       export) shift
                               dest="${1:-ascendo-backup-$(date +%Y%m%d_%H%M%S).tar.gz}"

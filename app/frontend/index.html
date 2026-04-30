@@ -40,7 +40,6 @@
       </svg>
       <div class="brand-text">
         <span class="brand-name">Ascendo</span>
-        <span class="brand-divider" aria-hidden="true"></span>
         <span class="brand-tagline" data-i18n="brand.tagline">unified updates</span>
       </div>
     </div>
@@ -518,6 +517,26 @@
             </label>
           </div>
           <div class="card">
+            <h3 data-i18n="settings.profiles_title">Profile templates</h3>
+            <p class="dim" data-i18n="settings.profiles_hint">
+              Curated package sets for common machine roles. Click a template
+              to preview (dry-run) or apply (appends to your config/*.list).
+            </p>
+            <div id="profiles-list">…</div>
+          </div>
+          <div class="card">
+            <h3 data-i18n="settings.updates_title">Update notifier</h3>
+            <p class="dim" data-i18n="settings.updates_hint">
+              Optional: check GitHub Releases for newer Ascendo versions.
+              Read-only, never installs anything.
+            </p>
+            <label><span data-i18n="settings.updates_repo">GitHub repo</span>
+              <input type="text" name="updates_check_repo" placeholder="KasprowiczM/Ubuntu_Aktualizacje" />
+            </label>
+            <button type="button" id="updates-check-btn" class="secondary" data-i18n="settings.updates_check">Check now</button>
+            <div id="updates-output" class="dim" style="margin-top:0.5rem;font-size:0.78rem"></div>
+          </div>
+          <div class="card">
             <h3 data-i18n="backup.title">Backup &amp; restore</h3>
             <p class="dim" data-i18n="backup.hint">
               Bundle your config (lists, exclusions, scheduler, settings)
@@ -763,8 +782,8 @@ UA_RESPECT_FOCUS=1</code></pre>
   </div>
 
   <footer>
-    <span id="sudo-indicator" class="dim" style="margin-right:1rem"></span>
     <span id="status-line" data-i18n="footer.ready">ready</span>
+    <span id="sudo-indicator" class="dim" style="float:right"></span>
   </footer>
   <script src="/icons.js"></script>
   <script src="/i18n.js"></script>

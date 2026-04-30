@@ -1,5 +1,82 @@
 # Ascendo — Release Notes
 
+## v0.5.0 — 2026-05-04 (Release-quality polish, profile templates, apt rollback)
+
+### Added
+- **Profile templates** (`config/profiles/*.list`): `dev-workstation`,
+  `media-server`, `minimal-laptop`. UI panel in Settings (Preview / Apply)
+  and CLI `ascendo profile {list|import [--dry-run]}`.
+- **Per-package apt rollback** — `↓ rollback` button per row in Categories
+  detail; runs `apt-get install --allow-downgrades pkg=ver`.
+- **GitHub Releases auto-update notifier** — `/updates/check`, settings.updates.check_repo,
+  Settings card with current vs latest tag.
+- **Help section** — full operator docs (11 chapters: install, first run, CLI
+  cheat-sheet, scripts reference table, configuration files, dashboard tour,
+  scheduler, snapshots, dev-sync, AI, troubleshooting), 1rem fonts.
+- **About section** — version + git head + system info + Markdown render of
+  release notes from `RELEASE_NOTES.md`.
+- **Hosts edit UI** — Add/Edit/Delete buttons writing to `config/hosts.toml`
+  with `.bak_<ts>` per save (`/hosts/upsert`, `/hosts/delete`).
+- **AI providers**: Anthropic, OpenAI, **Google Gemini**, **Ollama (local)**,
+  **LM Studio (local)**, OpenAI-compatible. Local providers need only Base URL.
+  Test connection button.
+- **Cloud sync providers**: Proton Drive / Google Drive / Dropbox / OneDrive /
+  WebDAV / S3 / local. Remote name dropdown from `rclone listremotes`,
+  Browse… modal with folder picker (`rclone lsf --dirs-only`).
+- **Logs detail viewer** — run dropdown + per-phase log viewer pane
+  (clickable from sidecar table).
+- **Smart Suggestions** panel with heuristic + opt-in LLM enrichment
+  (read-only, applied as diffs only with manual confirm).
+- **Live progress bar** in Run Center parsing `PROGRESS|...` markers from
+  scripts.
+- **Health card** on Overview (post-run audit, score 0-100).
+- **ETA banner** on History (avg / p90 / ok% per profile from past runs).
+- **Exclusions** — `config/exclusions.list` filters every apply phase;
+  Apps tab has per-package skip checkbox.
+- **Settings backup** — tar.gz export/import via UI or CLI.
+- **CHECK-ONLY banner** in CLI when no apply phases would run.
+- **Detailed package summary** at the end of every run (upgrade/install/refresh/noop).
+- **`--budget Nm`** flag stops the pipeline cleanly when wall time exceeded.
+- **`should-run.sh`** scheduler gate: defers on battery, outside maintenance
+  window, or while apt/dpkg busy.
+
+### Changed
+- **Layout**: full sidebar on the left with 12 inline Lucide-style icons
+  (overview/categories/run/history/logs/sync/apps/suggest/hosts/settings/help/about);
+  topbar utilities (lang/theme/font); hamburger drawer below 768px.
+- **Slogan** under logo (vertical), `Ascendo` gradient + `unified updates`
+  tagline.
+- **Sudo cache indicator** back in status bar (footer right).
+- **Theme switcher** uses monitor icon for auto mode (cycle monitor → sun → moon).
+- **Pie chart** redesigned: larger donut with rounded segments, total + % ok
+  centered, legend with percentages.
+- **Snap apply UX**: emits `SNAP-AUTO-REFRESHED` advisory when snapd's
+  background refresh wins the race; surfaces specific blocking snap name
+  for "running apps" errors.
+- **NVIDIA detection**: `apt_pkg_candidate` + `dpkg --compare-versions`
+  instead of `madison NR==1` — no false-positive "available" when the
+  candidate is actually older.
+- **Snapshot create.sh**: hard 300s timeout + askpass-aware so dashboard
+  runs no longer hang at pre-apply snapshot.
+- **Categories drivers/inventory** populated (NVIDIA pkg + smi + fwupd; APPS.md mtime).
+- **Scheduler install** wires `ExecStartPre=` to `should-run.sh`.
+- **Help/About** font sizes bumped to 1rem (from 0.85rem).
+
+### Fixed
+- Theme switcher cycle no longer collapses to always-light (was reading
+  `data-theme` resolved value instead of preference).
+- Categories `+ add` reflects the new package immediately by busting the
+  60s inventory cache.
+- Snapshot stuck-at-pre-apply (timeshift hang without TTY) — bounded with
+  `timeout`, never blocks the run.
+- Stuck dashboard runs (`141545Z`, `141641Z`) cleaned from history.
+- Duplicate PL i18n entries (logs/sync/hosts) removed.
+
+### Notes
+- 31 GET endpoints all 200 in CI smoke.
+- 9-file private overlay (Proton Drive) PASS verify-full.
+- Targets Ubuntu 24.04 / Debian-derived. macOS/Windows abstractions deferred.
+
 ## v0.4.0 — 2026-04-30 (Sidebar UI, Smart Suggestions, exclusions)
 
 ### Added

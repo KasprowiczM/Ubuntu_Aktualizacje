@@ -943,6 +943,98 @@ def sync_provider_test() -> dict[str, Any]:
         return {"ok": False, "stderr": "timed out (12s) — auth or network issue"}
 
 
+# ── apt downgrade per-package rollback ──────────────────────────────────────
+@app.post("/apt/downgrade")
+def apt_downgrade(payload: dict[str, Any]) -> dict[str, Any]:
+    """Force apt to install a specific older version of a package.
+    Body: {"package": "firefox", "version": "131.0+build1-0ubuntu1"}.
+    Requires sudo cache. Caller is expected to confirm — there is no
+    safety net beyond apt's own dependency check."""
+    import os, subprocess
+    pkg = (payload or {}).get("package", "")
+    ver = (payload or {}).get("version", "")
+    if not pkg or not ver:
+        raise HTTPException(status_code=400, detail="package and version required")
+    if not pkg.replace("-", "").replace(".", "").replace("+", "").isalnum():
+        raise HTTPException(status_code=400, detail="package name has unsafe characters")
+    st = sudo_mod.status()
+    if not st.cached:
+        raise HTTPException(status_code=401, detail={"code":"SUDO-REQUIRED",
+            "msg":"POST /sudo/auth first"})
+    helper = sudo_mod.make_askpass()
+    env = os.environ.copy()
+    env["SUDO_ASKPASS"] = str(helper)
+    cmd = ["sudo", "-A", "apt-get", "install", "-y",
+           "--allow-downgrades",
+           "-o", "Dpkg::Options::=--force-confdef",
+           "-o", "Dpkg::Options::=--force-confold",
+           f"{pkg}={ver}"]
+    res = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=300)
+    audit_mod.log("apt.downgrade", details={"pkg": pkg, "ver": ver, "rc": res.returncode})
+    return {"ok": res.returncode == 0, "stdout": res.stdout[-2000:],
+            "stderr": res.stderr[-2000:], "exit_code": res.returncode}
+
+
+# ── Profile templates ────────────────────────────────────────────────────────
+@app.get("/profiles/templates")
+def profile_templates() -> dict[str, Any]:
+    p = config.repo_root() / "config" / "profiles"
+    items: list[dict[str, Any]] = []
+    if p.exists():
+        for f in sorted(p.glob("*.list")):
+            head = ""
+            for L in f.read_text(encoding="utf-8").splitlines()[:6]:
+                if L.strip().startswith("#"):
+                    head += L.lstrip("# ") + " "
+            items.append({"name": f.stem, "summary": head.strip(),
+                          "lines": sum(1 for L in f.read_text().splitlines()
+                                       if L.strip() and not L.lstrip().startswith("#"))})
+    return {"items": items}
+
+
+@app.post("/profiles/import")
+def profile_import_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
+    import subprocess
+    name = (payload or {}).get("name", "")
+    dry = bool((payload or {}).get("dry_run", True))
+    if not name or not name.replace("-", "").replace("_", "").isalnum():
+        raise HTTPException(status_code=400, detail="invalid profile name")
+    cmd = ["bash", str(config.repo_root() / "scripts" / "apps" / "profile-import.sh"), name]
+    if dry: cmd.append("--dry-run")
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    audit_mod.log("profile.import", details={"name": name, "dry_run": dry, "rc": res.returncode})
+    return {"ok": res.returncode == 0, "stdout": res.stdout[-3000:], "stderr": res.stderr[-1000:]}
+
+
+# ── GitHub Releases auto-update notifier ─────────────────────────────────────
+@app.get("/updates/check")
+def updates_check() -> dict[str, Any]:
+    """Compare current Ascendo version with latest GH release tag for the
+    configured repo (settings.updates.check_repo). Read-only; UI shows a
+    badge if newer is available. Times out fast so it never stalls."""
+    import urllib.request, json as _json, subprocess
+    s = settings_mod.load() or {}
+    repo = ((s.get("updates") or {}).get("check_repo") or "").strip()
+    if not repo:
+        return {"enabled": False}
+    try:
+        cur = subprocess.check_output(
+            ["git", "-C", str(config.repo_root()), "describe", "--tags", "--always"],
+            text=True, timeout=3).strip()
+    except Exception:
+        cur = "unknown"
+    url = f"https://api.github.com/repos/{repo}/releases/latest"
+    try:
+        with urllib.request.urlopen(url, timeout=4) as r:
+            j = _json.loads(r.read().decode("utf-8"))
+        latest = j.get("tag_name", "")
+        return {"enabled": True, "repo": repo, "current": cur, "latest": latest,
+                "newer_available": bool(latest and latest != cur and latest.lstrip("v") > cur.lstrip("v")),
+                "url": j.get("html_url", "")}
+    except Exception as exc:
+        return {"enabled": True, "repo": repo, "current": cur, "error": str(exc)[:200]}
+
+
 # ── Static frontend ──────────────────────────────────────────────────────────
 _FRONT = Path(__file__).resolve().parent.parent / "frontend"
 if _FRONT.exists():

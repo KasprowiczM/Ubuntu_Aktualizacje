@@ -572,9 +572,14 @@ const ui = {
                 <td>${ui.badge(it.status)}</td>
                 <td class="dim">${it.source||""}</td>
                 <td>${it.in_config ? "✔" : "<span class='dim'>—</span>"}</td>
-                <td>${it.in_config
-                  ? `<button class="secondary" data-cat-rm data-pkg="${it.name}" data-cat="${cat}" title="Remove from config (does NOT uninstall)">remove</button>`
-                  : `<button class="secondary" data-cat-add data-pkg="${it.name}" data-cat="${cat}" title="Add to config so future updates include it">+ add</button>`}</td>
+                <td>
+                  ${it.in_config
+                    ? `<button class="secondary" data-cat-rm data-pkg="${it.name}" data-cat="${cat}" title="Remove from config (does NOT uninstall)">remove</button>`
+                    : `<button class="secondary" data-cat-add data-pkg="${it.name}" data-cat="${cat}" title="Add to config so future updates include it">+ add</button>`}
+                  ${cat === "apt" && it.installed && it.installed !== "—"
+                    ? ` <button class="secondary" data-apt-downgrade data-pkg="${it.name}" data-ver="${it.installed}" title="Roll back / pin to a specific older version (apt --allow-downgrades)" style="font-size:0.72rem">↓ rollback</button>`
+                    : ""}
+                </td>
               </tr>`).join("")}
           </tbody>
         </table>`;
@@ -723,9 +728,32 @@ const ui = {
     }
   },
 
+  async loadProfilesPanel() {
+    const wrap = $("#profiles-list");
+    if (!wrap) return;
+    try {
+      const r = await api.get("/profiles/templates");
+      if (!r.items.length) {
+        wrap.innerHTML = `<p class="dim">No templates in config/profiles/.</p>`;
+        return;
+      }
+      wrap.innerHTML = r.items.map(t => `
+        <div style="border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.7rem;margin:0.4rem 0">
+          <div><b>${t.name}</b> <span class="dim">— ${t.lines} pkg(s)</span></div>
+          <div class="dim" style="font-size:0.78rem;margin:0.2rem 0">${t.summary || ""}</div>
+          <div style="display:flex;gap:0.3rem">
+            <button class="secondary" data-profile-import="${t.name}" data-dry="1" style="font-size:0.78rem">Preview</button>
+            <button class="secondary" data-profile-import="${t.name}" data-dry="0" style="font-size:0.78rem">Apply</button>
+          </div>
+        </div>`).join("");
+    } catch (e) { wrap.textContent = String(e); }
+  },
+
   async loadSettings() {
     const s = await api.get("/settings");
     window.SETTINGS_CACHE = s;
+    // Load profile templates panel + updates repo field.
+    ui.loadProfilesPanel();
     const f = $("#settings-form");
     f.elements.default_profile.value = s.default_profile;
     f.elements.snapshot_before_apply.checked = !!s.snapshot_before_apply;
@@ -736,6 +764,9 @@ const ui = {
     f.elements.scheduler_calendar.value = (s.scheduler && s.scheduler.calendar) || "Sun *-*-* 03:00:00";
     f.elements.scheduler_profile.value = (s.scheduler && s.scheduler.profile) || "safe";
     f.elements.scheduler_no_drivers.checked = !!(s.scheduler && s.scheduler.no_drivers);
+    if (f.elements.updates_check_repo) {
+      f.elements.updates_check_repo.value = (s.updates && s.updates.check_repo) || "";
+    }
   },
 
   collectSettings() {
@@ -753,6 +784,10 @@ const ui = {
         calendar: f.elements.scheduler_calendar.value,
         profile:  f.elements.scheduler_profile.value,
         no_drivers: f.elements.scheduler_no_drivers.checked,
+      },
+      updates: {
+        check_repo: f.elements.updates_check_repo
+          ? f.elements.updates_check_repo.value.trim() : "",
       },
     };
   },
@@ -1418,6 +1453,31 @@ if (settingsForm) {
   });
 }
 document.addEventListener("click", async e => {
+  const pi = e.target.closest("[data-profile-import]");
+  if (pi) {
+    const name = pi.dataset.profileImport;
+    const dry = pi.dataset.dry === "1";
+    if (!dry && !confirm(`Apply profile '${name}' — will append packages to your config/*.list files?`)) return;
+    try {
+      const r = await api.post("/profiles/import", {name, dry_run: dry});
+      ui.status(dry ? `preview: ${name}` : `imported: ${name}`);
+      $("#settings-output").textContent = (r.stdout || "") + (r.stderr ? "\n" + r.stderr : "");
+    } catch (err) { ui.status(String(err)); }
+  }
+  if (e.target.id === "updates-check-btn") {
+    const out = $("#updates-output");
+    out.textContent = "checking…";
+    try {
+      const r = await api.get("/updates/check");
+      if (!r.enabled) { out.textContent = "disabled — set GitHub repo first."; return; }
+      if (r.error) { out.textContent = `error: ${r.error}`; return; }
+      out.textContent = r.newer_available
+        ? `📦 newer release available: ${r.latest} (current ${r.current}) — ${r.url}`
+        : `up to date — current ${r.current}, latest ${r.latest||"?"}`;
+    } catch (err) { out.textContent = String(err); }
+  }
+});
+document.addEventListener("click", async e => {
   const id = e.target.id;
   const out = $("#settings-output");
   if (id === "scheduler-install-btn") {
@@ -1569,6 +1629,21 @@ document.addEventListener("click", async e => {
       ui.status(r.ok ? `added ${ad.dataset.cat}:${ad.dataset.pkg}` : `error: ${(r.stderr||"").slice(0,120)}`);
       await _refreshAfterCfgEdit(ad.dataset.cat);
       ui.loadCategoryDetail(ad.dataset.cat);
+    } catch (err) { ui.status(String(err)); }
+  }
+  const dg = e.target.closest("[data-apt-downgrade]");
+  if (dg) {
+    const ver = prompt(`Downgrade ${dg.dataset.pkg} to which version?\n\nCurrently installed: ${dg.dataset.ver}\n\nFind a candidate with:  apt-cache madison ${dg.dataset.pkg}\nThis runs:  sudo apt-get install --allow-downgrades ${dg.dataset.pkg}=<version>`);
+    if (!ver) return;
+    if (!confirm(`Confirm: downgrade ${dg.dataset.pkg} → ${ver}?`)) return;
+    const ok = await sudoMgr.ensure();
+    if (!ok) { ui.status("sudo required"); return; }
+    ui.status(`downgrading ${dg.dataset.pkg}=${ver}…`);
+    try {
+      const r = await api.post("/apt/downgrade", {package: dg.dataset.pkg, version: ver});
+      ui.status(r.ok ? `downgraded ${dg.dataset.pkg} → ${ver}` : `failed: ${(r.stderr||"").slice(0,150)}`);
+      ui._loaded.categories = false;
+      ui.loadCategoryDetail("apt");
     } catch (err) { ui.status(String(err)); }
   }
   const rm = e.target.closest("[data-cat-rm]");
