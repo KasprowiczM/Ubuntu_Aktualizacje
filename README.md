@@ -31,10 +31,31 @@ Technical details and agent docs:
 
 ## Quick Start
 
+### New machine (fresh clone, one-liner)
+
+```bash
+git clone https://github.com/KasprowiczM/Ubuntu_Aktualizacje
+cd Ubuntu_Aktualizacje
+bash scripts/fresh-machine.sh           # preflight + overlay + setup + dashboard
+```
+
+`fresh-machine.sh` wraps:
+1. `scripts/preflight.sh` — read-only host audit
+2. `scripts/bootstrap.sh` — Proton/rclone overlay restore + `setup.sh` package reconciliation
+3. `app/install.sh` — dashboard Python venv (project-local, PEP-668 safe)
+4. `systemd/user/install-dashboard.sh` — autostart user-service on `127.0.0.1:8765`
+5. `scripts/verify-state.sh` — final consistency check
+
+Flags: `--check-only` (audit, no mutations), `--dry-run`, `--no-dashboard`,
+`--no-service`, `--no-sync`. Re-running on an already-bootstrapped host is
+idempotent.
+
+### Daily run
+
 Run full update:
 
 ```bash
-./update-all.sh
+./update-all.sh                         # one sudo prompt for the whole run
 ```
 
 Common options:

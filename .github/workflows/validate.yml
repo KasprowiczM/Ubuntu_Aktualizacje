@@ -175,6 +175,7 @@ jobs:
             "app/backend/settings.py"
             "app/install.sh"
             "docs/agents/hybrid-mode.md"
+            "scripts/fresh-machine.sh"
             "scripts/snapshot/create.sh"
             "scripts/snapshot/list.sh"
             "scripts/scheduler/install.sh"
@@ -288,6 +289,40 @@ jobs:
           bats tests/bash/test_json_emit.bats
           bats tests/bash/test_orchestrator.bats
           bats tests/bash/test_phase_contract.bats
+
+      - name: dev-sync overlay size guard (≤ 50 files)
+        # The private overlay should contain ONLY user-secret files (.env.local,
+        # ssh keys, agent settings). If a future build artifact slips through
+        # the .gitignore + DEFAULT_EXCLUDE_PATTERNS net, the export count
+        # explodes silently — caught it once at 3527 files (Cargo target/).
+        # 50 is a generous cap; current overlay is ~8 files.
+        run: |
+          # Seed minimum config so dry-run can resolve provider path.
+          if [[ ! -f .dev_sync_config.json ]]; then
+            cat > .dev_sync_config.json <<'JSON'
+          {
+            "project_name": "Ubuntu_Aktualizacje",
+            "provider": "protondrive",
+            "provider_path": "/tmp/_ci_proton",
+            "rclone_remote": "",
+            "rclone_remote_path": "",
+            "proton_project_root": "/tmp/_ci_proton/Ubuntu_Aktualizacje",
+            "exclude_patterns": [],
+            "include_always": []
+          }
+          JSON
+            mkdir -p /tmp/_ci_proton/Ubuntu_Aktualizacje
+          fi
+          count=$(python3 dev-sync/dev_sync_export.py --dry-run 2>&1 | awk -F': ' '/^Files selected:/ {print $2}')
+          echo "overlay file count: ${count:-?}"
+          if [[ -z "$count" ]]; then
+            echo "❌ could not parse file count from dev_sync_export"; exit 1
+          fi
+          if [[ "$count" -gt 50 ]]; then
+            echo "❌ overlay bloat: $count > 50 — review DEFAULT_EXCLUDE_PATTERNS in dev-sync/dev_sync_core.py"
+            exit 1
+          fi
+          echo "✔ overlay within bounds ($count ≤ 50)"
 
       - name: Plugin manifest scanner smoke test
         run: |

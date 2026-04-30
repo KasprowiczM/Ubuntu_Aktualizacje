@@ -1,5 +1,109 @@
 # Handoff
 
+## 2026-04-30 — UX/perf overhaul + portability (Etap 4)
+
+### Stan na koniec sesji
+
+Kompletne, przetestowane i pushed (commit `3fd629b` + follow-up):
+
+| Obszar | Status |
+|---|---|
+| Sudo: jedno hasło na cały run (CLI) | ✅ askpass helper w `$XDG_RUNTIME_DIR/ubuntu-aktualizacje/`, `lib/common.sh::sudo()` wrapper |
+| Live progress w konsoli i SSE | ✅ orchestrator tee'uje phase output, apt:apply printuje upgradable preview |
+| Inventory speed 85s → 11s | ✅ `apt_inventory_cache_init`, batched `apt-cache policy` |
+| `BREW-CLEANUP-WARN` (pipx pycache) | ✅ proaktywny chown Cellar w cleanup.sh |
+| `SNAP-STILL-OUTDATED` race | ✅ downgrade do `info SNAP-NEW-REVISION` |
+| Dashboard Overview cache | ✅ `ui._loaded[view]`, manual Refresh, auto-invalidate po runu |
+| Reboot UX | ✅ banner + `POST /system/reboot?delay=5`; CLI: rich box z systemctl/shutdown |
+| dev-sync overlay 3527 → 8 | ✅ Cargo target/, Tauri bundle, *.db*, .gradle/ wykluczone |
+| CI guard `overlay ≤ 50 plików` | ✅ nowy step w validate.yml — łapie przyszłe regresje |
+| `scripts/fresh-machine.sh` | ✅ one-liner do bring-up nowej maszyny przez `git clone && bash scripts/fresh-machine.sh` |
+| Dokumentacja | ✅ RUN.md + last-run-review.md + README.md + CLAUDE.md zaktualizowane |
+
+### Zmienione pliki (sesja 2026-04-30)
+
+```
+update-all.sh                          (askpass + reboot box)
+lib/common.sh                          (sudo wrapper, require_sudo no-op gdy READY)
+lib/orchestrator.sh                    (tee + ORCH_QUIET=1 fallback)
+lib/detect.sh                          (apt_inventory_cache_init + cached helpers)
+scripts/update-inventory.sh            (wywołuje cache init)
+scripts/brew/cleanup.sh                (proactive chown + retry-after-heal)
+scripts/snap/verify.sh                 (info zamiast warn)
+scripts/apt/apply.sh                   (upgradable list preview)
+scripts/fresh-machine.sh               (NEW — one-liner provisioning)
+app/backend/main.py                    (POST /system/reboot, /system/cancel-reboot)
+app/frontend/index.html                (banner + overview refresh button)
+app/frontend/app.js                    (cache map, rebootNow, invalidateCaches)
+app/frontend/style.css                 (.reboot-banner)
+app/frontend/i18n.js                   (PL+EN reboot strings)
+dev-sync/dev_sync_core.py              (Cargo/Tauri/Gradle/db excludes)
+.github/workflows/validate.yml         (overlay size guard step)
+RUN.md / README.md / CLAUDE.md         (one-liner + komendy)
+docs/last-run-review.md                (full session findings table)
+```
+
+### Walidacje uruchomione
+
+```text
+bash -n na wszystkich .sh                    OK
+python3 -c "import ast" dla wszystkich .py   OK
+python3 tests/validate_phase_json.py         232/232 PASS
+PYTHONDONTWRITEBYTECODE=1 python3 tests/test_dev_sync_safety.py   9/9 OK
+./update-all.sh --profile quick --no-notify  6/6 categories, 14.5s
+python3 dev-sync/dev_sync_export.py --dry-run   Files selected: 8
+bash scripts/fresh-machine.sh --check-only --no-service   wykonane do końca, exit 0
+```
+
+### Ryzyka / co warto zweryfikować
+
+1. **Askpass helper na crash** — jeśli `update-all.sh` zostanie zabity SIGKILL
+   (kill -9), helper w `$XDG_RUNTIME_DIR/ubuntu-aktualizacje/askpass-*.sh`
+   nie zostanie usunięty (trap nie złapie SIGKILL). Po stronie kontener
+   katalogu chmod 0700, ale plik zawiera hasło. Mitigation: katalog
+   `$XDG_RUNTIME_DIR` wygasa razem z user-session (logout); cleanup helper
+   na starcie również usuwa stare pliki — TODO follow-up.
+2. **Live `tee` w `set -e` master** — `${PIPESTATUS[0]}` używany do propagacji
+   exit code; przetestowane lokalnie, ale nietypowe shells mogą się różnić
+   (`bash` z `pipefail` jest OK).
+3. **`sudo()` shell function** w `lib/common.sh` — nadpisuje builtin tylko
+   gdy SUDO_ASKPASS jest ustawione, więc standalone phase scripts (poza
+   master orchestratorem) zachowują standardowe `sudo` → user prompt.
+4. **CI overlay guard** — używa heredoc minimal config; jeśli ktoś
+   doda nowy `provider=` w przyszłości, step trzeba rozszerzyć.
+
+### Zostało do zrobienia (deferred — nie ruszone)
+
+| Priorytet | Zadanie | Effort |
+|---|---|---|
+| Medium | Per-package live progress w `scripts/apt/apply.sh` (streaming `apt-get` z `--print-uris` lub `apt-get install` per package) | ~1 dzień |
+| Medium | libsecret/`secret-tool` migracja dla `.env.local` + tokenów rclone | ~0.5 dnia |
+| Low | Tauri reskin (REST API stable, można zrobić native shell) | 1-2 dni |
+| Low | Multi-host scheduler push (hosts.toml + central control panel) | 1-2 dni |
+| Low | Migracje DB w `app/backend/db.py` (obecnie `IF NOT EXISTS`) | 0.5 dnia |
+| Low | Frontend testy (Playwright) | 1 dzień |
+
+### Komendy do następnej sesji
+
+Pełen quick smoke po pull:
+```bash
+git pull
+bash scripts/fresh-machine.sh --check-only
+./update-all.sh --profile quick --no-notify
+python3 tests/validate_phase_json.py | tail -5
+python3 dev-sync/dev_sync_export.py --dry-run | grep "Files selected"
+```
+
+Pełen run z dashboardem:
+```bash
+bash systemd/user/install-dashboard.sh
+xdg-open http://127.0.0.1:8765
+# lub CLI:
+./update-all.sh --profile safe --snapshot
+```
+
+---
+
 ## Co zostawić po większej pracy
 - Krótka lista: decyzje, zmienione pliki, uruchomione walidacje, otwarte ryzyka.
 - Status: co jest gotowe, co wymaga kolejnego kroku.

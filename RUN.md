@@ -32,6 +32,18 @@ Wszystkie ścieżki względem `~/Dev_Env/Ubuntu_Aktualizacje`.
 
 ---
 
+## 0a. One-liner dla nowego komputera
+
+Po `git clone` na świeżym Ubuntu:
+
+```bash
+bash scripts/fresh-machine.sh
+```
+
+Wykonuje preflight → restore overlay (jeśli Proton dostępny) → `setup.sh` →
+dashboard venv → user-service → verify-state. Idempotentne; flagi:
+`--check-only`, `--dry-run`, `--no-dashboard`, `--no-service`, `--no-sync`.
+
 ## 0. Wymagania systemowe
 
 | Komponent | Wymagane | Skąd |
