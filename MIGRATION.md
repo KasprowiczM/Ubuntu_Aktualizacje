@@ -65,10 +65,19 @@ bash systemd/user/install-dashboard.sh
 
 **Option B — replace the old system-wide .deb:**
 ```bash
-sudo apt remove ubuntu-aktualizacje              # remove legacy 0.1.0
-bash packaging/build-deb.sh                      # produces dist/ascendo_<ver>_all.deb
-sudo dpkg -i dist/ascendo_*_all.deb              # installs Ascendo branding
+# Remove whichever legacy .deb is installed (name varies by build vintage):
+dpkg -l | grep -E '^ii\s+(ascendo|ubuntu-aktualizacje)\b' | awk '{print $2}' \
+  | xargs -r sudo apt remove -y
+
+# Build and install the new one (package name is `ascendo`):
+bash packaging/build-deb.sh                      # prints "install with: sudo dpkg -i …"
+sudo dpkg -i dist/ascendo_*_all.deb
 ```
+
+> The build script prints the exact install command at the end of its output
+> — copy-paste that line. Older builds may produce
+> `ubuntu-aktualizacje_<ver>_all.deb` instead; either filename works as long
+> as you pass the full path to `dpkg -i`.
 
 After either option, log out / log back in (or run
 `update-desktop-database ~/.local/share/applications` and
