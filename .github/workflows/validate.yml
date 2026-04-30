@@ -176,6 +176,18 @@ jobs:
             "app/install.sh"
             "docs/agents/hybrid-mode.md"
             "scripts/fresh-machine.sh"
+            "scripts/maintenance/prune-logs.sh"
+            "scripts/snapshot/restore.sh"
+            "app/backend/audit.py"
+            "app/backend/auth.py"
+            "app/backend/metrics.py"
+            "app/backend/report.py"
+            "app/backend/diff.py"
+            "packaging/build-deb.sh"
+            "packaging/deb/DEBIAN/control"
+            "packaging/deb/DEBIAN/postinst"
+            "packaging/deb/DEBIAN/prerm"
+            "packaging/deb/usr/bin/ubuntu-aktualizacje"
             "scripts/snapshot/create.sh"
             "scripts/snapshot/list.sh"
             "scripts/scheduler/install.sh"
@@ -282,6 +294,26 @@ jobs:
             bash scripts/apt/check.sh || true
           test -f "$tmpdir/runs/apt-check.json"
           python3 tests/validate_phase_json.py "$tmpdir/runs/apt-check.json"
+
+      - name: shellcheck — all .sh files
+        # Catches subtle shell bugs (unquoted vars, [[ vs [, $? after pipe,
+        # etc.) that `bash -n` can't see. Severity gate at "warning" so we
+        # don't fail on stylistic info notes. SC1090/SC1091 ignored: every
+        # phase script `source`s lib/*.sh by absolute path which shellcheck
+        # can't follow without --external-sources.
+        run: |
+          sudo apt-get install -y -q shellcheck
+          set +e
+          fail=0
+          while IFS= read -r f; do
+            shellcheck --severity=warning --exclude=SC1090,SC1091,SC2086 "$f" || fail=$((fail+1))
+          done < <(find . -name '*.sh' -not -path './.git/*' -not -path './app/.venv/*' \
+                          -not -path './app/tauri/src-tauri/target/*' | sort)
+          if [[ $fail -gt 0 ]]; then
+            echo "❌ shellcheck reported $fail file(s) with warnings"
+            exit 1
+          fi
+          echo "✔ shellcheck clean"
 
       - name: bats — emitter, orchestrator, phase contract
         run: |

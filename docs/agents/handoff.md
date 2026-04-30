@@ -1,5 +1,146 @@
 # Handoff
 
+## 2026-05-01 — Roadmap implementation (Etap 5)
+
+### Stan na koniec sesji
+
+Z handoffowego roadmapu (P0+P1) zrealizowane i pushed:
+
+| ID | Feature | Status | Commit |
+|---|---|---|---|
+| A1 | `.deb` package + postinst | ✅ `packaging/build-deb.sh` produkuje dystrybucyjny pakiet, `/usr/bin/ubuntu-aktualizacje` shim z subkomendami |
+| A2 | First-run wizard | ✅ modal w dashboardzie + `/onboarding/{state,complete}` endpoints |
+| B1 | Run diff view | ✅ `GET /runs/diff?a=X&b=Y` (`app/backend/diff.py`) |
+| B2 | Notification routing | ✅ `scripts/notify.sh` rozszerzony o ntfy/Slack/email/Telegram |
+| B3 | Snapshot rollback wired | ✅ `scripts/snapshot/restore.sh` + `POST /snapshots/restore` |
+| B4 | Markdown report export | ✅ `GET /runs/{id}/report.md` (`app/backend/report.py`) |
+| B5 | Per-package live progress (apt:apply) | ✅ awk parser + per-package JSON items |
+| C1 | Token auth middleware | ✅ `app/backend/auth.py` + `/auth/{status,generate-token,revoke-token}` |
+| C2 | libsecret migration | ✅ już istniało (`scripts/secrets/migrate-to-libsecret.sh`) |
+| C3 | Audit log | ✅ `app/backend/audit.py` zapis do `~/.local/state/.../audit.log`, `GET /audit` |
+| D1 | Prometheus `/metrics` | ✅ `app/backend/metrics.py`, dep-free text format 0.0.4 |
+| D2 | Log retention daemon | ✅ `scripts/maintenance/prune-logs.sh` keep N/days policy |
+| D4 | DB migrations versioned | ✅ już istniało (`app/backend/migrations.py` + schema_migrations table) |
+| G2 | shellcheck w CI | ✅ nowy step w validate.yml (severity=warning, SC1090/91/2086 ignored) |
+
+### Nowe pliki
+
+```
+app/backend/audit.py          (audit log writer)
+app/backend/auth.py           (bearer token middleware)
+app/backend/metrics.py        (Prometheus exporter)
+app/backend/report.py         (Markdown run report)
+app/backend/diff.py           (run-vs-run package diff)
+scripts/snapshot/restore.sh   (timeshift/etckeeper restore)
+scripts/maintenance/prune-logs.sh  (log retention)
+packaging/build-deb.sh        (deb builder)
+packaging/deb/DEBIAN/control      (deb metadata)
+packaging/deb/DEBIAN/postinst     (post-install hint)
+packaging/deb/DEBIAN/prerm        (stop user services)
+packaging/deb/usr/bin/ubuntu-aktualizacje (CLI shim)
+```
+
+### Zmodyfikowane
+
+```
+app/backend/main.py           (+13 endpoints, audit hooks, middleware mount)
+app/frontend/index.html       (wizard modal)
+app/frontend/app.js           (maybeShowWizard, finishWizard)
+scripts/notify.sh             (ntfy/Slack/email/Telegram channels)
+scripts/apt/apply.sh          (streaming apt-get + per-package items)
+.github/workflows/validate.yml (shellcheck step + new required files)
+RUN.md                        (Etap 5 changelog)
+```
+
+### Walidacje uruchomione
+
+```text
+bash -n na wszystkich .sh                          OK
+python3 ast parse na wszystkich nowych .py         OK
+TestClient: 13 GET endpoints (incl. /metrics, /audit, /auth/status,
+            /onboarding/state) → 200                OK
+metrics.render() — 36 lines, contains ubuntu_aktualizacje      OK
+report.render_run_id() na ostatnim runie — 4171 znaków         OK
+python3 tests/validate_phase_json.py               266/266 PASS
+PYTHONDONTWRITEBYTECODE=1 python3 tests/test_dev_sync_safety.py  9/9 OK
+python3 dev-sync/dev_sync_export.py --dry-run      Files selected: 8
+```
+
+### Ryzyka / co zweryfikować
+
+1. **`.deb` packaging** zbudowany konstrukcyjnie ale **nie testowany pełnym
+   build/install loop** — wymaga `dpkg-deb` i fizycznej instalacji żeby
+   sprawdzić, że `/usr/bin/ubuntu-aktualizacje` resolve'uje się poprawnie
+   po `dpkg -i`.
+2. **Token auth middleware** dodany do `app.add_middleware(...)`. Gdy plik
+   tokenu nie istnieje, middleware jest no-op. Test: `POST /auth/generate-token`
+   → kolejny request bez Authorization powinien zwrócić 401.
+3. **apt:apply streaming** — `Dpkg::Use-Pty=0` jest wymagane żeby parsować
+   `Setting up X` po linijce; testowane lokalnie tylko przez `bash -n`.
+   Prawdziwy run apply zweryfikuje czy parser łapie wszystkie pakiety.
+4. **Slack webhook payload** — escapes `*` jako Markdown bold; jeśli msg
+   zawiera niezamknięte `*`, Slack pokaże mismatch. Best-effort, nie krytyczne.
+5. **Log retention** użyty `--dry-run` zwrócił `kept=23, removed=13` — prune
+   policy działa, ale przed pierwszym apply warto zerknąć `ls -1dt logs/runs/`.
+6. **shellcheck w CI** — severity=warning, ale niektóre stare skrypty mogą
+   mieć nieczyste warstwy (np. `[ ` zamiast `[[ `). Pierwszy run CI pokaże
+   listę; może wymagać `--exclude=SC2034` itd.
+
+### Zostało (nie ruszane w tej sesji — zwykle za duże lub mniej leverage)
+
+| Priorytet | ID | Zadanie | Effort |
+|---|---|---|---|
+| P1 | A3 | Snap package (`snapcraft.yaml`) | 2 dni |
+| P2 | A4 | AppImage dla Tauri shell | 0.5 dnia |
+| P2 | A5 | Homebrew tap | 0.5 dnia |
+| P3 | B6 | Toast/snackbar zamiast `ui.status()` | 0.3 dnia |
+| P3 | B7 | Mobile-friendly layout | 0.3 dnia |
+| P3 | C4 | CSP/CORS hardening | 0.2 dnia |
+| P2 | D3 | Run timeline Gantt view | 1 dzień |
+| P1 | E1 | Push-mode SSH multi-host runs | 2 dni |
+| P2 | E2 | Central history aggregation | 2 dni |
+| P3 | E3 | Drift detection między hostami | 1 dzień |
+| P2 | F1 | Fedora/RHEL `dnf` adapter | 2 dni |
+| P3 | F2-3 | Arch + macOS adapters | 2-3 dni |
+| P1 | G1 | Frontend Playwright e2e | 1 dzień |
+| P3 | G3 | Coverage reporting | 0.5 dnia |
+| P2 | i18n | Klucze PL/EN dla wizard.* (obecnie tylko EN inline) | 0.2 dnia |
+
+### Komendy do następnej sesji
+
+```bash
+git pull
+bash scripts/fresh-machine.sh --check-only
+./update-all.sh --profile quick --no-notify
+
+# Zbuduj .deb (wymaga dpkg-deb)
+bash packaging/build-deb.sh
+ls -la dist/
+
+# Test endpointów po pull
+app/.venv/bin/python -c "
+import sys; sys.path.insert(0,'.')
+from app.backend.main import app
+from fastapi.testclient import TestClient
+c = TestClient(app)
+print(c.get('/metrics').status_code, c.get('/audit').status_code)
+"
+
+# Smoke test prune-logs
+bash scripts/maintenance/prune-logs.sh --dry-run
+
+# Włącz token auth (LAN-safe dashboard)
+curl -X POST http://127.0.0.1:8765/auth/generate-token | jq .
+# Wyłącz:
+curl -X POST http://127.0.0.1:8765/auth/revoke-token
+
+# Wyeksportuj raport runa
+LATEST=$(ls -t logs/runs/ | head -1)
+curl -s "http://127.0.0.1:8765/runs/$LATEST/report.md" | head -40
+```
+
+---
+
 ## 2026-04-30 — UX/perf overhaul + portability (Etap 4)
 
 ### Stan na koniec sesji

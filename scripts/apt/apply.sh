@@ -160,13 +160,44 @@ if (( ${#_upgradable[@]} > 0 )); then
 fi
 
 upgrade_rc=0
-print_step "apt-get upgrade"
-if sudo apt-get upgrade "${APT_OPTS[@]}" >> "${LOG_FILE}" 2>&1; then
-    print_ok
+print_step "apt-get upgrade (streaming)"
+echo
+# Stream apt output through tee to BOTH the per-phase log and a parser that
+# emits one human-friendly line per package, plus a JSON sidecar item.
+# Dpkg::Progress-Fancy=0 keeps lines plain (no terminal-resize escape codes).
+set +e
+sudo apt-get upgrade "${APT_OPTS[@]}" \
+    -o Dpkg::Progress-Fancy=0 \
+    -o Dpkg::Use-Pty=0 2>&1 \
+| tee -a "${LOG_FILE}" \
+| awk -v total=${#_upgradable[@]} '
+    BEGIN { i = 0 }
+    /^Setting up / {
+        i++
+        # capture: "Setting up firefox (132.0+build1-0ubuntu1) ..."
+        match($0, /^Setting up ([^ ]+) \(([^)]+)\)/, m)
+        if (m[1] != "") {
+            printf "  [%d/%d] %s → %s\n", i, total, m[1], m[2]
+            fflush()
+        }
+    }
+    /^Unpacking /  { fflush() }
+    /^Removing /   { fflush() }
+'
+upgrade_rc=${PIPESTATUS[0]}
+set -e
+if [[ $upgrade_rc -eq 0 ]]; then
+    print_ok "apt-get upgrade complete"
     json_add_item id="apt:upgrade" action="upgrade" result="ok"
     json_count_ok
+    # Per-package items (best-effort: parse the log we just wrote).
+    while IFS= read -r line; do
+        pkg=$(echo "$line" | sed -nE 's/^Setting up ([^ ]+) \(([^)]+)\).*/\1|\2/p')
+        [[ -z "$pkg" ]] && continue
+        name="${pkg%%|*}"; ver="${pkg##*|}"
+        json_add_item id="apt:upgrade:${name}" action="upgrade" to="${ver}" result="ok" || true
+    done < <(grep '^Setting up ' "${LOG_FILE}" 2>/dev/null || true)
 else
-    upgrade_rc=$?
     print_warn "apt-get upgrade non-zero (${upgrade_rc})"
     if grep -qiE "nvidia-dkms|dkms.*nvidia" "${LOG_FILE}" 2>/dev/null; then
         json_add_diag warn APT-DKMS-NVIDIA "upgrade hit NVIDIA DKMS build error"

@@ -19,10 +19,16 @@ from . import (
     sudo as sudo_mod,
     hosts as hosts_mod,
     inventory as inv_mod,
+    audit as audit_mod,
+    auth as auth_mod,
+    metrics as metrics_mod,
+    report as report_mod,
+    diff as diff_mod,
 )
 from .runner import get_runner
 
 app = FastAPI(title="Ubuntu_Aktualizacje Dashboard", version="0.1.0")
+app.add_middleware(auth_mod.TokenAuthMiddleware)
 
 
 class StartRunRequest(BaseModel):
@@ -111,6 +117,10 @@ async def start_run(req: StartRunRequest) -> dict[str, Any]:
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
+    audit_mod.log("run.start", details={
+        "run_id": h.run_id, "profile": req.profile, "only": req.only,
+        "phase": req.phase, "dry_run": req.dry_run,
+    })
     return {"run_id": h.run_id, "started_at": h.started_at}
 
 
@@ -421,6 +431,132 @@ def sync_export(dry_run: bool = True) -> dict[str, Any]:
         "stderr": res.stderr[-4000:],
         "exit_code": res.returncode,
     }
+
+
+@app.get("/metrics", response_class=FileResponse)
+def prometheus_metrics() -> Any:
+    """Prometheus text-format metrics for fleet monitoring."""
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(metrics_mod.render(), media_type="text/plain; version=0.0.4")
+
+
+@app.get("/audit")
+def audit_tail(limit: int = 200) -> dict[str, Any]:
+    return {"records": audit_mod.tail(limit=limit)}
+
+
+@app.get("/auth/status")
+def auth_status() -> dict[str, Any]:
+    return {"token_configured": auth_mod.read_token() is not None,
+            "token_path": str(auth_mod.token_path())}
+
+
+@app.post("/auth/generate-token")
+def auth_generate_token() -> dict[str, Any]:
+    token = auth_mod.generate_and_store_token()
+    audit_mod.log("auth.token.generate", details={"path": str(auth_mod.token_path())})
+    return {"token": token, "path": str(auth_mod.token_path())}
+
+
+@app.post("/auth/revoke-token")
+def auth_revoke_token() -> dict[str, Any]:
+    ok = auth_mod.revoke_token()
+    audit_mod.log("auth.token.revoke", details={"ok": ok})
+    return {"ok": ok}
+
+
+@app.get("/runs/{run_id}/report.md", response_class=FileResponse)
+def run_report_md(run_id: str) -> Any:
+    from fastapi.responses import PlainTextResponse
+    md = report_mod.render_run_id(run_id, config.runs_dir())
+    if md is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    return PlainTextResponse(md, media_type="text/markdown")
+
+
+@app.get("/runs/diff")
+def runs_diff(a: str, b: str) -> dict[str, Any]:
+    runs_dir = config.runs_dir()
+    pa = runs_dir / a
+    pb = runs_dir / b
+    if not pa.exists() or not pb.exists():
+        raise HTTPException(status_code=404, detail="run(s) not found")
+    return diff_mod.diff_runs(pa, pb)
+
+
+# ── Onboarding state ─────────────────────────────────────────────────────────
+@app.get("/onboarding/state")
+def onboarding_state() -> dict[str, Any]:
+    import os
+    base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+    p = Path(base) / "ubuntu-aktualizacje" / "onboarded.json"
+    return {"onboarded": p.exists(), "path": str(p)}
+
+
+@app.post("/onboarding/complete")
+def onboarding_complete(payload: dict[str, Any]) -> dict[str, Any]:
+    import os, json as _json, datetime as _dt
+    base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+    p = Path(base) / "ubuntu-aktualizacje" / "onboarded.json"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "completed_at": _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "choices": payload,
+    }
+    p.write_text(_json.dumps(record, indent=2), encoding="utf-8")
+    audit_mod.log("onboarding.complete", details=payload)
+    return {"ok": True, "path": str(p)}
+
+
+# ── Snapshot restore ─────────────────────────────────────────────────────────
+@app.get("/snapshots")
+def snapshots_list() -> dict[str, Any]:
+    import subprocess
+    res = subprocess.run(
+        ["bash", str(config.repo_root() / "scripts" / "snapshot" / "list.sh")],
+        capture_output=True, text=True,
+    )
+    return {"ok": res.returncode == 0, "raw": res.stdout, "stderr": res.stderr.strip()}
+
+
+@app.post("/snapshots/restore")
+def snapshots_restore(payload: dict[str, Any]) -> dict[str, Any]:
+    import os, subprocess
+    snap_id = (payload or {}).get("id")
+    confirm = (payload or {}).get("confirm")
+    if not snap_id or confirm != "RESTORE":
+        raise HTTPException(status_code=400, detail={
+            "code": "CONFIRM-REQUIRED",
+            "msg": "send {\"id\":\"<snapshot>\",\"confirm\":\"RESTORE\"}",
+        })
+    st = sudo_mod.status()
+    if not st.cached:
+        raise HTTPException(status_code=401, detail={"code": "SUDO-REQUIRED",
+            "msg": "POST /sudo/auth first"})
+    helper = sudo_mod.make_askpass()
+    env = os.environ.copy()
+    env["SUDO_ASKPASS"] = str(helper)
+    cmd = ["bash", str(config.repo_root() / "scripts" / "snapshot" / "restore.sh"), snap_id]
+    res = subprocess.run(cmd, env=env, capture_output=True, text=True)
+    audit_mod.log("snapshot.restore", details={"id": snap_id, "rc": res.returncode})
+    return {"ok": res.returncode == 0, "stdout": res.stdout[-2000:],
+            "stderr": res.stderr[-2000:], "exit_code": res.returncode}
+
+
+# ── Notification settings (test send) ────────────────────────────────────────
+@app.post("/notify/test")
+def notify_test(payload: dict[str, Any]) -> dict[str, Any]:
+    import subprocess
+    cmd = [
+        "bash", str(config.repo_root() / "scripts" / "notify.sh"),
+        "--title", payload.get("title", "Ubuntu_Aktualizacje test"),
+        "--time",  payload.get("time",  "0m 0s"),
+    ]
+    if payload.get("reboot"):
+        cmd.append("--reboot")
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    audit_mod.log("notify.test", details={"rc": res.returncode})
+    return {"ok": res.returncode == 0, "stdout": res.stdout, "stderr": res.stderr}
 
 
 @app.post("/system/reboot")

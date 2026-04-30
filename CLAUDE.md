@@ -12,6 +12,11 @@ Obsługuje APT, Snap, Homebrew, npm, pip/pipx, Flatpak, sterowniki NVIDIA i firm
 ```bash
 ./update-all.sh                        # pełna aktualizacja (full profile, NVIDIA held)
                                        # sudo password ONCE — askpass dla wszystkich faz
+bash packaging/build-deb.sh            # buduje dist/ubuntu-aktualizacje_<ver>_all.deb
+bash scripts/maintenance/prune-logs.sh --keep 50 --days 30  # log retention
+curl -X POST http://127.0.0.1:8765/auth/generate-token       # opt-in token auth
+curl http://127.0.0.1:8765/metrics                           # Prometheus
+curl http://127.0.0.1:8765/runs/<id>/report.md               # MD raport
 ./update-all.sh --profile quick        # tylko check (read-only sweep, ~15s)
 ./update-all.sh --profile safe         # bez drivers/firmware
 ./update-all.sh --dry-run              # podgląd bez wykonania

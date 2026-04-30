@@ -72,3 +72,80 @@ else
     echo "$MSG" | sed 's/\\n/\n/g'
     echo ""
 fi
+
+# ── Optional remote notification channels (best-effort, non-fatal) ───────────
+# Reads endpoint URLs from settings.json (UI Settings panel) and falls back
+# to env vars so unattended/CI runs can route notifications too.
+
+SETTINGS_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/ubuntu-aktualizacje/settings.json"
+_get_setting() {
+    # _get_setting <jq-path> — prints value or empty
+    [[ -f "$SETTINGS_FILE" ]] || return 0
+    python3 -c "
+import json, sys
+try:
+    d = json.load(open('${SETTINGS_FILE}'))
+except Exception:
+    sys.exit(0)
+keys = '$1'.split('.')
+v = d
+for k in keys:
+    if not isinstance(v, dict): sys.exit(0)
+    v = v.get(k)
+    if v is None: sys.exit(0)
+print(v)
+" 2>/dev/null
+}
+
+NTFY_URL="${UA_NTFY_URL:-$(_get_setting notifications.ntfy_url)}"
+SLACK_URL="${UA_SLACK_WEBHOOK:-$(_get_setting notifications.slack_webhook)}"
+EMAIL_TO="${UA_EMAIL_TO:-$(_get_setting notifications.email_to)}"
+TG_BOT="${UA_TELEGRAM_BOT:-$(_get_setting notifications.telegram_bot_token)}"
+TG_CHAT="${UA_TELEGRAM_CHAT:-$(_get_setting notifications.telegram_chat_id)}"
+
+# ntfy.sh — simplest: POST plaintext body
+if [[ -n "$NTFY_URL" ]] && command -v curl >/dev/null 2>&1; then
+    curl -fsS -X POST \
+        -H "Title: ${TITLE}" \
+        -H "Priority: ${URGENCY}" \
+        -d "$(printf '%b' "$MSG")" \
+        "$NTFY_URL" >/dev/null 2>&1 || true
+fi
+
+# Slack incoming webhook
+if [[ -n "$SLACK_URL" ]] && command -v curl >/dev/null 2>&1; then
+    SLACK_BODY="$(printf '%b' "$MSG")"
+    SLACK_PAYLOAD=$(SLACK_TITLE="$TITLE" SLACK_BODY="$SLACK_BODY" python3 -c '
+import json, os
+title = os.environ.get("SLACK_TITLE", "")
+body  = os.environ.get("SLACK_BODY", "")
+print(json.dumps({"text": f"*{title}*\n{body}"}))
+' 2>/dev/null)
+    [[ -n "$SLACK_PAYLOAD" ]] && curl -fsS -X POST \
+        -H 'content-type: application/json' \
+        --data "$SLACK_PAYLOAD" \
+        "$SLACK_URL" >/dev/null 2>&1 || true
+fi
+
+# Email via local mailx/sendmail
+if [[ -n "$EMAIL_TO" ]]; then
+    if command -v mail >/dev/null 2>&1; then
+        printf '%b\n' "$MSG" | mail -s "$TITLE" "$EMAIL_TO" >/dev/null 2>&1 || true
+    elif command -v sendmail >/dev/null 2>&1; then
+        {
+            printf 'Subject: %s\n' "$TITLE"
+            printf 'To: %s\n\n'    "$EMAIL_TO"
+            printf '%b\n' "$MSG"
+        } | sendmail "$EMAIL_TO" >/dev/null 2>&1 || true
+    fi
+fi
+
+# Telegram bot
+if [[ -n "$TG_BOT" && -n "$TG_CHAT" ]] && command -v curl >/dev/null 2>&1; then
+    TG_MSG="$(printf '*%s*\n%b' "$TITLE" "$MSG")"
+    curl -fsS -X POST \
+        "https://api.telegram.org/bot${TG_BOT}/sendMessage" \
+        --data-urlencode "chat_id=${TG_CHAT}" \
+        --data-urlencode "text=${TG_MSG}" \
+        --data-urlencode "parse_mode=Markdown" >/dev/null 2>&1 || true
+fi

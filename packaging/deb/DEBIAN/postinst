@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Post-install: leave the heavy bring-up (Python venv, dashboard service,
+# Proton overlay restore) to the operator's first interactive run of
+# `ubuntu-aktualizacje fresh`. We only fix permissions and print a hint.
+set -e
+
+INSTALL_DIR=/opt/ubuntu-aktualizacje
+chmod -R u+rwX,go+rX "$INSTALL_DIR" 2>/dev/null || true
+chmod +x "$INSTALL_DIR"/update-all.sh \
+         "$INSTALL_DIR"/scripts/*.sh \
+         "$INSTALL_DIR"/scripts/*/*.sh 2>/dev/null || true
+
+# /usr/bin/ubuntu-aktualizacje shim is already installed by dpkg from the
+# package tree (see usr/bin/ubuntu-aktualizacje below).
+
+cat <<EOF
+─────────────────────────────────────────────────────────────────
+  Ubuntu_Aktualizacje installed at $INSTALL_DIR
+
+  Next steps (run as your normal user, NOT root):
+    ubuntu-aktualizacje fresh           # full bring-up incl. dashboard
+    ubuntu-aktualizacje                 # alias for update-all.sh
+    ubuntu-aktualizacje dashboard       # start dashboard ad-hoc
+
+  Dashboard URL after install: http://127.0.0.1:8765
+─────────────────────────────────────────────────────────────────
+EOF
+exit 0

@@ -1,0 +1,16 @@
+Package: ubuntu-aktualizacje
+Version: 0.2.0
+Section: admin
+Priority: optional
+Architecture: all
+Depends: bash (>= 5.0), python3 (>= 3.11), python3-venv, git, flock, sudo, apt
+Recommends: timeshift | etckeeper, snapd, fwupd, libsecret-tools
+Maintainer: Mateusz Kasprowicz <gaipro.mk@gmail.com>
+Homepage: https://github.com/KasprowiczM/Ubuntu_Aktualizacje
+Description: One-command Ubuntu system update manager with dashboard
+ Ubuntu_Aktualizacje is a hybrid CLI + local FastAPI dashboard that drives
+ a 5-phase per-category update pipeline (apt, snap, brew, npm, pip,
+ flatpak, drivers, inventory). Each run emits structured JSON sidecars
+ (schema v1) so the state of every update is auditable. Includes
+ single-prompt sudo, live progress, snapshot integration (timeshift /
+ etckeeper), Prometheus /metrics, and Markdown report export.

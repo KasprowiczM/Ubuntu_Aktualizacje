@@ -23,6 +23,32 @@
   </header>
 
   <main>
+    <!-- First-run wizard modal -->
+    <div id="wizard-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-card" style="max-width:520px">
+        <h3 data-i18n="wizard.title">Welcome to Ubuntu_Aktualizacje</h3>
+        <p class="dim" data-i18n="wizard.intro">A few quick choices and you're done.</p>
+        <div id="wizard-step1">
+          <h4 data-i18n="wizard.profile_q">Pick your default profile</h4>
+          <label><input type="radio" name="wiz-profile" value="quick"> <b>quick</b> — read-only check (~15s)</label><br>
+          <label><input type="radio" name="wiz-profile" value="safe" checked> <b>safe</b> — full pipeline, no driver changes</label><br>
+          <label><input type="radio" name="wiz-profile" value="full"> <b>full</b> — everything incl. NVIDIA/firmware</label>
+        </div>
+        <div id="wizard-step2" style="margin-top:0.8rem">
+          <h4 data-i18n="wizard.schedule_q">Schedule a weekly run?</h4>
+          <label><input type="checkbox" id="wiz-schedule" checked> <span data-i18n="wizard.schedule_on">Yes, every Sunday 03:00</span></label>
+        </div>
+        <div id="wizard-step3" style="margin-top:0.8rem">
+          <h4 data-i18n="wizard.snapshot_q">Snapshot before each apply?</h4>
+          <label><input type="checkbox" id="wiz-snapshot" checked> <span data-i18n="wizard.snapshot_on">Yes (timeshift / etckeeper fallback)</span></label>
+        </div>
+        <div class="modal-actions">
+          <button id="wizard-finish" data-i18n="wizard.finish">Finish</button>
+          <button id="wizard-skip" type="button" class="secondary" data-i18n="wizard.skip">Skip</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Reboot banner (shown only when /var/run/reboot-required) -->
     <div id="reboot-banner" class="reboot-banner hidden">
       <span class="reboot-banner-icon">⚠</span>

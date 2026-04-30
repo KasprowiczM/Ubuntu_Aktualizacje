@@ -88,6 +88,42 @@ const ui = {
     window.INV_SUMMARY = null;
   },
 
+  async maybeShowWizard() {
+    try {
+      const s = await api.get("/onboarding/state");
+      if (s.onboarded) return;
+      $("#wizard-modal").classList.remove("hidden");
+    } catch {}
+  },
+
+  async finishWizard(skip) {
+    const modal = $("#wizard-modal");
+    const choices = skip ? {skipped: true} : {
+      default_profile: (document.querySelector("input[name=wiz-profile]:checked") || {}).value || "safe",
+      schedule:        $("#wiz-schedule").checked,
+      snapshot_before_apply: $("#wiz-snapshot").checked,
+    };
+    try {
+      await api.post("/onboarding/complete", choices);
+      if (!skip) {
+        // Persist into settings.json so next sessions honour the choices.
+        const cur = window.SETTINGS_CACHE || (await api.get("/settings"));
+        const merged = {
+          ...cur,
+          default_profile: choices.default_profile,
+          snapshot_before_apply: !!choices.snapshot_before_apply,
+        };
+        await fetch("/settings", {method:"PUT", headers:{"content-type":"application/json"},
+                                  body: JSON.stringify(merged)});
+        if (choices.schedule) {
+          await api.post("/scheduler/install", {calendar:"Sun *-*-* 03:00:00",
+                                                profile: choices.default_profile});
+        }
+      }
+    } catch (e) { console.warn("wizard:", e); }
+    modal.classList.add("hidden");
+  },
+
   async checkRebootBanner() {
     try {
       const p = await api.get("/preflight");
@@ -645,6 +681,12 @@ $("#sudo-cancel").addEventListener("click", () => sudoMgr.close(false));
 sudoMgr.refreshIndicator();
 setInterval(() => sudoMgr.refreshIndicator(), 30000);
 
+// First-run wizard
+document.addEventListener("click", e => {
+  if (e.target.id === "wizard-finish") ui.finishWizard(false);
+  if (e.target.id === "wizard-skip")   ui.finishWizard(true);
+});
+
 // Reboot banner
 document.addEventListener("click", e => {
   if (e.target.id === "reboot-now-btn")     ui.rebootNow();
@@ -741,6 +783,7 @@ async function bootstrap() {
   const start = location.hash.replace("#", "") || "overview";
   ui.show(start);
   ui.checkRebootBanner();
+  ui.maybeShowWizard();
   // React to OS theme switch when user picks "auto"
   if (window.matchMedia) {
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {

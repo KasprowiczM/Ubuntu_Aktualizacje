@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Thin shim → dispatches to the right script under /opt/ubuntu-aktualizacje.
+# Subcommands:
+#   (default)            → update-all.sh
+#   fresh                → scripts/fresh-machine.sh
+#   dashboard            → run dashboard ad-hoc (uses app/.venv if present)
+#   schedule [args...]   → scripts/scheduler/install.sh
+#   snapshot list|create → scripts/snapshot/{list,create}.sh
+set -euo pipefail
+ROOT=/opt/ubuntu-aktualizacje
+case "${1:-}" in
+    fresh)        shift; exec bash "$ROOT/scripts/fresh-machine.sh" "$@" ;;
+    schedule)     shift; exec bash "$ROOT/scripts/scheduler/install.sh" "$@" ;;
+    snapshot)     shift; case "${1:-list}" in
+                      list)   exec bash "$ROOT/scripts/snapshot/list.sh" ;;
+                      create) shift; exec bash "$ROOT/scripts/snapshot/create.sh" "$@" ;;
+                      restore) shift; exec bash "$ROOT/scripts/snapshot/restore.sh" "$@" ;;
+                  esac ;;
+    dashboard)
+        if [[ -x "$ROOT/app/.venv/bin/python" ]]; then
+            cd "$ROOT" && exec "$ROOT/app/.venv/bin/python" -m app.backend
+        fi
+        bash "$ROOT/app/install.sh" >&2
+        cd "$ROOT" && exec "$ROOT/app/.venv/bin/python" -m app.backend ;;
+    "" | --*) exec bash "$ROOT/update-all.sh" "$@" ;;
+    *)        exec bash "$ROOT/update-all.sh" "$@" ;;
+esac

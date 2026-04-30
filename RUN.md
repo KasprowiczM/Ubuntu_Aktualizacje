@@ -3,6 +3,48 @@
 Pełen przewodnik dla nowego operatora — od zera do działającego dashboardu.
 Wszystkie ścieżki względem `~/Dev_Env/Ubuntu_Aktualizacje`.
 
+## Co nowego (2026-05-01 — Etap 5)
+
+- **Roadmap zrealizowany**: Top 5 + większość P1 z handoffu wdrożone.
+- **`.deb` package** (`packaging/`): `bash packaging/build-deb.sh` produkuje
+  `dist/ubuntu-aktualizacje_<ver>_all.deb`. Po `sudo dpkg -i` mamy
+  `/usr/bin/ubuntu-aktualizacje` (subkomendy: `fresh`, `dashboard`,
+  `schedule`, `snapshot list|create|restore`, default = `update-all.sh`).
+- **First-run wizard** w dashboardzie — modal pokazywany gdy
+  `~/.config/ubuntu-aktualizacje/onboarded.json` brak. Wybór profilu +
+  schedule + snapshot toggle, zapisuje do `settings.json` i opcjonalnie
+  instaluje systemd timer.
+- **Token auth** (opt-in): `POST /auth/generate-token` zapisuje
+  `~/.config/ubuntu-aktualizacje/auth.token` (chmod 0600). Jeśli token
+  istnieje — wszystkie endpointy (poza `/health` + assets) wymagają
+  `Authorization: Bearer …`. Pozwala bezpiecznie wystawić dashboard na LAN.
+- **Audit log** — każda akcja mutująca (run.start, sync.export,
+  system.reboot, scheduler.install, snapshot.restore, auth.token.*,
+  notify.test, onboarding.complete) zapisuje JSONL w
+  `~/.local/state/ubuntu-aktualizacje/audit.log`. `GET /audit` zwraca tail.
+- **Prometheus `/metrics`** — text format, dependency-free, eksportuje
+  `ubuntu_aktualizacje_run_total{status}`,
+  `..._last_run_duration_seconds{status}`,
+  `..._phase_summary{category,phase,bucket}`,
+  `..._inventory_totals{status}`, `..._reboot_required`.
+- **Snapshot rollback** wpięty: `POST /snapshots/restore` z
+  `{"id":"...","confirm":"RESTORE"}` → `scripts/snapshot/restore.sh`
+  (timeshift→etckeeper fallback).
+- **Run diff**: `GET /runs/diff?a=<id>&b=<id>` zwraca
+  `{added, removed, upgraded, downgraded, unchanged}` per pakiet.
+- **Markdown report**: `GET /runs/{id}/report.md` — self-contained MD
+  z run summary, per-phase counts, diagnostyką, advisories.
+- **Notification routing** w `scripts/notify.sh`: ntfy.sh, Slack webhook,
+  email (mail/sendmail), Telegram bot. URLs/tokeny z
+  `settings.json::notifications.*` lub env (`UA_NTFY_URL`, `UA_SLACK_WEBHOOK`,
+  `UA_EMAIL_TO`, `UA_TELEGRAM_{BOT,CHAT}`).
+- **Per-package live progress w apt:apply** — `tee` + awk parsuje
+  `Setting up <pkg> (<ver>)` i printuje `[N/total] pkg → ver` na bieżąco.
+  Każdy pakiet trafia jako osobny item do JSON sidecara.
+- **Log retention**: `bash scripts/maintenance/prune-logs.sh --keep 50 --days 30`
+  (idempotentne, `--dry-run` możliwe).
+- **shellcheck w CI** — `--severity=warning`, ignoruje SC1090/91/2086.
+
 ## Co nowego (2026-04-30)
 
 - **Sudo: jedno hasło na cały run.** `update-all.sh` pyta o hasło raz, tworzy
