@@ -13,6 +13,12 @@ chmod +x "$INSTALL_DIR"/update-all.sh \
 # /usr/bin/ascendo-ubuntu shim is already installed by dpkg from the
 # package tree.
 
+# Bootstrap system-wide python venv so normal users can run the dashboard without permission errors
+if [[ ! -x "${INSTALL_DIR}/app/.venv/bin/python" ]]; then
+    echo "── Bootstrapping Python venv in ${INSTALL_DIR}/app/.venv (as root)"
+    bash "${INSTALL_DIR}/app/install.sh"
+fi
+
 # Refresh icon + desktop databases so the Ascendo entry shows in app menus.
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
