@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-05-29 (Etap 13) — Port Conflict Resolution & Dev-Sync Mount Fix
+
+### Port Collision Fix
+- Resolved port conflict with cross-platform version of Ascendo (`Dev_Env/Ascendo` running on default port `8765`).
+- Moved this local Ubuntu dashboard web service (`Ubuntu_Aktualizacje`) default port to `8766` across all configuration files, launcher scripts, HTML templates, Tauri files, and systemd user services.
+- Successfully verified both services running side-by-side:
+  - `127.0.0.1:8765` for the cross-platform Ascendo app.
+  - `127.0.0.1:8766` for this local `Ubuntu_Aktualizacje` dashboard.
+
+### Dev-Sync Rclone Mount Fix
+- **Problem**: The system-level rclone (`v1.60.1-DEV`) lacked native support for `type = protondrive`, causing the systemd-user unit `rclone-proton.service` to fail with: `didn't find backend called "protondrive"`. This caused the private overlay verification to fail.
+- **Fix**:
+  1. Installed the modern pre-built rclone binary (`v1.66.0`) locally at `~/.local/bin/rclone` (user-space, zero-root).
+  2. Updated the systemd user service `~/.config/systemd/user/rclone-proton.service` to use `%h/.local/bin/rclone mount` instead of `/usr/bin/rclone`.
+  3. Reloaded systemd user daemon and restarted the mount service.
+- **Result**: The Proton Drive mount successfully activated and `/home/mk/ProtonDrive/Dev_Env/Ubuntu_Aktualizacje` became readable, fully passing the dev-sync consistency audit.
+
+### Test & Validation Fixes
+- **Problem**: `tests/validate_phase_json.py` recursively scanned all `.json` files in `logs/runs/` and crashed on `health.json` (the new health check report) because it did not conform to the `phase-result.schema.json` schema.
+- **Fix**: Updated `tests/validate_phase_json.py` to skip `health.json` alongside `run.json` during scanning. All 230+ sidecars now validate successfully.
+- Rebuilt the staged Debian package and verified files consistency via `bash packaging/build-deb.sh`.
+
+### Verification Status
+- `./update-all.sh --profile quick` syntax check passes successfully.
+- `bash scripts/verify-state.sh` reports a **100% CLEAN PASS** (0 failures, 0 warnings).
+- Commited and pushed to remote `main` branch: `https://github.com/KasprowiczM/Ubuntu_Aktualizacje.git`.
+
+---
+
 ## 2026-04-30 (Etap 12) — Inventory false-positive outdated fix + unified title
 
 ### Bug
