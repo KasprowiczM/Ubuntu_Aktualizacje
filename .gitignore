@@ -67,3 +67,4 @@ app/.venv/
 config/hosts.toml
 packaging/deb/opt/
 dist/
+.antigravitycli/
