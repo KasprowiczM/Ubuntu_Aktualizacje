@@ -1,5 +1,28 @@
 # Handoff
 
+## 2026-05-29 (Etap 14) — Rebrand GUI/CLI Package Separation & Launcher Fix
+
+### Package Separation & Renaming
+- **Core CLI Package**: Retained the package name `ascendo-ubuntu` with architecture `all` (`dist/ascendo-ubuntu_0.4.0_all.deb`).
+- **Tauri GUI Package**: Renamed package, binary, and identifier to `ascendo-ubuntu-desktop` (`app/tauri/src-tauri/target/release/bundle/deb/ascendo-ubuntu-desktop_0.4.0_amd64.deb`). This fully resolves the dpkg overwrite collision where both packages attempted to install `/usr/bin/ascendo-ubuntu`.
+- **Tauri Installation**: Modified `app/tauri/install-deb.sh` to remove `ascendo-ubuntu` from the legacy package purge list. This prevents the desktop installation from accidentally uninstalling the CLI package.
+
+### Launcher Script Update
+- **Problem**: The local user launcher `~/.local/bin/ascendo-ubuntu-launch` and the CLI package's launcher `packaging/deb/usr/bin/ascendo-ubuntu-launch` were outdated, still referencing `ubuntu-aktualizacje-dashboard.service` and looking for the binary name `ascendo-ubuntu` instead of `ascendo-ubuntu-desktop`.
+- **Fix**:
+  1. Synchronized `packaging/deb/usr/bin/ascendo-ubuntu-launch` with the corrected `share/bin/ascendo-ubuntu-launch` script.
+  2. Updated the service target in the launcher from `ubuntu-aktualizacje-dashboard.service` to `ascendo-ubuntu-dashboard.service`.
+  3. Added the candidate search path `/usr/bin/ascendo-ubuntu-desktop` and local paths to the `TAURI_CANDIDATES` array.
+  4. Executed `systemd/user/install-dashboard.sh` to immediately refresh the local `~/.local/bin/ascendo-ubuntu-launch` file and icons under the user's home folder.
+
+### Documentation & Verification
+- Updated `scripts/fresh-machine.sh` to use the correct service name `ascendo-ubuntu-dashboard` instead of the old `ubuntu-aktualizacje-dashboard`.
+- Ran full verification: `bash scripts/verify-state.sh` reports a clean **OVERALL PASS** (0 failures).
+- Pushed all commits cleanly to the remote GitHub `main` branch.
+- Successfully exported the private overlay configurations to Proton Drive using `bash dev-sync-export.sh` (9 overlay files updated and checksum-verified).
+
+---
+
 ## 2026-05-29 (Etap 13) — Port Conflict Resolution & Dev-Sync Mount Fix
 
 ### Port Collision Fix
