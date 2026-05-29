@@ -39,7 +39,7 @@ Co się dzieje, krok po kroku:
 > sam przez `bash scripts/apps/install-missing.sh`.
 
 Po zakończeniu adres dashboardu to **<http://127.0.0.1:8766>**; jeśli
-`~/.config/ubuntu-aktualizacje/onboarded.json` jeszcze nie istnieje,
+`~/.config/ascendo-ubuntu/onboarded.json` jeszcze nie istnieje,
 pojawi się First-run wizard.
 
 **Wyjścia awaryjne:**
@@ -157,7 +157,7 @@ sudo systemctl reboot                         # wstań na cofniętym stanie
 
 Odpowiednik w dashboardzie: panel **Snapshots** → wiersz → **Restore**
 → confirm. Akcja loguje się do
-`~/.local/state/ubuntu-aktualizacje/audit.log`.
+`~/.local/state/ascendo-ubuntu/audit.log`.
 
 ---
 

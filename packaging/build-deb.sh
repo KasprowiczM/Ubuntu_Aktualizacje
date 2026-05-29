@@ -8,7 +8,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PKG_DIR="${SCRIPT_DIR}/packaging/deb"
-STAGE="${PKG_DIR}/opt/ubuntu-aktualizacje"
+STAGE="${PKG_DIR}/opt/ascendo-ubuntu"
 DIST="${SCRIPT_DIR}/dist"
 
 VERSION=$(awk -F'[ :]+' '/^Version:/{print $2; exit}' "${PKG_DIR}/DEBIAN/control")
@@ -41,14 +41,15 @@ find "$STAGE" -name '*.sh' -exec chmod +x {} +
 
 echo "── Setting DEBIAN/* perms"
 chmod 0755 "${PKG_DIR}/DEBIAN/postinst" "${PKG_DIR}/DEBIAN/prerm"
-chmod 0755 "${PKG_DIR}/usr/bin/ubuntu-aktualizacje" \
-           "${PKG_DIR}/usr/bin/ascendo-launch"
+chmod 0755 "${PKG_DIR}/usr/bin/ascendo-ubuntu" \
+           "${PKG_DIR}/usr/bin/ascendo-ubuntu-launch"
 
 OUT="${DIST}/${PKG_NAME}_${VERSION}_all.deb"
 echo "── Building $OUT"
 ( cd "${PKG_DIR}/.." && dpkg-deb --build --root-owner-group deb "$OUT" )
 # Clean up any older mismatched filename so `ls dist/` is unambiguous.
-find "${DIST}" -maxdepth 1 -name 'ubuntu-aktualizacje_*_all.deb' \
+find "${DIST}" -maxdepth 1 -name 'ubuntu-aktualizacje_*_all.deb' -delete 2>/dev/null || true
+find "${DIST}" -maxdepth 1 -name 'ascendo-ubuntu_*_all.deb' \
     ! -name "$(basename "$OUT")" -delete 2>/dev/null || true
 echo "✔ ${OUT}"
 echo "   install with: sudo dpkg -i ${OUT}"

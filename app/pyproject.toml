@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ubuntu-aktualizacje-dashboard"
-version = "0.1.0"
-description = "Local dashboard for Ubuntu_Aktualizacje update suite"
+name = "ascendo-ubuntu-dashboard"
+version = "0.4.0"
+description = "Local dashboard for Ascendo Ubuntu update suite"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ubuntu-aktualizacje-dashboard = "app.backend.__main__:main"
+ascendo-ubuntu-dashboard = "app.backend.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

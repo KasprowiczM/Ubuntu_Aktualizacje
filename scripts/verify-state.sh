@@ -59,10 +59,10 @@ fi
 
 print_section "Systemd templates"
 if has_cmd systemd-analyze; then
-    if systemd-analyze verify "${SCRIPT_DIR}/systemd/ubuntu-aktualizacje@.service" "${SCRIPT_DIR}/systemd/ubuntu-aktualizacje@.timer" >/tmp/ubuntu-aktualizacje-systemd-verify.log 2>&1; then
+    if systemd-analyze verify "${SCRIPT_DIR}/systemd/ascendo-ubuntu@.service" "${SCRIPT_DIR}/systemd/ascendo-ubuntu@.timer" >/tmp/ascendo-ubuntu-systemd-verify.log 2>&1; then
         ok_check "systemd templates verify"
     else
-        cat /tmp/ubuntu-aktualizacje-systemd-verify.log >&2 || true
+        cat /tmp/ascendo-ubuntu-systemd-verify.log >&2 || true
         fail_check "systemd template verification failed"
     fi
 else

@@ -79,7 +79,7 @@ fn main() {
     let mut child = None;
 
     let mut cmd = Command::new("systemctl");
-    cmd.args(["--user", "start", "ubuntu-aktualizacje-dashboard.service"]);
+    cmd.args(["--user", "start", "ascendo-ubuntu-dashboard.service"]);
     if let Ok(status) = cmd.status() {
         if status.success() {
             is_systemd = true;
@@ -110,7 +110,7 @@ fn main() {
                     if let Ok(is_sys) = state.is_systemd.lock() {
                         if *is_sys {
                             let mut cmd = Command::new("systemctl");
-                            cmd.args(["--user", "stop", "ubuntu-aktualizacje-dashboard.service"]);
+                            cmd.args(["--user", "stop", "ascendo-ubuntu-dashboard.service"]);
                             let _ = cmd.status();
                             println!("Stopped dashboard service via systemd-user");
                             return;

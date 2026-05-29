@@ -20,10 +20,10 @@
 ### Dynamic Service Lifecycle Management
 - **Requirements Met**:
   1. The dashboard systemd service is explicitly **disabled** from auto-starting at user login/boot (`systemd/user/install-dashboard.sh` runs `systemctl --user disable`).
-  2. When the user launches either the Tauri desktop shell or the browser web launcher (`ascendo-launch`), the `ubuntu-aktualizacje-dashboard.service` is dynamically started.
+  2. When the user launches either the Tauri desktop shell or the browser web launcher (`ascendo-ubuntu-launch`), the `ascendo-ubuntu-dashboard.service` is dynamically started.
   3. When either the Tauri window is closed or the launched browser session exits, the service is dynamically stopped.
-- **Tauri Implementation**: Refactored `app/tauri/src-tauri/src/main.rs` to try launching the backend via `systemctl --user start ubuntu-aktualizacje-dashboard.service`. If successful, it manages the service lifecycle, issuing `systemctl --user stop ...` on close window event. If systemd is unavailable, it gracefully falls back to raw Python process spawning and process killing on exit.
-- **CLI/Browser Launcher Implementation**: Refactored `share/bin/ascendo-launch` (and its deb packaging copy) to trap exit signals, start the systemd service on launch, run persistent candidate browser applications in the foreground, and automatically stop the service on exit. For web mode, it opens the browser tab and displays a clean, user-friendly `zenity` info dialog, stopping the service automatically when the user clicks "OK" to finish the session.
+- **Tauri Implementation**: Refactored `app/tauri/src-tauri/src/main.rs` to try launching the backend via `systemctl --user start ascendo-ubuntu-dashboard.service`. If successful, it manages the service lifecycle, issuing `systemctl --user stop ...` on close window event. If systemd is unavailable, it gracefully falls back to raw Python process spawning and process killing on exit.
+- **CLI/Browser Launcher Implementation**: Refactored `share/bin/ascendo-ubuntu-launch` (and its deb packaging copy) to trap exit signals, start the systemd service on launch, run persistent candidate browser applications in the foreground, and automatically stop the service on exit. For web mode, it opens the browser tab and displays a clean, user-friendly `zenity` info dialog, stopping the service automatically when the user clicks "OK" to finish the session.
 
 ### Test & Validation Fixes
 - **Problem**: `tests/validate_phase_json.py` recursively scanned all `.json` files in `logs/runs/` and crashed on `health.json` (the new health check report) because it did not conform to the `phase-result.schema.json` schema.
@@ -114,16 +114,16 @@ curl -s http://127.0.0.1:8766/ | grep -o '<title>[^<]*</title>'
 
 | Obszar | Status |
 |---|---|
-| **Ikona Ubuntu desktop = Ascendo logo** | ✅ `share/icons/hicolor/scalable/apps/ascendo.svg` + `share/applications/ubuntu-aktualizacje.desktop` (`Name=Ascendo`, `Icon=ascendo`, `StartupWMClass=Ascendo`); poprzednio używało systemowego `software-update-available` |
-| **User-level instalator ikony** | ✅ `systemd/user/install-dashboard.sh` instaluje ikonę i `.desktop` do `~/.local/share/{icons,applications}`, woła `update-desktop-database` + `gtk-update-icon-cache`, kasuje stare `ubuntu-aktualizacje.desktop` |
-| **System-wide ikona w `.deb`** | ✅ `packaging/deb/usr/share/icons/hicolor/scalable/apps/ascendo.svg` + `packaging/deb/usr/share/applications/ascendo.desktop`, postinst odświeża bazy |
+| **Ikona Ubuntu desktop = Ascendo logo** | ✅ `share/icons/hicolor/scalable/apps/ascendo-ubuntu.svg` + `share/applications/ascendo-ubuntu.desktop` (`Name=Ascendo`, `Icon=ascendo`, `StartupWMClass=Ascendo`); poprzednio używało systemowego `software-update-available` |
+| **User-level instalator ikony** | ✅ `systemd/user/install-dashboard.sh` instaluje ikonę i `.desktop` do `~/.local/share/{icons,applications}`, woła `update-desktop-database` + `gtk-update-icon-cache`, kasuje stare `ascendo-ubuntu.desktop` |
+| **System-wide ikona w `.deb`** | ✅ `packaging/deb/usr/share/icons/hicolor/scalable/apps/ascendo-ubuntu.svg` + `packaging/deb/usr/share/applications/ascendo-ubuntu.desktop`, postinst odświeża bazy |
 | **CLI runs widoczne w historii dashboard/web** | ✅ `db.import_disk_runs()` reconciliuje `logs/runs/<id>/run.json` z SQLite; wpięte w startup oraz w `/runs` i `/runs/{id}` |
 | **Migracja `004 run_source`** | ✅ kolumna `runs.source` (`'cli'` vs `'dashboard'`); `insert_run` przyjmuje source; UI dorzuca pill **cli** w History |
 | **Inferencja profilu z faz** | ✅ tylko `check` → `quick`; brak `drivers` → `safe`; reszta → `full`. `only_cat`/`only_phase` ustawiane gdy single-cat / single-kind |
 
 ### Pliki dotknięte
 
-share/icons/hicolor/scalable/apps/ascendo.svg, share/applications/ubuntu-aktualizacje.desktop, systemd/user/install-dashboard.sh, packaging/deb/usr/share/icons/hicolor/scalable/apps/ascendo.svg, packaging/deb/usr/share/applications/ascendo.desktop, packaging/deb/DEBIAN/postinst, app/backend/migrations.py (+_m004_run_source), app/backend/db.py (import_disk_runs), app/backend/main.py (startup/lazy reconcile), app/frontend/app.js (cli pill).
+share/icons/hicolor/scalable/apps/ascendo-ubuntu.svg, share/applications/ascendo-ubuntu.desktop, systemd/user/install-dashboard.sh, packaging/deb/usr/share/icons/hicolor/scalable/apps/ascendo-ubuntu.svg, packaging/deb/usr/share/applications/ascendo-ubuntu.desktop, packaging/deb/DEBIAN/postinst, app/backend/migrations.py (+_m004_run_source), app/backend/db.py (import_disk_runs), app/backend/main.py (startup/lazy reconcile), app/frontend/app.js (cli pill).
 
 ### Walidacja
 
@@ -144,7 +144,7 @@ bash -n update-all.sh + scripts/*/*.sh + lib/*.sh + systemd/user/*.sh + DEBIAN/p
 ### Komendy do weryfikacji
 
 ```bash
-systemctl --user restart ubuntu-aktualizacje-dashboard.service
+systemctl --user restart ascendo-ubuntu-dashboard.service
 ./update-all.sh --profile quick --no-notify
 curl -s 'http://127.0.0.1:8766/runs?limit=5' | jq '.runs[] | {id, source, profile, status}'
 ```
@@ -179,7 +179,7 @@ config/profiles/{dev-workstation,media-server,minimal-laptop}.list, scripts/apps
 
 ### Zmodyfikowane (tej sesji)
 
-app/backend/main.py (+/apt/downgrade, /profiles/*, /updates/check, /sync/remotes, /sync/browse), app/backend/inventory.py (scan_drivers, scan_inventory_meta), app/backend/settings.py (ai.base_url, sync.*, updates.*), app/backend/hosts_edit.py (NEW), app/frontend/{index.html, app.js, style.css}, app/frontend/i18n.js (PL/EN parity), app/frontend/icons.js (monitor, folder), packaging/deb/usr/bin/ubuntu-aktualizacje (settings/health/exclusions/profile subcommands), scripts/snap/apply.sh (SNAP-AUTO-REFRESHED), scripts/drivers/check.sh (dpkg --compare-versions), update-all.sh (--budget, --no-health, CHECK-ONLY banner).
+app/backend/main.py (+/apt/downgrade, /profiles/*, /updates/check, /sync/remotes, /sync/browse), app/backend/inventory.py (scan_drivers, scan_inventory_meta), app/backend/settings.py (ai.base_url, sync.*, updates.*), app/backend/hosts_edit.py (NEW), app/frontend/{index.html, app.js, style.css}, app/frontend/i18n.js (PL/EN parity), app/frontend/icons.js (monitor, folder), packaging/deb/usr/bin/ascendo-ubuntu-ubuntu (settings/health/exclusions/profile subcommands), scripts/snap/apply.sh (SNAP-AUTO-REFRESHED), scripts/drivers/check.sh (dpkg --compare-versions), update-all.sh (--budget, --no-health, CHECK-ONLY banner).
 
 ### Walidacja
 
@@ -211,11 +211,11 @@ Slogan "unified updates" in UI + i18n PL/EN. Per-category 5-phase buttons (check
 
 ## 2026-05-02 — Ascendo brand + i18n + apps (Etap 6)
 
-Branding Ascendo: logo.svg + icon.svg + banner.txt + favicon. CLI i18n (EN/PL): `lib/i18n.sh` + `i18n/{en,pl}.txt`, persisted to `~/.config/ascendo/lang`. CLI tables: `lib/tables.sh` with @ok/@warn/@err/@skip/@info pills, unicode box-drawing. App registration: `scripts/apps/{detect,add,remove,list,install-missing}.sh`. Backend `/apps/*` + `/i18n/*` endpoints. fresh-machine.sh: language pick step 0, apps detect read-only before setup. Wizard step 0 = language radio. Dev-sync TTY pretty output (box + table + ✔). User Journey docs (EN+PL). `bin/ascendo` shim auto-resolve ROOT. `.deb` rebrand: Package=ascendo.
+Branding Ascendo: logo.svg + icon.svg + banner.txt + favicon. CLI i18n (EN/PL): `lib/i18n.sh` + `i18n/{en,pl}.txt`, persisted to `~/.config/ascendo/lang`. CLI tables: `lib/tables.sh` with @ok/@warn/@err/@skip/@info pills, unicode box-drawing. App registration: `scripts/apps/{detect,add,remove,list,install-missing}.sh`. Backend `/apps/*` + `/i18n/*` endpoints. fresh-machine.sh: language pick step 0, apps detect read-only before setup. Wizard step 0 = language radio. Dev-sync TTY pretty output (box + table + ✔). User Journey docs (EN+PL). `bin/ascendo-ubuntu` shim auto-resolve ROOT. `.deb` rebrand: Package=ascendo.
 
-**Files:** branding/{logo.svg,icon.svg,banner.txt}, app/frontend/favicon.svg, lib/{i18n.sh,tables.sh}, i18n/{en.txt,pl.txt}, scripts/apps/{detect,add,remove,list,install-missing}.sh, docs/{en,pl}/user-journey.md, bin/ascendo (NEW).
+**Files:** branding/{logo.svg,icon.svg,banner.txt}, app/frontend/favicon.svg, lib/{i18n.sh,tables.sh}, i18n/{en.txt,pl.txt}, scripts/apps/{detect,add,remove,list,install-missing}.sh, docs/{en,pl}/user-journey.md, bin/ascendo-ubuntu (NEW).
 
-**Validation:** bash -n all .sh OK; python3 ast parse all .py OK; TestClient 16 GET endpoints 16/16 → 200; python3 tests/validate_phase_json.py 266/266 PASS; test_dev_sync_safety.py 9/9 OK; `bin/ascendo apps detect` tracked=38, detected=308, missing=0; i18n tn apps.summary (PL) "38 śledzonych · 308 wykrytych"; fresh-machine --lang en --check-only OK.
+**Validation:** bash -n all .sh OK; python3 ast parse all .py OK; TestClient 16 GET endpoints 16/16 → 200; python3 tests/validate_phase_json.py 266/266 PASS; test_dev_sync_safety.py 9/9 OK; `bin/ascendo-ubuntu apps detect` tracked=38, detected=308, missing=0; i18n tn apps.summary (PL) "38 śledzonych · 308 wykrytych"; fresh-machine --lang en --check-only OK.
 
 ---
 
@@ -231,7 +231,7 @@ Branding Ascendo: logo.svg + icon.svg + banner.txt + favicon. CLI i18n (EN/PL): 
 
 ## 2026-04-30 — UX/perf overhaul + portability (Etap 4)
 
-Sudo: one password per CLI run via ephemeral askpass helper ($XDG_RUNTIME_DIR/ubuntu-aktualizacje/askpass-*.sh, chmod 0700). lib/common.sh::sudo() wraps all calls as `sudo -A`. Live progress: orchestrator tee's phase output to console + log; apt:apply prints upgradable preview. Inventory speed 85s → 11s via `apt_inventory_cache_init` (batched apt-cache policy). Brew cleanup proactive chown Cellar before prune. Dashboard Overview cache via ui._loaded[view]. Reboot UX: banner + POST /system/reboot?delay=5. dev-sync overlay 3527 → 8 files (Cargo target/, Tauri bundle, *.db, .gradle/ excluded). CI guard: overlay ≤ 50 files check. scripts/fresh-machine.sh: one-liner bring-up.
+Sudo: one password per CLI run via ephemeral askpass helper ($XDG_RUNTIME_DIR/ascendo-ubuntu/askpass-*.sh, chmod 0700). lib/common.sh::sudo() wraps all calls as `sudo -A`. Live progress: orchestrator tee's phase output to console + log; apt:apply prints upgradable preview. Inventory speed 85s → 11s via `apt_inventory_cache_init` (batched apt-cache policy). Brew cleanup proactive chown Cellar before prune. Dashboard Overview cache via ui._loaded[view]. Reboot UX: banner + POST /system/reboot?delay=5. dev-sync overlay 3527 → 8 files (Cargo target/, Tauri bundle, *.db, .gradle/ excluded). CI guard: overlay ≤ 50 files check. scripts/fresh-machine.sh: one-liner bring-up.
 
 **Validation:** bash -n all .sh OK; python3 ast parse all .py OK; ./update-all.sh --profile quick --no-notify 6/6 ok, 14.5s; python3 tests/validate_phase_json.py 232/232 PASS; test_dev_sync_safety.py 9/9 OK.
 

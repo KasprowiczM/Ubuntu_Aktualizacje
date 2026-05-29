@@ -4,14 +4,14 @@
 # `ubuntu-aktualizacje fresh`. We only fix permissions and print a hint.
 set -e
 
-INSTALL_DIR=/opt/ubuntu-aktualizacje
+INSTALL_DIR=/opt/ascendo-ubuntu
 chmod -R u+rwX,go+rX "$INSTALL_DIR" 2>/dev/null || true
 chmod +x "$INSTALL_DIR"/update-all.sh \
          "$INSTALL_DIR"/scripts/*.sh \
          "$INSTALL_DIR"/scripts/*/*.sh 2>/dev/null || true
 
-# /usr/bin/ubuntu-aktualizacje shim is already installed by dpkg from the
-# package tree (see usr/bin/ubuntu-aktualizacje below).
+# /usr/bin/ascendo-ubuntu shim is already installed by dpkg from the
+# package tree.
 
 # Refresh icon + desktop databases so the Ascendo entry shows in app menus.
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -23,14 +23,14 @@ fi
 
 cat <<EOF
 ─────────────────────────────────────────────────────────────────
-  Ubuntu_Aktualizacje installed at $INSTALL_DIR
+  Ascendo Ubuntu installed at $INSTALL_DIR
 
   Next steps (run as your normal user, NOT root):
-    ubuntu-aktualizacje fresh           # full bring-up incl. dashboard
-    ubuntu-aktualizacje                 # alias for update-all.sh
-    ubuntu-aktualizacje dashboard       # start dashboard ad-hoc
+    ascendo-ubuntu fresh           # full bring-up incl. dashboard
+    ascendo-ubuntu                 # alias for update-all.sh
+    ascendo-ubuntu dashboard       # start dashboard ad-hoc
 
-  Dashboard URL after install: http://127.0.0.1:8765
+  Dashboard URL after install: http://127.0.0.1:8766
 ─────────────────────────────────────────────────────────────────
 EOF
 exit 0

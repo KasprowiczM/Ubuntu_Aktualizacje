@@ -7,12 +7,12 @@ Native desktop shell wrapping the FastAPI dashboard.
 ```
 ┌────────────────────────────────────────────┐
 │ Tauri window                                │
-│  WebView → http://127.0.0.1:8765/           │
+│  WebView → http://127.0.0.1:8766/           │
 └──────────┬─────────────────────────────────┘
            │ spawned at startup
            ▼
    app/.venv/bin/python -m app.backend
-       (uvicorn :8765, FastAPI, SPA)
+       (uvicorn :8766, FastAPI, SPA)
 ```
 
 The skin is intentionally thin: ~80 lines of Rust whose only job is to
@@ -36,7 +36,7 @@ bash build.sh           # interactive: prompts before installing rust/libs
 bash build.sh -y        # non-interactive, accepts all prompts
 
 # Find the produced .deb / .AppImage:
-find src-tauri/target -name 'ubuntu-aktualizacje*.deb' -o -name '*.AppImage'
+find src-tauri/target -name 'ascendo-ubuntu*.deb' -o -name '*.AppImage'
 ```
 
 `build.sh` will:
@@ -53,9 +53,9 @@ Skip auto-install with `--skip-deps` if you have prereqs already.
 ## Install the produced .deb
 
 ```bash
-DEB=$(find src-tauri/target -name 'ubuntu-aktualizacje*.deb' | head -1)
-sudo apt install "./$DEB"
-ubuntu-aktualizacje      # launches the window
+DEB=$(find src-tauri/target -name 'ascendo-ubuntu*.deb' | head -1)
+sudo dpkg -i "$DEB"
+ascendo-ubuntu      # launches the window
 ```
 
 > **Important:** `apt install ./*.deb` only works when the path expands to
@@ -97,8 +97,8 @@ default Tauri icon.
 
 ## Troubleshooting
 
-- `connection refused at 127.0.0.1:8765` after launch → the spawned python
-  process didn't start. Check `journalctl --user -u ubuntu-aktualizacje-dashboard.service`
+- `connection refused at 127.0.0.1:8766` after launch → the spawned python
+  process didn't start. Check `journalctl --user -u ascendo-ubuntu-dashboard.service`
   or run `app/.venv/bin/python -m app.backend` manually to see the error.
 - `python3: command not found` → install python3 or set `PATH` for the
   service. The skin falls back to `python3` if `app/.venv/bin/python` is

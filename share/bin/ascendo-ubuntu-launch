@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ascendo-launch — open the Ascendo dashboard either in the default browser
+# (`web` mode) or as a standalone window (`desktop` mode).
+#
+# Both modes ensure the dashboard service is reachable at 127.0.0.1:8766
+# before opening the UI, starting the user-level systemd unit if needed.
+#
+# Usage:
+#   ascendo-launch web        # → xdg-open http://127.0.0.1:8766
+#   ascendo-launch desktop    # → standalone window (Tauri binary, browser
+#                                  --app= mode, or fallback to xdg-open)
+#
+# Exit codes:
+#   0 launched, 1 dashboard never came up, 2 bad usage.
+# =============================================================================
+set -euo pipefail
+
+MODE="${1:-web}"
+URL="${ASCENDO_URL:-http://127.0.0.1:8766}"
+
+case "$MODE" in
+    web|desktop) ;;
+    -h|--help)   sed -n '2,18p' "$0"; exit 0 ;;
+    *)           echo "ascendo-ubuntu-launch: bad mode: $MODE (want web|desktop)" >&2; exit 2 ;;
+esac
+
+WE_STARTED_IT=0
+
+_cleanup() {
+    if [[ "$WE_STARTED_IT" -eq 1 ]]; then
+        systemctl --user stop ascendo-ubuntu-dashboard.service >/dev/null 2>&1 || true
+    fi
+}
+trap _cleanup EXIT ERR SIGINT SIGTERM
+
+_dashboard_up() {
+    # Cheap probe — backend always answers GET /health with 200.
+    curl -fsS --max-time 1 "$URL/health" >/dev/null 2>&1
+}
+
+# Start the user service if installed and the port is dead.
+if ! _dashboard_up; then
+    if command -v systemctl >/dev/null 2>&1 \
+       && systemctl --user list-unit-files 2>/dev/null \
+            | grep -q '^ascendo-ubuntu-dashboard\.service'; then
+        systemctl --user start ascendo-ubuntu-dashboard.service \
+            >/dev/null 2>&1 || true
+        WE_STARTED_IT=1
+    fi
+    # Wait up to 8 seconds for the backend to bind.
+    for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16; do
+        _dashboard_up && break
+        sleep 0.5
+    done
+fi
+
+if ! _dashboard_up; then
+    if command -v zenity >/dev/null 2>&1; then
+        zenity --error --no-wrap --title="Ascendo" \
+            --text="Dashboard service is not running and could not be started.\n\nRun:    systemctl --user start ascendo-ubuntu-dashboard.service\nOr:     ascendo-ubuntu dashboard" \
+            >/dev/null 2>&1 || true
+    fi
+    echo "ascendo-ubuntu-launch: dashboard at $URL is not responding" >&2
+    exit 1
+fi
+
+# ── Web mode: hand off to xdg-open, then wait for user to stop it via zenity ────────
+if [[ "$MODE" == "web" ]]; then
+    xdg-open "$URL"
+    if command -v zenity >/dev/null 2>&1; then
+        zenity --info --title="Ascendo" \
+            --text="Ascendo Dashboard is running at $URL.\n\nClick OK to stop the dashboard service." \
+            --no-wrap >/dev/null 2>&1 || true
+    else
+        echo "Dashboard running at $URL. Press Enter to stop it..."
+        read -r
+    fi
+    exit 0
+fi
+
+# ── Desktop mode: prefer a standalone window ────────────────────────────────
+# Priority order:
+#   1. ASCENDO_DESKTOP_BIN env override (e.g. tauri shell built locally).
+#   2. /opt/ascendo-ubuntu/app/tauri/.../release/ascendo-ubuntu
+#      (present when the user built the Tauri shell into the install tree).
+#   3. Chromium-class browser with --app= (true app-window, no tabs).
+#   4. firefox --kiosk (full-screen window with no chrome — closest match).
+#   5. xdg-open (last resort — opens a tab in the default browser).
+TAURI_CANDIDATES=(
+    "${ASCENDO_DESKTOP_BIN:-}"
+    /opt/ascendo-ubuntu/app/tauri/src-tauri/target/release/ascendo-ubuntu
+    "${HOME}/Dev_Env/Ubuntu_Aktualizacje/app/tauri/src-tauri/target/release/ascendo-ubuntu"
+)
+for cand in "${TAURI_CANDIDATES[@]}"; do
+    [[ -n "$cand" && -x "$cand" ]] || continue
+    "$cand"
+    exit 0
+done
+
+CHROMIUM_BROWSERS=(
+    chromium chromium-browser
+    google-chrome google-chrome-stable
+    brave-browser microsoft-edge-stable vivaldi-stable
+)
+for b in "${CHROMIUM_BROWSERS[@]}"; do
+    if command -v "$b" >/dev/null 2>&1; then
+        # Per-app profile keeps cookies/tabs separate from the user's main
+        # browser session — so closing the standalone window doesn't kill
+        # browsing tabs and vice versa.
+        PROFILE_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/ascendo/chrome-profile"
+        mkdir -p "$PROFILE_DIR"
+        "$b" --user-data-dir="$PROFILE_DIR" --app="$URL" \
+                  --no-first-run --no-default-browser-check \
+                  --class=AscendoDesktop --name=AscendoDesktop \
+                  >/dev/null 2>&1 || true
+        exit 0
+    fi
+done
+
+if command -v firefox >/dev/null 2>&1; then
+    # Firefox doesn't have a true --app mode; --kiosk is the closest analogue.
+    firefox --kiosk "$URL" >/dev/null 2>&1 || true
+    exit 0
+fi
+
+# Last-resort fallback: just open the URL in whatever the system prefers and show zenity
+xdg-open "$URL"
+if command -v zenity >/dev/null 2>&1; then
+    zenity --info --title="Ascendo" \
+        --text="Ascendo Dashboard is running at $URL.\n\nClick OK to stop the dashboard service." \
+        --no-wrap >/dev/null 2>&1 || true
+else
+    echo "Dashboard running. Press Enter to stop..."
+    read -r
+fi
+exit 0

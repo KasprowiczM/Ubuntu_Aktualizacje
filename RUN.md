@@ -17,16 +17,16 @@ Wszystkie ścieżki względem `~/Dev_Env/Ubuntu_Aktualizacje`.
   - Browser tab: `app/frontend/index.html` `<title>`.
   - FastAPI: `main.py` `title=…`.
   - Desktop entries (repo + `.deb` + `~/.local/share/applications/`):
-    `ascendo.desktop` → `Name=Ascendo - Unified Updates`,
-    `ascendo-desktop.desktop` → `Name=Ascendo - Unified Updates (Desktop)`.
+    `ascendo-ubuntu.desktop` → `Name=Ascendo - Unified Updates`,
+    `ascendo-ubuntu-desktop.desktop` → `Name=Ascendo - Unified Updates (Desktop)`.
 
 ## Co nowego (2026-05-04 — Etap 11: Ascendo desktop icon + CLI runs in history)
 
 - **Ikona aplikacji w menu Ubuntu = Ascendo „A"** (gradientowy kwadrat,
   `branding/icon.svg`). Wcześniej `software-update-available` z systemu —
   teraz markowy logotyp w panelu i Activities.
-- **`share/icons/hicolor/scalable/apps/ascendo.svg`** + zaktualizowany
-  `share/applications/ubuntu-aktualizacje.desktop` (`Name=Ascendo`,
+- **`share/icons/hicolor/scalable/apps/ascendo-ubuntu.svg`** + zaktualizowany
+  `share/applications/ascendo-ubuntu.desktop` (`Name=Ascendo`,
   `Icon=ascendo`, `StartupWMClass=Ascendo`).
 - `systemd/user/install-dashboard.sh` instaluje ikonę i `.desktop` do
   `~/.local/share/{icons,applications}` i odświeża cache (
@@ -64,7 +64,7 @@ Wszystkie ścieżki względem `~/Dev_Env/Ubuntu_Aktualizacje`.
 - **Rebrand: Ascendo.** Wordmark + ikona w `branding/`, ASCII banner
   pokazywany na starcie `update-all.sh` i `fresh-machine.sh`. Favicon
   `app/frontend/favicon.svg`. Tytuł aplikacji: "Ascendo — unified system
-  updates". Pakiet `.deb` → `Package: ascendo`, Source: `ubuntu-aktualizacje`.
+  updates". Pakiet `.deb` → `Package: ascendo`, Source: `ascendo-ubuntu`.
 - **CLI i18n bez gettexta.** `lib/i18n.sh` + katalogi `i18n/{en,pl}.txt`
   (klucz=wartość). Helpery `t KEY [FALLBACK]` i `tn KEY ARG…` dla
   printf-style. Persisted w `~/.config/ascendo/lang`. Pierwsze pytanie
@@ -73,7 +73,7 @@ Wszystkie ścieżki względem `~/Dev_Env/Ubuntu_Aktualizacje`.
   kolorystycznymi pillami `@ok`/`@warn`/`@err`/`@skip`/`@info`. Używane
   przez `apps detect`, `apps list`, dev-sync export podsumowanie. Identyczna
   semantyka kolorów co dashboard CSS (.st-pill).
-- **App registration**: `bin/ascendo apps {detect|add|remove|list|install-missing}`.
+- **App registration**: `bin/ascendo-ubuntu apps {detect|add|remove|list|install-missing}`.
   `detect` porównuje system z `config/*.list` i pokazuje 3 stany:
   `tracked` (zielony), `detected` (żółty, kandydat do dodania), `missing`
   (czerwony, kandydat do instalacji). Endpoint `GET /apps/detect`
@@ -98,21 +98,21 @@ Wszystkie ścieżki względem `~/Dev_Env/Ubuntu_Aktualizacje`.
 
 - **Roadmap zrealizowany**: Top 5 + większość P1 z handoffu wdrożone.
 - **`.deb` package** (`packaging/`): `bash packaging/build-deb.sh` produkuje
-  `dist/ubuntu-aktualizacje_<ver>_all.deb`. Po `sudo dpkg -i` mamy
-  `/usr/bin/ubuntu-aktualizacje` (subkomendy: `fresh`, `dashboard`,
+  `dist/ascendo-ubuntu_<ver>_all.deb`. Po `sudo dpkg -i` mamy
+  `/usr/bin/ascendo-ubuntu-ubuntu` (subkomendy: `fresh`, `dashboard`,
   `schedule`, `snapshot list|create|restore`, default = `update-all.sh`).
 - **First-run wizard** w dashboardzie — modal pokazywany gdy
-  `~/.config/ubuntu-aktualizacje/onboarded.json` brak. Wybór profilu +
+  `~/.config/ascendo-ubuntu/onboarded.json` brak. Wybór profilu +
   schedule + snapshot toggle, zapisuje do `settings.json` i opcjonalnie
   instaluje systemd timer.
 - **Token auth** (opt-in): `POST /auth/generate-token` zapisuje
-  `~/.config/ubuntu-aktualizacje/auth.token` (chmod 0600). Jeśli token
+  `~/.config/ascendo-ubuntu/auth.token` (chmod 0600). Jeśli token
   istnieje — wszystkie endpointy (poza `/health` + assets) wymagają
   `Authorization: Bearer …`. Pozwala bezpiecznie wystawić dashboard na LAN.
 - **Audit log** — każda akcja mutująca (run.start, sync.export,
   system.reboot, scheduler.install, snapshot.restore, auth.token.*,
   notify.test, onboarding.complete) zapisuje JSONL w
-  `~/.local/state/ubuntu-aktualizacje/audit.log`. `GET /audit` zwraca tail.
+  `~/.local/state/ascendo-ubuntu/audit.log`. `GET /audit` zwraca tail.
 - **Prometheus `/metrics`** — text format, dependency-free, eksportuje
   `ubuntu_aktualizacje_run_total{status}`,
   `..._last_run_duration_seconds{status}`,
@@ -139,7 +139,7 @@ Wszystkie ścieżki względem `~/Dev_Env/Ubuntu_Aktualizacje`.
 ## Co nowego (2026-04-30)
 
 - **Sudo: jedno hasło na cały run.** `update-all.sh` pyta o hasło raz, tworzy
-  ephemeralny askpass helper (`$XDG_RUNTIME_DIR/ubuntu-aktualizacje/askpass-*.sh`,
+  ephemeralny askpass helper (`$XDG_RUNTIME_DIR/ascendo-ubuntu/askpass-*.sh`,
   chmod 0700) i eksportuje `SUDO_ASKPASS` dla wszystkich faz. Helper jest
   usuwany przy `EXIT/INT/TERM`. `lib/common.sh` wraps `sudo` → `sudo -A`,
   więc wszystkie sub-sudo (apt, snap, drivers) korzystają automatycznie.
@@ -323,8 +323,8 @@ Czego oczekiwać:
 bash systemd/user/install-dashboard.sh
 
 # Sprawdzenie
-systemctl --user status ubuntu-aktualizacje-dashboard.service
-journalctl --user -u ubuntu-aktualizacje-dashboard.service -f
+systemctl --user status ascendo-ubuntu-dashboard.service
+journalctl --user -u ascendo-ubuntu-dashboard.service -f
 
 # Sanity check portu
 ss -lntp | grep 8766
@@ -336,14 +336,14 @@ tj. nigdy nie tknie systemowego/brew Pythona.
 `bash systemd/user/install-dashboard.sh` instaluje też ikonę i wpis menu:
 
 ```bash
-~/.local/share/icons/hicolor/scalable/apps/ascendo.svg
-~/.local/share/applications/ascendo.desktop
+~/.local/share/icons/hicolor/scalable/apps/ascendo-ubuntu.svg
+~/.local/share/applications/ascendo-ubuntu.desktop
 ```
 
 W Activities pojawi się ikona **Ascendo** (logo „A" w gradientowym
 kwadracie) otwierająca dashboard w przeglądarce. Po `dpkg -i` pakietu
-`.deb` ikona ląduje w `/usr/share/icons/hicolor/scalable/apps/ascendo.svg`
-i `/usr/share/applications/ascendo.desktop` (system-wide).
+`.deb` ikona ląduje w `/usr/share/icons/hicolor/scalable/apps/ascendo-ubuntu.svg`
+i `/usr/share/applications/ascendo-ubuntu.desktop` (system-wide).
 
 ### 4.3 Sprawdzenie endpointów (curl)
 
@@ -394,7 +394,7 @@ granicę dashboard → update-all.sh subprocess (TTY tickets). Stosujemy
 3. Hasło → POST `/sudo/auth` (body JSON), backend weryfikuje przez
    `sudo -S -v`, trzyma w pamięci procesu (NIE na dysku, NIE w DB).
 4. Przy POST `/runs` z mutującą fazą backend tworzy ephemeral askpass
-   helper w `$XDG_RUNTIME_DIR/ubuntu-aktualizacje/askpass-*.sh` (chmod 0700,
+   helper w `$XDG_RUNTIME_DIR/ascendo-ubuntu/askpass-*.sh` (chmod 0700,
    embed hasła jako shell literal), eksportuje `SUDO_ASKPASS=...`.
 5. update-all.sh czyta `SUDO_ASKPASS`, używa `sudo -A`. Wszystkie sub-sudo
    wywołania (apt, snap…) dziedziczą env automatycznie.
@@ -440,8 +440,8 @@ z dashboardu lokalnego hosta lub przez systemd timer per-host.
 ```bash
 cd app/tauri
 bash build.sh                  # cargo tauri build → .deb + .AppImage
-sudo apt install ./src-tauri/target/release/bundle/deb/ubuntu-aktualizacje_*.deb
-ubuntu-aktualizacje            # native window with embedded backend
+sudo apt install ./src-tauri/target/release/bundle/deb/ascendo-ubuntu_*.deb
+ascendo-ubuntu            # native window with embedded backend
 ```
 
 Skin spawnuje `app/.venv/bin/python -m app.backend` jako sidecar i otwiera
@@ -488,7 +488,7 @@ Widok **Settings** w UI lub `PUT /settings`:
   systemd timer przyciskiem **Install/Update timer** (woła
   `scripts/scheduler/install.sh`).
 
-Plik: `~/.config/ubuntu-aktualizacje/settings.json`
+Plik: `~/.config/ascendo-ubuntu/settings.json`
 
 ---
 
@@ -547,7 +547,7 @@ plugins_validate example
 
 ### "a run is already in progress" (HTTP 409)
 - Aktywny run blokuje kolejny. Sprawdź `GET /runs/active`, czekaj lub `POST /runs/active/stop`.
-- Stale lock: `ls -la "${XDG_RUNTIME_DIR:-/tmp}/ubuntu-aktualizacje.lock"`. Po crashu można usunąć ręcznie po sprawdzeniu, że żaden proces nie używa pliku.
+- Stale lock: `ls -la "${XDG_RUNTIME_DIR:-/tmp}/ascendo-ubuntu.lock"`. Po crashu można usunąć ręcznie po sprawdzeniu, że żaden proces nie używa pliku.
 
 ### Sidecar nie waliduje się
 ```bash
@@ -623,7 +623,7 @@ Browser  ──POST /runs──▶  FastAPI (app/backend/main.py)
 
 - Backend bind tylko na `127.0.0.1`. **Nigdy** nie wystawiaj na sieć zewnętrzną.
 - Brak autoryzacji HTTP (zaufanie do lokalnego usera). Multi-user host:
-  edytuj `systemd/user/ubuntu-aktualizacje-dashboard.service` na unix socket
+  edytuj `systemd/user/ascendo-ubuntu-dashboard.service` na unix socket
   + permission 0600.
 - POST `/runs` uruchamia `update-all.sh` z uprawnieniami użytkownika.
   Sudo pyta interaktywnie/cache jak w CLI.

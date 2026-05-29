@@ -65,3 +65,5 @@ github
 github.pub
 app/.venv/
 config/hosts.toml
+packaging/deb/opt/
+dist/

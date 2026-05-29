@@ -33,10 +33,10 @@ xdg-open http://127.0.0.1:8766   # dashboard
 | 4 | `bash app/install.sh` — creates `app/.venv/`, installs FastAPI/uvicorn/pydantic/httpx | `--no-dashboard` |
 | 5 | `bash systemd/user/install-dashboard.sh` — user-service + Ascendo icon + .desktop | `--no-service` |
 | 6 | `bash scripts/verify-state.sh` — sanity check | n/a |
-| 7 | `bin/ascendo apps detect` — read-only diff between `config/*.list` and installed packages | n/a |
+| 7 | `bin/ascendo-ubuntu apps detect` — read-only diff between `config/*.list` and installed packages | n/a |
 
 It **never installs packages on its own**. Use the dashboard (Apps tab) or
-`bin/ascendo apps install-missing` after reviewing the detect report.
+`bin/ascendo-ubuntu apps install-missing` after reviewing the detect report.
 
 ## Manual prerequisites (only if preflight reports them)
 
@@ -66,18 +66,18 @@ bash systemd/user/install-dashboard.sh
 **Option B — replace the old system-wide .deb:**
 ```bash
 # Remove whichever legacy .deb is installed (name varies by build vintage):
-dpkg -l | grep -E '^ii\s+(ascendo|ubuntu-aktualizacje)\b' | awk '{print $2}' \
+dpkg -l | grep -E '^ii\s+(ascendo|ubuntu-aktualizacje|ascendo-ubuntu)\b' | awk '{print $2}' \
   | xargs -r sudo apt remove -y
 
-# Build and install the new one (package name is `ascendo`):
+# Build and install the new one (package name is `ascendo-ubuntu`):
 bash packaging/build-deb.sh                      # prints "install with: sudo dpkg -i …"
-sudo dpkg -i dist/ascendo_*_all.deb
+sudo dpkg -i dist/ascendo-ubuntu_*_all.deb
 ```
 
 > The build script prints the exact install command at the end of its output
 > — copy-paste that line. Older builds may produce
-> `ubuntu-aktualizacje_<ver>_all.deb` instead; either filename works as long
-> as you pass the full path to `dpkg -i`.
+> `ubuntu-aktualizacje_<ver>_all.deb` or `ascendo_<ver>_all.deb` instead;
+> either filename works as long as you pass the full path to `dpkg -i`.
 
 After either option, log out / log back in (or run
 `update-desktop-database ~/.local/share/applications` and
@@ -88,12 +88,12 @@ re-reads the desktop database.
 
 ```bash
 ./update-all.sh --profile quick --no-notify       # ~15s, all 6 categories should pass
-bin/ascendo health --json                          # post-run health audit
-bin/ascendo apps detect                            # tracked / detected / missing report
+bin/ascendo-ubuntu health --json                          # post-run health audit
+bin/ascendo-ubuntu apps detect                            # tracked / detected / missing report
 python3 tests/validate_phase_json.py | tail -3     # all sidecars schema-valid
 
 # Dashboard:
-systemctl --user status ubuntu-aktualizacje-dashboard.service
+systemctl --user status ascendo-ubuntu-dashboard.service
 curl -s http://127.0.0.1:8766/health | jq .
 
 # Sudo flow (only if you intend to run apply phases):
@@ -118,27 +118,27 @@ Full dry-run** on the Overview tab.
 ## Profile templates
 
 ```bash
-ascendo profile list                              # dev-workstation, media-server, minimal-laptop
-ascendo profile import dev-workstation --dry-run  # preview
-ascendo profile import dev-workstation            # writes diff into config/*.list
+ascendo-ubuntu profile list                              # dev-workstation, media-server, minimal-laptop
+ascendo-ubuntu profile import dev-workstation --dry-run  # preview
+ascendo-ubuntu profile import dev-workstation            # writes diff into config/*.list
 ```
 
 ## Settings export / import (move config between hosts)
 
 ```bash
 # Source machine:
-ascendo settings export ~/ascendo-backup.tar.gz
+ascendo-ubuntu settings export ~/ascendo-backup.tar.gz
 
 # Target machine:
 scp ~/ascendo-backup.tar.gz target:~/
-ssh target 'cd ~/Dev_Env/Ubuntu_Aktualizacje && ascendo settings import ~/ascendo-backup.tar.gz'
+ssh target 'cd ~/Dev_Env/Ubuntu_Aktualizacje && ascendo-ubuntu settings import ~/ascendo-backup.tar.gz'
 ```
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
-| Dashboard 404 on `/` | `bash app/install.sh && systemctl --user restart ubuntu-aktualizacje-dashboard.service` |
+| Dashboard 404 on `/` | `bash app/install.sh && systemctl --user restart ascendo-ubuntu-dashboard.service` |
 | `apt apply` exits silently with no sidecar | Fixed in v0.5.1 — pull latest, re-run |
 | Old icon still showing in menu | See "Icon / desktop entry" section above; log out / log in |
 | `pip install` blocked by PEP 668 | Always use `app/.venv/`; never `pip install --user` |

@@ -1,4 +1,4 @@
-"""Entrypoint: `python3 -m app.backend` runs the dashboard on 127.0.0.1:8765."""
+"""Entrypoint: `python3 -m app.backend` runs the dashboard on 127.0.0.1:8766."""
 from __future__ import annotations
 
 import os

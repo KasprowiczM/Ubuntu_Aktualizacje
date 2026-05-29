@@ -12,16 +12,16 @@ Obsługuje APT, Snap, Homebrew, npm, pip/pipx, Flatpak, sterowniki NVIDIA i firm
 ```bash
 ./update-all.sh                        # pełna aktualizacja (full profile, NVIDIA held)
                                        # sudo password ONCE — askpass dla wszystkich faz
-bin/ascendo apps detect                # raport: tracked/detected/missing (kolorowa tabela)
-bin/ascendo apps add <pkg> --category <cat>   # dodaj do config/*.list
-bin/ascendo apps install-missing       # zainstaluj wszystko z .list co brak na dysku
-bin/ascendo profile list               # dostępne szablony profili (dev/media/minimal)
-bin/ascendo profile import <name> [--dry-run]  # zaimportuj szablon do config/*.list
-bin/ascendo health --json              # post-run audit: failed units, dmesg, disk, reboot
-bin/ascendo settings export <file>     # tar.gz konfiguracji do przeniesienia
-bin/ascendo settings import <file>     # przywróć konfigurację z tar.gz
-bin/ascendo exclusions {list|add|remove} <cat:pkg>   # per-user opt-out z apply
-bash packaging/build-deb.sh            # buduje dist/ascendo_<ver>_all.deb
+bin/ascendo-ubuntu apps detect                # raport: tracked/detected/missing (kolorowa tabela)
+bin/ascendo-ubuntu apps add <pkg> --category <cat>   # dodaj do config/*.list
+bin/ascendo-ubuntu apps install-missing       # zainstaluj wszystko z .list co brak na dysku
+bin/ascendo-ubuntu profile list               # dostępne szablony profili (dev/media/minimal)
+bin/ascendo-ubuntu profile import <name> [--dry-run]  # zaimportuj szablon do config/*.list
+bin/ascendo-ubuntu health --json              # post-run audit: failed units, dmesg, disk, reboot
+bin/ascendo-ubuntu settings export <file>     # tar.gz konfiguracji do przeniesienia
+bin/ascendo-ubuntu settings import <file>     # przywróć konfigurację z tar.gz
+bin/ascendo-ubuntu exclusions {list|add|remove} <cat:pkg>   # per-user opt-out z apply
+bash packaging/build-deb.sh            # buduje dist/ascendo-ubuntu_<ver>_all.deb
 bash scripts/maintenance/prune-logs.sh --keep 50 --days 30  # log retention
 curl -X POST http://127.0.0.1:8766/auth/generate-token       # opt-in token auth
 curl http://127.0.0.1:8766/metrics                           # Prometheus

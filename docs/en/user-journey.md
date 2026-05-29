@@ -41,7 +41,7 @@ What happens, in order:
 > decide whether to install with `bash scripts/apps/install-missing.sh`.
 
 After this, the dashboard URL is **<http://127.0.0.1:8766>** and shows the
-First-run wizard if `~/.config/ubuntu-aktualizacje/onboarded.json`
+First-run wizard if `~/.config/ascendo-ubuntu/onboarded.json`
 doesn't exist yet.
 
 **Escape hatches:**
@@ -159,7 +159,7 @@ sudo systemctl reboot                         # come back on the rolled-back sta
 ```
 
 Dashboard equivalent: **Snapshots** panel → row → **Restore** → confirm.
-Audit log records the action under `~/.local/state/ubuntu-aktualizacje/audit.log`.
+Audit log records the action under `~/.local/state/ascendo-ubuntu/audit.log`.
 
 ---
 

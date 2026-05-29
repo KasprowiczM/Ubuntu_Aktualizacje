@@ -1,7 +1,7 @@
 # Ascendo - Unified Updates Dashboard
 
 Lokalny dashboard (FastAPI + vanilla SPA) dla pakietu skryptów aktualizacji.
-Działa na `127.0.0.1:8765`, czyta JSON sidecary generowane przez fazowe skrypty.
+Działa na `127.0.0.1:8766`, czyta JSON sidecary generowane przez fazowe skrypty.
 
 ## Architektura
 
@@ -24,8 +24,8 @@ app/
 
 ```bash
 pip install --user fastapi uvicorn pydantic
-python3 -m app.backend          # serwuje http://127.0.0.1:8765
-xdg-open http://127.0.0.1:8765
+python3 -m app.backend          # serwuje http://127.0.0.1:8766
+xdg-open http://127.0.0.1:8766
 ```
 
 ## Instalacja jako user-service
@@ -33,7 +33,7 @@ xdg-open http://127.0.0.1:8765
 ```bash
 bash systemd/user/install-dashboard.sh
 # enable + start; po reboot chodzi automatycznie
-xdg-open http://127.0.0.1:8765
+xdg-open http://127.0.0.1:8766
 ```
 
 ## Zmienne środowiskowe
@@ -41,7 +41,7 @@ xdg-open http://127.0.0.1:8765
 | Var                     | Default                             |
 |-------------------------|-------------------------------------|
 | `UA_DASHBOARD_HOST`     | `127.0.0.1`                         |
-| `UA_DASHBOARD_PORT`     | `8765`                              |
+| `UA_DASHBOARD_PORT`     | `8766`                              |
 | `UA_REPO_ROOT`          | repo z którego serwowany jest backend |
 | `UA_DB_PATH`            | `$XDG_DATA_HOME/ubuntu-aktualizacje/history.db` |
 

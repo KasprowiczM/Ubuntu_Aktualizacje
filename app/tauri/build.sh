@@ -147,8 +147,8 @@ find target -path '*/release/bundle/*' \( -name '*.deb' -o -name '*.AppImage' \)
 
 # Find the produced artifacts (case-insensitive in case Tauri's
 # productName is renamed in the future; AppImage filename also varies).
-DEB=$(find "${TAURI_DIR}/target" -iname '*aktualizacje*.deb' 2>/dev/null | head -1)
-APPIMG=$(find "${TAURI_DIR}/target" -iname '*aktualizacje*.AppImage' 2>/dev/null | head -1)
+DEB=$(find "${TAURI_DIR}/target" -iname '*ascendo-ubuntu*.deb' 2>/dev/null | head -1)
+APPIMG=$(find "${TAURI_DIR}/target" -iname '*ascendo-ubuntu*.AppImage' 2>/dev/null | head -1)
 
 echo
 if [[ -n "$DEB" ]]; then
@@ -166,8 +166,8 @@ if [[ -n "$DEB" ]]; then
         echo
     fi
     echo "After install, launch with:"
-    echo "  ubuntu-aktualizacje      # CLI binary on PATH"
-    echo "  # or via Activities menu (look for 'ubuntu-aktualizacje')"
+    echo "  ascendo-ubuntu      # CLI binary on PATH"
+    echo "  # or via Activities menu (look for 'ascendo-ubuntu')"
     echo
     echo "Quick install command (copy-paste, runs sudo apt install):"
     echo "  bash \"${SCRIPT_DIR}/install-deb.sh\""
