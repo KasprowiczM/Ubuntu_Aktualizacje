@@ -77,11 +77,50 @@ def _read_config_list(rel: str) -> set[str]:
     return out
 
 
+_VER_TOKEN = re.compile(r"(\d+)|([a-zA-Z]+)")
+
+
+def _ver_key(v: str) -> list:
+    """Normalise a version string into a comparable list of tokens.
+
+    Splits on ``.``/``-``/``_``/``+`` then breaks each segment into runs of
+    digits vs letters so ``1.10`` > ``1.9`` and ``1.0.0`` > ``1.0.0-rc1``
+    (a release without a pre-release suffix beats one with).
+    """
+    if not v:
+        return []
+    s = v.strip().lstrip("vV=")
+    segments = re.split(r"[.\-_+]", s)
+    key: list = []
+    for seg in segments:
+        toks = _VER_TOKEN.findall(seg)
+        if not toks:
+            continue
+        for num, alpha in toks:
+            if num:
+                key.append((1, int(num), ""))
+            else:
+                # Letter tokens sort *below* numeric ones so 1.0 > 1.0rc1.
+                key.append((0, 0, alpha.lower()))
+    return key
+
+
+def _version_gt(a: str | None, b: str | None) -> bool:
+    """Return True iff ``a`` is strictly a newer version than ``b``."""
+    if not a or not b or a == b:
+        return False
+    try:
+        return _ver_key(a) > _ver_key(b)
+    except Exception:
+        return False
+
+
 def _classify(installed: str | None, candidate: str | None) -> str:
     if not installed:
         return "missing"
     if candidate and candidate not in ("(none)", "", "unknown") and candidate != installed:
-        return "outdated"
+        if _version_gt(candidate, installed):
+            return "outdated"
     return "ok"
 
 
@@ -290,6 +329,8 @@ def _scan_brew_inner() -> list[dict]:
 
     for name, ver in sorted(installed_f.items()):
         cand = outdated_f.get(name)
+        if cand and not _version_gt(cand, ver):
+            cand = None
         items.append({
             "name": name, "installed": ver, "candidate": cand,
             "status": _classify(ver, cand),
@@ -354,6 +395,8 @@ def _scan_npm_inner() -> list[dict]:
             pass
     for name, ver in sorted(installed.items()):
         cand = outdated.get(name)
+        if cand and not _version_gt(cand, ver):
+            cand = None
         items.append({
             "name": name, "installed": ver, "candidate": cand,
             "status": _classify(ver, cand),
@@ -406,6 +449,8 @@ def _scan_pip_inner() -> list[dict]:
             pass
     for name, ver in sorted(inst.items()):
         cand = outdated.get(name)
+        if cand and not _version_gt(cand, ver):
+            cand = None
         items.append({
             "name": name, "installed": ver, "candidate": cand,
             "status": _classify(ver, cand),

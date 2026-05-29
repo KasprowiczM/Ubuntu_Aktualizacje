@@ -54,7 +54,7 @@ bash scripts/update-snap.sh                      # standalone, generuje master_*
 
 # 3. Dashboard (wymaga venv)
 bash systemd/user/install-dashboard.sh
-xdg-open http://127.0.0.1:8765
+xdg-open http://127.0.0.1:8766
 # → Categories → snap → check
 ```
 

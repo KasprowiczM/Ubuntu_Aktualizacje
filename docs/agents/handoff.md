@@ -49,10 +49,10 @@ python3 -c "from app.backend.inventory import scan_npm; \
   for i in scan_npm() if i['status']=='outdated'])"
 # []  (was 2 false-positives before fix)
 
-curl -s http://127.0.0.1:8765/inventory/summary | jq .totals
+curl -s http://127.0.0.1:8766/inventory/summary | jq .totals
 # { ok: 340, outdated: 0, missing: 0 }
 
-curl -s http://127.0.0.1:8765/ | grep -o '<title>[^<]*</title>'
+curl -s http://127.0.0.1:8766/ | grep -o '<title>[^<]*</title>'
 # <title>Ascendo - Unified Updates</title>
 ```
 
@@ -108,7 +108,7 @@ bash -n update-all.sh + scripts/*/*.sh + lib/*.sh + systemd/user/*.sh + DEBIAN/p
 ```bash
 systemctl --user restart ubuntu-aktualizacje-dashboard.service
 ./update-all.sh --profile quick --no-notify
-curl -s 'http://127.0.0.1:8765/runs?limit=5' | jq '.runs[] | {id, source, profile, status}'
+curl -s 'http://127.0.0.1:8766/runs?limit=5' | jq '.runs[] | {id, source, profile, status}'
 ```
 
 ---

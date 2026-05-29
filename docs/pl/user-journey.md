@@ -38,7 +38,7 @@ Co się dzieje, krok po kroku:
 > `config/*.list` automatycznie.** Mówi co brakuje; decyzję podejmujesz
 > sam przez `bash scripts/apps/install-missing.sh`.
 
-Po zakończeniu adres dashboardu to **<http://127.0.0.1:8765>**; jeśli
+Po zakończeniu adres dashboardu to **<http://127.0.0.1:8766>**; jeśli
 `~/.config/ubuntu-aktualizacje/onboarded.json` jeszcze nie istnieje,
 pojawi się First-run wizard.
 
@@ -174,5 +174,5 @@ Odpowiednik w dashboardzie: panel **Snapshots** → wiersz → **Restore**
 | Doinstaluj brakujące     | `bash scripts/apps/install-missing.sh` |
 | Snapshot pre-apply       | `./update-all.sh --snapshot` |
 | Rollback                 | `bash scripts/snapshot/restore.sh <id>` |
-| Otwórz dashboard         | `xdg-open http://127.0.0.1:8765` |
+| Otwórz dashboard         | `xdg-open http://127.0.0.1:8766` |
 | Zbuduj .deb              | `bash packaging/build-deb.sh` |

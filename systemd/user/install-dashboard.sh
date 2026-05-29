@@ -51,13 +51,13 @@ command -v gtk-update-icon-cache >/dev/null 2>&1 \
     && gtk-update-icon-cache -t "${HOME}/.local/share/icons/hicolor" >/dev/null 2>&1 || true
 
 # 4. Verify port
-if ss -lntp 2>/dev/null | grep -q ":8765"; then
+if ss -lntp 2>/dev/null | grep -q ":8766"; then
     echo
-    echo "✔ Dashboard listening at http://127.0.0.1:8765"
+    echo "✔ Dashboard listening at http://127.0.0.1:8766"
     echo "✔ Ascendo icons installed in app menu:"
     echo "    • Ascendo - Unified Updates           — opens dashboard in your default browser"
     echo "    • Ascendo - Unified Updates (Desktop) — opens dashboard in a standalone window"
 else
     echo
-    echo "⚠ Dashboard not listening on :8765 — check journalctl --user -u ubuntu-aktualizacje-dashboard.service"
+    echo "⚠ Dashboard not listening on :8766 — check journalctl --user -u ubuntu-aktualizacje-dashboard.service"
 fi

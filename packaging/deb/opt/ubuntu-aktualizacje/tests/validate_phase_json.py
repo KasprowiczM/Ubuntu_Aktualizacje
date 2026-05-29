@@ -93,7 +93,7 @@ def main(argv: list[str]) -> int:
     else:
         paths = [
             p for p in (repo / "logs" / "runs").rglob("*.json")
-            if p.name != "run.json"
+            if p.name not in ("run.json", "health.json")
         ]
 
     if not paths:

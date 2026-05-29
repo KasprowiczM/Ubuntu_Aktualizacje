@@ -27,7 +27,7 @@ flowchart LR
         HP[lib/host_profile.sh]
     end
     subgraph Dashboard[Dashboard — FastAPI + vanilla SPA]
-        Backend[app/backend/main.py<br/>uvicorn :8765]
+        Backend[app/backend/main.py<br/>uvicorn :8766]
         Inv[app/backend/inventory.py<br/>live package scanners]
         Sudo[app/backend/sudo.py<br/>SUDO_ASKPASS lifecycle]
         DBmod[app/backend/db.py + migrations]
@@ -37,7 +37,7 @@ flowchart LR
     end
     subgraph Tauri[Native shell — opcjonalne]
         Bin[ubuntu-aktualizacje<br/>.deb / .AppImage]
-        Webview[WebView → 127.0.0.1:8765]
+        Webview[WebView → 127.0.0.1:8766]
     end
 
     L1 --> Lib
@@ -156,7 +156,7 @@ flowchart TD
 | Scheduled updates | `scripts/scheduler/install.sh` (or legacy `systemd/install-timer.sh`) | generated unit files | Configurable from Settings UI. |
 | Snapshots | `scripts/snapshot/{create,list}.sh` | `timeshift` → `etckeeper` fallback | Opt-in via `update-all.sh --snapshot` or Settings toggle. |
 | Plugins | `plugins/<id>/{manifest.toml, *.sh}` + `lib/plugins.sh` | manifest + 5-phase scripts | Sidecar uses `category=plugin:<id>`. |
-| Dashboard backend | `app/backend/main.py` (FastAPI on 127.0.0.1:8765) | REST + SSE | 13 endpoints incl. `/inventory*`, `/sudo/*`, `/hosts*`, `/scheduler/*`, `/sync/*`. |
+| Dashboard backend | `app/backend/main.py` (FastAPI on 127.0.0.1:8766) | REST + SSE | 13 endpoints incl. `/inventory*`, `/sudo/*`, `/hosts*`, `/scheduler/*`, `/sync/*`. |
 | Dashboard frontend | `app/frontend/{index.html, app.js, i18n.js, style.css}` | vanilla SPA | 8 views, EN/PL i18n, light/dark/auto theme, SVG donut+bar charts. |
 | Sudo flow | `app/backend/sudo.py` + `update-all.sh` SUDO_ASKPASS branch | password held in memory | Ephemeral askpass helper in `$XDG_RUNTIME_DIR/ubuntu-aktualizacje/`. |
 | Multi-host preflight | `app/backend/hosts.py` + `config/hosts.toml` | SSH BatchMode read-only | Read-only by design — no remote mutation. |

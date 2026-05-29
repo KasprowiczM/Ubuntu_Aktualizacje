@@ -18,7 +18,7 @@ verifies state. Idempotent. Flags: `--check-only`, `--dry-run`,
 After it finishes:
 
 ```bash
-xdg-open http://127.0.0.1:8765   # dashboard
+xdg-open http://127.0.0.1:8766   # dashboard
 ./update-all.sh --profile quick  # 15s read-only sweep, no sudo
 ```
 
@@ -94,12 +94,12 @@ python3 tests/validate_phase_json.py | tail -3     # all sidecars schema-valid
 
 # Dashboard:
 systemctl --user status ubuntu-aktualizacje-dashboard.service
-curl -s http://127.0.0.1:8765/health | jq .
+curl -s http://127.0.0.1:8766/health | jq .
 
 # Sudo flow (only if you intend to run apply phases):
 curl -s -X POST -H 'content-type: application/json' \
      -d '{"password":"YOUR_PASSWORD"}' \
-     http://127.0.0.1:8765/sudo/auth
+     http://127.0.0.1:8766/sudo/auth
 ```
 
 ## First real apply run

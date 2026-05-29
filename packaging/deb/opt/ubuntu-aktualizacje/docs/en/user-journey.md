@@ -40,7 +40,7 @@ What happens, in order:
 > `config/*.list` automatically.** It tells you what's missing; you
 > decide whether to install with `bash scripts/apps/install-missing.sh`.
 
-After this, the dashboard URL is **<http://127.0.0.1:8765>** and shows the
+After this, the dashboard URL is **<http://127.0.0.1:8766>** and shows the
 First-run wizard if `~/.config/ubuntu-aktualizacje/onboarded.json`
 doesn't exist yet.
 
@@ -176,5 +176,5 @@ Audit log records the action under `~/.local/state/ubuntu-aktualizacje/audit.log
 | Install missing apps    | `bash scripts/apps/install-missing.sh` |
 | Snapshot pre-apply      | `./update-all.sh --snapshot` |
 | Roll back               | `bash scripts/snapshot/restore.sh <id>` |
-| Open dashboard          | `xdg-open http://127.0.0.1:8765` |
+| Open dashboard          | `xdg-open http://127.0.0.1:8766` |
 | Build .deb              | `bash packaging/build-deb.sh` |

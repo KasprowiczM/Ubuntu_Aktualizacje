@@ -22,7 +22,7 @@ use tauri::Manager;
 struct BackendChild(Mutex<Option<Child>>);
 
 const HOST: &str = "127.0.0.1";
-const PORT: u16 = 8765;
+const PORT: u16 = 8766;
 const STARTUP_TIMEOUT_SECS: u64 = 30;
 
 fn repo_root() -> std::path::PathBuf {

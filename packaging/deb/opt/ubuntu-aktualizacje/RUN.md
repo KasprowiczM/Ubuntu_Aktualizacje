@@ -3,6 +3,23 @@
 Pełen przewodnik dla nowego operatora — od zera do działającego dashboardu.
 Wszystkie ścieżki względem `~/Dev_Env/Ubuntu_Aktualizacje`.
 
+## Co nowego (2026-04-30 — Etap 12: false-positive outdated fix + branded title)
+
+- **Inventory: `candidate < installed` więcej nie jest flagowany jako outdated.**
+  Naprawione `app/backend/inventory.py::_classify` — dodany helper
+  `_version_gt()` z token-based comparatorem (numeric/alpha runs splitowane
+  po `.-_+`). Status `outdated` wymaga teraz **strictly newer** candidate.
+  Dotyczyło npm (`@google/gemini-cli` 0.40.0 → 0.1.9, `npm` 11.13.0 → 10.9.8
+  — npm `latest` dist-tag wskazywał na starszą linię). Pozostałe kategorie
+  audytowane — apt/snap/flatpak korzystają z store-side update lists, więc
+  były OK; brew dodatkowo zabezpieczony defensive guardem.
+- **Tytuł aplikacji ujednolicony:** `Ascendo - Unified Updates`.
+  - Browser tab: `app/frontend/index.html` `<title>`.
+  - FastAPI: `main.py` `title=…`.
+  - Desktop entries (repo + `.deb` + `~/.local/share/applications/`):
+    `ascendo.desktop` → `Name=Ascendo - Unified Updates`,
+    `ascendo-desktop.desktop` → `Name=Ascendo - Unified Updates (Desktop)`.
+
 ## Co nowego (2026-05-04 — Etap 11: Ascendo desktop icon + CLI runs in history)
 
 - **Ikona aplikacji w menu Ubuntu = Ascendo „A"** (gradientowy kwadrat,
@@ -286,12 +303,12 @@ bash app/install.sh
 
 # Start serwera z venv
 app/.venv/bin/python -m app.backend
-# → INFO: Uvicorn running on http://127.0.0.1:8765
+# → INFO: Uvicorn running on http://127.0.0.1:8766
 ```
 
 W innym terminalu lub przeglądarce:
 ```bash
-xdg-open http://127.0.0.1:8765
+xdg-open http://127.0.0.1:8766
 ```
 
 Czego oczekiwać:
@@ -310,7 +327,7 @@ systemctl --user status ubuntu-aktualizacje-dashboard.service
 journalctl --user -u ubuntu-aktualizacje-dashboard.service -f
 
 # Sanity check portu
-ss -lntp | grep 8765
+ss -lntp | grep 8766
 ```
 
 Service używa `%h/Dev_Env/Ubuntu_Aktualizacje/app/.venv/bin/python` —
@@ -331,22 +348,22 @@ i `/usr/share/applications/ascendo.desktop` (system-wide).
 ### 4.3 Sprawdzenie endpointów (curl)
 
 ```bash
-curl -s http://127.0.0.1:8765/health        | jq .
-curl -s http://127.0.0.1:8765/categories    | jq '.categories[].id'
-curl -s http://127.0.0.1:8765/profiles      | jq '.profiles[].id'
-curl -s http://127.0.0.1:8765/preflight     | jq '.items[] | "\(.tool): \(.present)"'
-curl -s http://127.0.0.1:8765/git/status    | jq .
-curl -s http://127.0.0.1:8765/sync/status   | jq .
-curl -s http://127.0.0.1:8765/runs?limit=5  | jq '.runs[].id'
+curl -s http://127.0.0.1:8766/health        | jq .
+curl -s http://127.0.0.1:8766/categories    | jq '.categories[].id'
+curl -s http://127.0.0.1:8766/profiles      | jq '.profiles[].id'
+curl -s http://127.0.0.1:8766/preflight     | jq '.items[] | "\(.tool): \(.present)"'
+curl -s http://127.0.0.1:8766/git/status    | jq .
+curl -s http://127.0.0.1:8766/sync/status   | jq .
+curl -s http://127.0.0.1:8766/runs?limit=5  | jq '.runs[].id'
 
 # Trigger run (POST):
-curl -s -X POST http://127.0.0.1:8765/runs \
+curl -s -X POST http://127.0.0.1:8766/runs \
      -H 'content-type: application/json' \
      -d '{"profile":"quick","dry_run":false}' | jq .
 # → {"run_id":"…", "started_at":"…"}
 
 # Live log (Server-Sent Events):
-curl -N http://127.0.0.1:8765/runs/active/stream
+curl -N http://127.0.0.1:8766/runs/active/stream
 ```
 
 ### 4.4 Smoke test backendu (automatyczny)
@@ -390,16 +407,17 @@ granicę dashboard → update-all.sh subprocess (TTY tickets). Stosujemy
 curl odpowiednik:
 ```bash
 curl -X POST -H 'content-type: application/json' \
-     -d '{"password":"YOUR_PASSWORD"}' http://127.0.0.1:8765/sudo/auth
+     -d '{"password":"YOUR_PASSWORD"}' http://127.0.0.1:8766/sudo/auth
 # → {"cached": true, "detail": "password verified and stored in memory"}
 
-curl -X POST http://127.0.0.1:8765/sudo/invalidate     # gdy chcesz wymazać
+curl -X POST http://127.0.0.1:8766/sudo/invalidate     # gdy chcesz wymazać
+
 ```
 
 curl odpowiednik:
 ```bash
 curl -X POST -H 'content-type: application/json' \
-     -d '{"password":"YOUR_PASSWORD"}' http://127.0.0.1:8765/sudo/auth
+     -d '{"password":"YOUR_PASSWORD"}' http://127.0.0.1:8766/sudo/auth
 # → {"cached": true, "detail": "sudo cache warmed"}
 ```
 
@@ -427,7 +445,7 @@ ubuntu-aktualizacje            # native window with embedded backend
 ```
 
 Skin spawnuje `app/.venv/bin/python -m app.backend` jako sidecar i otwiera
-webview na `127.0.0.1:8765`. Cały kontrakt REST + SPA jest reużyty.
+webview na `127.0.0.1:8766`. Cały kontrakt REST + SPA jest reużyty.
 Build wymaga Rust + libwebkit2gtk — patrz `app/tauri/README.md`.
 
 ### 4.8 Inventory — live scan zainstalowanych pakietów
@@ -439,12 +457,12 @@ w pamięci procesu.
 
 **Endpointy** (curl):
 ```bash
-curl -s http://127.0.0.1:8765/inventory/summary | jq .
+curl -s http://127.0.0.1:8766/inventory/summary | jq .
 # {totals: {ok:334, outdated:2, missing:0}, categories: {apt:{...}, snap:{...}, ...}}
 
-curl -s http://127.0.0.1:8765/inventory/apt | jq '.items[] | select(.status=="outdated")'
+curl -s http://127.0.0.1:8766/inventory/apt | jq '.items[] | select(.status=="outdated")'
 
-curl -s -X POST http://127.0.0.1:8765/inventory/refresh   # invalidate cache
+curl -s -X POST http://127.0.0.1:8766/inventory/refresh   # invalidate cache
 ```
 
 **UI**:
@@ -523,7 +541,7 @@ plugins_validate example
 ## 8. Troubleshooting
 
 ### Dashboard nie startuje
-- Sprawdź port: `ss -lntp | grep 8765`
+- Sprawdź port: `ss -lntp | grep 8766`
 - Inny port: `UA_DASHBOARD_PORT=9000 python3 -m app.backend`
 - Zależności: `python3 -c "import fastapi, uvicorn, pydantic"` musi przejść.
 
@@ -548,7 +566,7 @@ Komunikat `FAIL` mówi gdzie. Najczęstsze: zły `category`, niewalidne `code` (
 ### Frontend ładuje się pusty
 - Cache przeglądarki: `Ctrl+Shift+R`.
 - Console (F12) → szukaj 4xx/5xx.
-- `curl http://127.0.0.1:8765/` musi zwrócić HTML.
+- `curl http://127.0.0.1:8766/` musi zwrócić HTML.
 
 ### `pip install` failuje na PEP 668
 ```bash

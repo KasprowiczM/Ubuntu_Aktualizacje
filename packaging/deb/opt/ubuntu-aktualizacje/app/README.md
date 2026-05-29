@@ -1,4 +1,4 @@
-# Ubuntu_Aktualizacje Dashboard
+# Ascendo - Unified Updates Dashboard
 
 Lokalny dashboard (FastAPI + vanilla SPA) dla pakietu skryptów aktualizacji.
 Działa na `127.0.0.1:8765`, czyta JSON sidecary generowane przez fazowe skrypty.

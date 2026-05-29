@@ -15,7 +15,7 @@
         "height": 800,
         "minWidth": 800,
         "minHeight": 600,
-        "url": "http://127.0.0.1:8765/",
+        "url": "http://127.0.0.1:8766/",
         "decorations": true,
         "resizable": true
       }
@@ -29,7 +29,7 @@
     "targets": ["deb", "appimage"],
     "category": "Utility",
     "shortDescription": "Local dashboard for Ubuntu update suite",
-    "longDescription": "Native Tauri shell that wraps the FastAPI dashboard at http://127.0.0.1:8765/. Manages Ubuntu updates: APT, snap, brew, npm, pip, flatpak, drivers, plus snapshots, scheduler, and multi-host overview.",
+    "longDescription": "Native Tauri shell that wraps the FastAPI dashboard at http://127.0.0.1:8766/. Manages Ubuntu updates: APT, snap, brew, npm, pip, flatpak, drivers, plus snapshots, scheduler, and multi-host overview.",
     "linux": {
       "deb": {
         "depends": ["python3", "python3-venv", "ssh-client"]

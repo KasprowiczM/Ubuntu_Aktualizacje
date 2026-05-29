@@ -3,11 +3,11 @@
 # ascendo-launch — open the Ascendo dashboard either in the default browser
 # (`web` mode) or as a standalone window (`desktop` mode).
 #
-# Both modes ensure the dashboard service is reachable at 127.0.0.1:8765
+# Both modes ensure the dashboard service is reachable at 127.0.0.1:8766
 # before opening the UI, starting the user-level systemd unit if needed.
 #
 # Usage:
-#   ascendo-launch web        # → xdg-open http://127.0.0.1:8765
+#   ascendo-launch web        # → xdg-open http://127.0.0.1:8766
 #   ascendo-launch desktop    # → standalone window (Tauri binary, browser
 #                                  --app= mode, or fallback to xdg-open)
 #
@@ -17,7 +17,7 @@
 set -euo pipefail
 
 MODE="${1:-web}"
-URL="${ASCENDO_URL:-http://127.0.0.1:8765}"
+URL="${ASCENDO_URL:-http://127.0.0.1:8766}"
 
 case "$MODE" in
     web|desktop) ;;

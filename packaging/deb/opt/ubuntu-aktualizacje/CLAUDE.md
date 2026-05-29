@@ -23,9 +23,9 @@ bin/ascendo settings import <file>     # przywróć konfigurację z tar.gz
 bin/ascendo exclusions {list|add|remove} <cat:pkg>   # per-user opt-out z apply
 bash packaging/build-deb.sh            # buduje dist/ascendo_<ver>_all.deb
 bash scripts/maintenance/prune-logs.sh --keep 50 --days 30  # log retention
-curl -X POST http://127.0.0.1:8765/auth/generate-token       # opt-in token auth
-curl http://127.0.0.1:8765/metrics                           # Prometheus
-curl http://127.0.0.1:8765/runs/<id>/report.md               # MD raport
+curl -X POST http://127.0.0.1:8766/auth/generate-token       # opt-in token auth
+curl http://127.0.0.1:8766/metrics                           # Prometheus
+curl http://127.0.0.1:8766/runs/<id>/report.md               # MD raport
 ./update-all.sh --profile quick        # tylko check (read-only sweep, ~15s)
 ./update-all.sh --profile safe         # bez drivers/firmware
 ./update-all.sh --dry-run              # podgląd bez wykonania
@@ -41,7 +41,7 @@ bash scripts/verify-state.sh           # repo/dev-sync/systemd verification
 
 # Dashboard (Etap 2)
 pip install --user fastapi uvicorn pydantic
-python3 -m app.backend                 # http://127.0.0.1:8765
+python3 -m app.backend                 # http://127.0.0.1:8766
 bash systemd/user/install-dashboard.sh # instaluje user-service + ikonę Ascendo + .desktop
 # CLI runs (./update-all.sh) automatycznie pojawiają się w History — backend
 # reconciluje logs/runs/<id>/run.json z SQLite przy każdym /runs i na startup.

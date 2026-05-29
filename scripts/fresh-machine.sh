@@ -151,7 +151,7 @@ echo
 print_section "$(t setup.next_steps 'Next steps')"
 echo
 echo -e "  ${BOLD}CLI run:${RESET}     ./update-all.sh --profile quick --no-notify"
-echo -e "  ${BOLD}Dashboard:${RESET}   xdg-open http://127.0.0.1:8765"
+echo -e "  ${BOLD}Dashboard:${RESET}   xdg-open http://127.0.0.1:8766"
 [[ $NO_DASHBOARD -eq 0 && $NO_SERVICE -eq 0 ]] && \
     echo -e "  ${BOLD}Service:${RESET}     systemctl --user status ubuntu-aktualizacje-dashboard"
 echo -e "  ${BOLD}Schedule:${RESET}    bash scripts/scheduler/install.sh --calendar 'Sun *-*-* 03:00:00' --profile safe"

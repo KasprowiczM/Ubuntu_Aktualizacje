@@ -428,7 +428,7 @@ if [[ -f /var/run/reboot-required ]]; then
     [[ -n "$REBOOT_PKGS" ]] && echo -e "${DIM}  Pending packages: ${REBOOT_PKGS}${RESET}"
     echo -e "${BOLD}  Run now:${RESET}    sudo systemctl reboot"
     echo -e "${BOLD}  Or later:${RESET}   sudo shutdown -r +5"
-    echo -e "${DIM}  Dashboard: open http://127.0.0.1:8765 — banner shows a one-click 'Restart now' button.${RESET}"
+    echo -e "${DIM}  Dashboard: open http://127.0.0.1:8766 — banner shows a one-click 'Restart now' button.${RESET}"
     echo
 fi
 
