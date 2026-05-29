@@ -66,9 +66,10 @@ fi
 # ── Web mode: hand off to xdg-open, then wait for user to stop it via zenity ────────
 if [[ "$MODE" == "web" ]]; then
     xdg-open "$URL"
+    sleep 2
     if command -v zenity >/dev/null 2>&1; then
         zenity --info --title="Ascendo" \
-            --text="Ascendo Dashboard is running at $URL.\n\nClick OK to stop the dashboard service." \
+            --text="Ascendo Dashboard has been opened in your default browser at $URL.\n\n⚠ KEEP THIS DIALOG OPEN while using the dashboard!\n\nClick 'OK' ONLY when you are finished and want to stop the dashboard service." \
             --no-wrap >/dev/null 2>&1 || true
     else
         echo "Dashboard running at $URL. Press Enter to stop it..."
