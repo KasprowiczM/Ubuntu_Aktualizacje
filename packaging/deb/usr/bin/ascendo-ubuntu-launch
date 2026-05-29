@@ -41,12 +41,10 @@ _dashboard_up() {
 
 # Start the user service if installed and the port is dead.
 if ! _dashboard_up; then
-    if command -v systemctl >/dev/null 2>&1 \
-       && systemctl --user list-unit-files 2>/dev/null \
-            | grep -q '^ascendo-ubuntu-dashboard\.service'; then
-        systemctl --user start ascendo-ubuntu-dashboard.service \
-            >/dev/null 2>&1 || true
-        WE_STARTED_IT=1
+    if command -v systemctl >/dev/null 2>&1; then
+        if systemctl --user start ascendo-ubuntu-dashboard.service >/dev/null 2>&1; then
+            WE_STARTED_IT=1
+        fi
     fi
     # Wait up to 8 seconds for the backend to bind.
     for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16; do
