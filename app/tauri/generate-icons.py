@@ -32,36 +32,90 @@ def _png_chunk(tag: bytes, data: bytes) -> bytes:
 
 
 def write_png(path: Path, size: int) -> None:
-    """Render a stylised square logo with a centred lighter square + dot."""
+    """Render the official Ascendo 'A' logo with smooth anti-aliasing."""
     s = size
-    pad_outer = max(2, s // 8)
-    pad_inner = max(1, s // 4)
-    dot_size = max(2, s // 5)
-    dot_margin = max(1, s // 12)
+    margin = 2.0 / 64.0 * s
+    R = 14.0 / 64.0 * s
+    stroke_width = 6.0 / 64.0 * s
+    half_stroke = stroke_width / 2.0
+
+    # Key points for the A shape (M16 44 L32 22 L48 44)
+    ax, ay = 16.0 / 64.0 * s, 44.0 / 64.0 * s
+    bx, by = 32.0 / 64.0 * s, 22.0 / 64.0 * s
+    cx, cy = 48.0 / 64.0 * s, 44.0 / 64.0 * s
+
+    # Corner centers
+    c1x, c1y = margin + R, margin + R
+    c2x, c2y = s - margin - R, margin + R
+    c3x, c3y = margin + R, s - margin - R
+    c4x, c4y = s - margin - R, s - margin - R
+
+    def get_pixel(x: float, y: float) -> tuple[int, int, int, int]:
+        # 1. Background linear gradient from green (#22c55e) to blue (#0ea5e9)
+        # Gradient direction: top-left to bottom-right
+        t = (x + y) / (2.0 * (s - 1)) if s > 1 else 0.5
+        t = max(0.0, min(1.0, t))
+        
+        bg_r = int((1.0 - t) * 0x22 + t * 0x0e)
+        bg_g = int((1.0 - t) * 0xc5 + t * 0xa5)
+        bg_b = int((1.0 - t) * 0x5e + t * 0xe9)
+        bg_a = 0xff
+
+        # 2. Rounded rect mask with anti-aliasing
+        # Distance to edges
+        dist_edge = min(x - margin, (s - margin) - x, y - margin, (s - margin) - y)
+        rect_coverage = max(0.0, min(1.0, dist_edge + 0.5))
+
+        # Check corners
+        if x < c1x and y < c1y:
+            d = ((x - c1x)**2 + (y - c1y)**2)**0.5
+            rect_coverage = max(0.0, min(1.0, R + 0.5 - d))
+        elif x > c2x and y < c2y:
+            d = ((x - c2x)**2 + (y - c2y)**2)**0.5
+            rect_coverage = max(0.0, min(1.0, R + 0.5 - d))
+        elif x < c3x and y > c3y:
+            d = ((x - c3x)**2 + (y - c3y)**2)**0.5
+            rect_coverage = max(0.0, min(1.0, R + 0.5 - d))
+        elif x > c4x and y > c4y:
+            d = ((x - c4x)**2 + (y - c4y)**2)**0.5
+            rect_coverage = max(0.0, min(1.0, R + 0.5 - d))
+
+        # If completely outside the rounded rect, return transparent
+        if rect_coverage <= 0.0:
+            return (0, 0, 0, 0)
+
+        # 3. Stroke coverage (A path: A-B and B-C)
+        def dist_to_seg(px: float, py: float, lx1: float, ly1: float, lx2: float, ly2: float) -> float:
+            vx, vy = lx2 - lx1, ly2 - ly1
+            wx, wy = px - lx1, py - ly1
+            v2 = vx * vx + vy * vy
+            if v2 == 0.0:
+                return (wx * wx + wy * wy)**0.5
+            proj = (wx * vx + wy * wy) / v2
+            proj = max(0.0, min(1.0, proj))
+            cx, cy = lx1 + proj * vx, ly1 + proj * vy
+            return ((px - cx)**2 + (py - cy)**2)**0.5
+
+        d1 = dist_to_seg(x, y, ax, ay, bx, by)
+        d2 = dist_to_seg(x, y, bx, by, cx, cy)
+        d_stroke = min(d1, d2)
+        
+        stroke_coverage = max(0.0, min(1.0, half_stroke + 0.5 - d_stroke))
+
+        # Blend stroke (white) over gradient background
+        r = int((1.0 - stroke_coverage) * bg_r + stroke_coverage * 0xff)
+        g = int((1.0 - stroke_coverage) * bg_g + stroke_coverage * 0xff)
+        b = int((1.0 - stroke_coverage) * bg_b + stroke_coverage * 0xff)
+        a = int(rect_coverage * 0xff)
+
+        return (r, g, b, a)
 
     rows: list[bytes] = []
     for y in range(s):
         row = bytearray()
         row.append(0)  # PNG filter byte: None
         for x in range(s):
-            # Default: indigo background
-            r, g, b, a = BG
-            # Outer rounded-ish square: just a plain square here
-            in_outer = pad_outer <= x < s - pad_outer and pad_outer <= y < s - pad_outer
-            in_inner = pad_inner <= x < s - pad_inner and pad_inner <= y < s - pad_inner
-            if in_inner:
-                r, g, b, a = ACCENT_1
-            elif in_outer:
-                # subtle frame: blend background and accent
-                r = (BG[0] + ACCENT_1[0]) // 2
-                g = (BG[1] + ACCENT_1[1]) // 2
-                b = (BG[2] + ACCENT_1[2]) // 2
-                a = 0xff
-            # Status dot in lower-right
-            dx = x - (s - dot_margin - dot_size + dot_size // 2)
-            dy = y - (s - dot_margin - dot_size + dot_size // 2)
-            if dx * dx + dy * dy <= (dot_size // 2) ** 2:
-                r, g, b, a = ACCENT_2
+            r, g, b, a = get_pixel(x + 0.5, y + 0.5)
             row.extend([r, g, b, a])
         rows.append(bytes(row))
 
