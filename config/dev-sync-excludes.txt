@@ -39,3 +39,6 @@ graphify-out/.graphify_*
 
 # Staging and packaging build output folders
 packaging/deb/opt/
+
+# CLI workspace metadata
+.antigravitycli/
