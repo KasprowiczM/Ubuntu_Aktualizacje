@@ -41,8 +41,8 @@ install -m 0644 "${SCRIPT_DIR}/share/applications/ascendo-ubuntu-desktop.desktop
     "${APPS_DIR}/ascendo-ubuntu-desktop.desktop"
 install -m 0755 "${SCRIPT_DIR}/share/bin/ascendo-ubuntu-launch" \
     "${BIN_DIR}/ascendo-ubuntu-launch"
-# Drop the old (pre-rebrand) desktop file and legacy ascendo files if they linger
-rm -f "${APPS_DIR}/ubuntu-aktualizacje.desktop" "${APPS_DIR}/ascendo.desktop" "${APPS_DIR}/ascendo-desktop.desktop" "${BIN_DIR}/ascendo-launch" "${ICON_DIR}/ascendo.svg"
+# Drop the old (pre-rebrand) desktop file if it lingers
+rm -f "${APPS_DIR}/ubuntu-aktualizacje.desktop"
 # Warn the user if ~/.local/bin isn't on $PATH (the .desktop entries call
 # `ascendo-ubuntu-launch` by name; if $PATH is missing it, GNOME spawns nothing).
 case ":${PATH}:" in
