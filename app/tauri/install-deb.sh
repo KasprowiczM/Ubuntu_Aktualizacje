@@ -10,7 +10,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-DEB=$(find "${SCRIPT_DIR}/src-tauri/target" -iname '*ascendo-ubuntu*.deb' 2>/dev/null \
+DEB=$(find "${SCRIPT_DIR}/src-tauri/target" -iname '*ascendo-ubuntu-desktop*.deb' 2>/dev/null \
         | xargs -d '\n' -r ls -t 2>/dev/null \
         | head -1)
 if [[ -z "$DEB" ]]; then
@@ -34,5 +34,5 @@ sudo apt install -y "$DEB_ABS"
 
 echo
 echo "✔ installed. Launch with:"
-echo "    ascendo-ubuntu"
-echo "  or open from GNOME Activities (search 'ascendo-ubuntu')."
+echo "    ascendo-ubuntu-desktop"
+echo "  or open from GNOME Activities (search 'ascendo-ubuntu-desktop')."

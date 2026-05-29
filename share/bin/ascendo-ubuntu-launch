@@ -89,8 +89,9 @@ fi
 #   5. xdg-open (last resort — opens a tab in the default browser).
 TAURI_CANDIDATES=(
     "${ASCENDO_DESKTOP_BIN:-}"
-    /opt/ascendo-ubuntu/app/tauri/src-tauri/target/release/ascendo-ubuntu
-    "${HOME}/Dev_Env/Ubuntu_Aktualizacje/app/tauri/src-tauri/target/release/ascendo-ubuntu"
+    /usr/bin/ascendo-ubuntu-desktop
+    /opt/ascendo-ubuntu/app/tauri/src-tauri/target/release/ascendo-ubuntu-desktop
+    "${HOME}/Dev_Env/Ubuntu_Aktualizacje/app/tauri/src-tauri/target/release/ascendo-ubuntu-desktop"
 )
 for cand in "${TAURI_CANDIDATES[@]}"; do
     [[ -n "$cand" && -x "$cand" ]] || continue
