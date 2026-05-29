@@ -25,6 +25,15 @@ case "$MODE" in
     *)           echo "ascendo-launch: bad mode: $MODE (want web|desktop)" >&2; exit 2 ;;
 esac
 
+WE_STARTED_IT=0
+
+_cleanup() {
+    if [[ "$WE_STARTED_IT" -eq 1 ]]; then
+        systemctl --user stop ubuntu-aktualizacje-dashboard.service >/dev/null 2>&1 || true
+    fi
+}
+trap _cleanup EXIT ERR SIGINT SIGTERM
+
 _dashboard_up() {
     # Cheap probe — backend always answers GET /health with 200.
     curl -fsS --max-time 1 "$URL/health" >/dev/null 2>&1
@@ -37,6 +46,7 @@ if ! _dashboard_up; then
             | grep -q '^ubuntu-aktualizacje-dashboard\.service'; then
         systemctl --user start ubuntu-aktualizacje-dashboard.service \
             >/dev/null 2>&1 || true
+        WE_STARTED_IT=1
     fi
     # Wait up to 8 seconds for the backend to bind.
     for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16; do
@@ -55,9 +65,18 @@ if ! _dashboard_up; then
     exit 1
 fi
 
-# ── Web mode: hand off to xdg-open and forget about it ──────────────────────
+# ── Web mode: hand off to xdg-open, then wait for user to stop it via zenity ────────
 if [[ "$MODE" == "web" ]]; then
-    exec xdg-open "$URL"
+    xdg-open "$URL"
+    if command -v zenity >/dev/null 2>&1; then
+        zenity --info --title="Ascendo" \
+            --text="Ascendo Dashboard is running at $URL.\n\nClick OK to stop the dashboard service." \
+            --no-wrap >/dev/null 2>&1 || true
+    else
+        echo "Dashboard running at $URL. Press Enter to stop it..."
+        read -r
+    fi
+    exit 0
 fi
 
 # ── Desktop mode: prefer a standalone window ────────────────────────────────
@@ -75,7 +94,8 @@ TAURI_CANDIDATES=(
 )
 for cand in "${TAURI_CANDIDATES[@]}"; do
     [[ -n "$cand" && -x "$cand" ]] || continue
-    exec "$cand"
+    "$cand"
+    exit 0
 done
 
 CHROMIUM_BROWSERS=(
@@ -90,17 +110,28 @@ for b in "${CHROMIUM_BROWSERS[@]}"; do
         # browsing tabs and vice versa.
         PROFILE_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/ascendo/chrome-profile"
         mkdir -p "$PROFILE_DIR"
-        exec "$b" --user-data-dir="$PROFILE_DIR" --app="$URL" \
+        "$b" --user-data-dir="$PROFILE_DIR" --app="$URL" \
                   --no-first-run --no-default-browser-check \
                   --class=AscendoDesktop --name=AscendoDesktop \
-                  >/dev/null 2>&1
+                  >/dev/null 2>&1 || true
+        exit 0
     fi
 done
 
 if command -v firefox >/dev/null 2>&1; then
     # Firefox doesn't have a true --app mode; --kiosk is the closest analogue.
-    exec firefox --kiosk "$URL" >/dev/null 2>&1
+    firefox --kiosk "$URL" >/dev/null 2>&1 || true
+    exit 0
 fi
 
-# Last-resort fallback: just open the URL in whatever the system prefers.
-exec xdg-open "$URL"
+# Last-resort fallback: just open the URL in whatever the system prefers and show zenity
+xdg-open "$URL"
+if command -v zenity >/dev/null 2>&1; then
+    zenity --info --title="Ascendo" \
+        --text="Ascendo Dashboard is running at $URL.\n\nClick OK to stop the dashboard service." \
+        --no-wrap >/dev/null 2>&1 || true
+else
+    echo "Dashboard running. Press Enter to stop..."
+    read -r
+fi
+exit 0

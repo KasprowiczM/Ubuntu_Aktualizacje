@@ -17,6 +17,14 @@
   3. Reloaded systemd user daemon and restarted the mount service.
 - **Result**: The Proton Drive mount successfully activated and `/home/mk/ProtonDrive/Dev_Env/Ubuntu_Aktualizacje` became readable, fully passing the dev-sync consistency audit.
 
+### Dynamic Service Lifecycle Management
+- **Requirements Met**:
+  1. The dashboard systemd service is explicitly **disabled** from auto-starting at user login/boot (`systemd/user/install-dashboard.sh` runs `systemctl --user disable`).
+  2. When the user launches either the Tauri desktop shell or the browser web launcher (`ascendo-launch`), the `ubuntu-aktualizacje-dashboard.service` is dynamically started.
+  3. When either the Tauri window is closed or the launched browser session exits, the service is dynamically stopped.
+- **Tauri Implementation**: Refactored `app/tauri/src-tauri/src/main.rs` to try launching the backend via `systemctl --user start ubuntu-aktualizacje-dashboard.service`. If successful, it manages the service lifecycle, issuing `systemctl --user stop ...` on close window event. If systemd is unavailable, it gracefully falls back to raw Python process spawning and process killing on exit.
+- **CLI/Browser Launcher Implementation**: Refactored `share/bin/ascendo-launch` (and its deb packaging copy) to trap exit signals, start the systemd service on launch, run persistent candidate browser applications in the foreground, and automatically stop the service on exit. For web mode, it opens the browser tab and displays a clean, user-friendly `zenity` info dialog, stopping the service automatically when the user clicks "OK" to finish the session.
+
 ### Test & Validation Fixes
 - **Problem**: `tests/validate_phase_json.py` recursively scanned all `.json` files in `logs/runs/` and crashed on `health.json` (the new health check report) because it did not conform to the `phase-result.schema.json` schema.
 - **Fix**: Updated `tests/validate_phase_json.py` to skip `health.json` alongside `run.json` during scanning. All 230+ sidecars now validate successfully.
@@ -26,6 +34,7 @@
 - `./update-all.sh --profile quick` syntax check passes successfully.
 - `bash scripts/verify-state.sh` reports a **100% CLEAN PASS** (0 failures, 0 warnings).
 - Commited and pushed to remote `main` branch: `https://github.com/KasprowiczM/Ubuntu_Aktualizacje.git`.
+- Exported overlay state to Proton Drive successfully.
 
 ---
 

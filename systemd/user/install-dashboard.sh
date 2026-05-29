@@ -16,9 +16,9 @@ mkdir -p "$DEST"
 install -m 0644 "${SCRIPT_DIR}/systemd/user/ubuntu-aktualizacje-dashboard.service" \
     "${DEST}/ubuntu-aktualizacje-dashboard.service"
 systemctl --user daemon-reload
-systemctl --user enable --now ubuntu-aktualizacje-dashboard.service
+systemctl --user disable ubuntu-aktualizacje-dashboard.service || true
+systemctl --user stop ubuntu-aktualizacje-dashboard.service || true
 sleep 1
-systemctl --user status ubuntu-aktualizacje-dashboard.service --no-pager || true
 
 # 3. Install Ascendo icon + desktop entries (user-level, no root)
 #    Two .desktop entries:

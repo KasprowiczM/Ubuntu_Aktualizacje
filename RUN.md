@@ -316,7 +316,7 @@ Czego oczekiwać:
 - 6 widoków: Overview / Categories / Run Center / History / Logs / Sync,
 - przyciski **Quick check** / **Safe update** / **Full update** / **Full dry-run**.
 
-### 4.2 Instalacja jako user-service (autostart po loginie)
+### 4.2 Instalacja jako user-service (dynamiczne zarządzanie cyklem życia)
 
 ```bash
 # Instalator: bootstrapuje venv (jeśli brak) + instaluje user-unit

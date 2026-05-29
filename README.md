@@ -49,7 +49,7 @@ bash scripts/fresh-machine.sh           # preflight + overlay + setup + dashboar
 1. `scripts/preflight.sh` — read-only host audit
 2. `scripts/bootstrap.sh` — Proton/rclone overlay restore + `setup.sh` package reconciliation
 3. `app/install.sh` — dashboard Python venv (project-local, PEP-668 safe)
-4. `systemd/user/install-dashboard.sh` — autostart user-service on `127.0.0.1:8766`
+4. `systemd/user/install-dashboard.sh` — register user-service on `127.0.0.1:8766` (no autostart at login, managed dynamically)
 5. `scripts/verify-state.sh` — final consistency check
 
 Flags: `--check-only` (audit, no mutations), `--dry-run`, `--no-dashboard`,
