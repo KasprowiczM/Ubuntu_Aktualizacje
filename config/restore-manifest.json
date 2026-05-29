@@ -44,7 +44,8 @@
     ".codex.local/tmp/",
     "__pycache__/",
     "node_modules/",
-    "graphify-out/cache/"
+    "graphify-out/cache/",
+    "packaging/deb/opt/"
   ],
   "fresh_clone_flow": [
     "bash scripts/preflight.sh",
