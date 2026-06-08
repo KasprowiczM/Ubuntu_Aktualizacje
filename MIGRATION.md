@@ -4,16 +4,21 @@ Quick guide for installing/testing this project on a fresh Ubuntu 24.04 host.
 
 ## TL;DR (one-liner)
 
+For a fresh install, run the master installer:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/KasprowiczM/Ubuntu_Aktualizacje/main/install.sh)"
+```
+
+Alternatively, you can manually clone and run:
+
 ```bash
 git clone https://github.com/KasprowiczM/Ubuntu_Aktualizacje ~/Dev_Env/Ubuntu_Aktualizacje
 cd ~/Dev_Env/Ubuntu_Aktualizacje
 bash scripts/fresh-machine.sh
 ```
 
-That runs preflight → restores private overlay from Proton (if available) →
-sets up dashboard venv → installs the user-level systemd dashboard service →
-verifies state. Idempotent. Flags: `--check-only`, `--dry-run`,
-`--no-dashboard`, `--no-service`, `--no-sync`, `--lang en|pl`.
+The installer verifies host conditions, installs prerequisites, prompts to **discover currently installed applications** (building your custom local inventory to avoid forcing uninstalled template apps), restores the private overlay from Proton (if developer mode is chosen), configures the dashboard Python venv, and installs the systemd user service. Flags for `fresh-machine.sh` include: `--check-only`, `--dry-run`, `--no-dashboard`, `--no-service`, `--no-sync`, `--lang en|pl`.
 
 After it finishes:
 

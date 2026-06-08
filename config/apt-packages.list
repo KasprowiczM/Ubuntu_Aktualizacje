@@ -39,7 +39,7 @@ rclone                      # Multi-cloud sync CLI
 
 # ── VPN & Privacy ─────────────────────────────────────────────────────────────
 proton-vpn-gnome-desktop    # ProtonVPN desktop (includes daemon + gtk app)
-proton-mail                 # Proton Mail desktop client
+# proton-mail                 # Proton Mail desktop client (no official APT repository, download manually from official website)
 
 # ── Remote Access ─────────────────────────────────────────────────────────────
 remotedesktopmanager        # Devolutions Remote Desktop Manager

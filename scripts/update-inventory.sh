@@ -350,9 +350,30 @@ cat <<'MD'
 |----------|-------|
 MD
 
-echo "| BIOS Version | $(sudo dmidecode -s bios-version 2>/dev/null || echo 'N/A') |"
-echo "| BIOS Date | $(sudo dmidecode -s bios-release-date 2>/dev/null || echo 'N/A') |"
-echo "| System | $(sudo dmidecode -s system-product-name 2>/dev/null || echo 'N/A') |"
+bios_version="N/A"
+if [[ -r /sys/class/dmi/id/bios_version ]]; then
+    bios_version=$(cat /sys/class/dmi/id/bios_version 2>/dev/null | tr -d '\n')
+else
+    bios_version=$(sudo dmidecode -s bios-version 2>/dev/null || echo 'N/A')
+fi
+
+bios_date="N/A"
+if [[ -r /sys/class/dmi/id/bios_date ]]; then
+    bios_date=$(cat /sys/class/dmi/id/bios_date 2>/dev/null | tr -d '\n')
+else
+    bios_date=$(sudo dmidecode -s bios-release-date 2>/dev/null || echo 'N/A')
+fi
+
+sys_product="N/A"
+if [[ -r /sys/class/dmi/id/product_name ]]; then
+    sys_product=$(cat /sys/class/dmi/id/product_name 2>/dev/null | tr -d '\n')
+else
+    sys_product=$(sudo dmidecode -s system-product-name 2>/dev/null || echo 'N/A')
+fi
+
+echo "| BIOS Version | ${bios_version} |"
+echo "| BIOS Date | ${bios_date} |"
+echo "| System | ${sys_product} |"
 
 # ━━━ Flatpak ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 cat <<'MD'

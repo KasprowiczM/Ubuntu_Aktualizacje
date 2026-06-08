@@ -20,7 +20,12 @@ if [[ "${HAS_NVIDIA:-0}" -eq 1 ]]; then
     json_add_item id="drivers:nvidia:installed" action="present" \
         from="${nv_pkg}" to="${nv_ver}" result="ok"
     smi=""
-    if has_cmd nvidia-smi && nvidia-smi >/dev/null 2>&1; then
+    smi_out=$(nvidia-smi 2>&1 || true)
+    if [[ "$smi_out" == *"Driver/library version mismatch"* ]]; then
+        json_add_diag warn NVIDIA-SMI-MISMATCH "nvidia-smi reports driver/library version mismatch (reboot required)"
+        json_count_warn
+        json_set_needs_reboot 1
+    elif has_cmd nvidia-smi && nvidia-smi >/dev/null 2>&1; then
         smi=$(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2>/dev/null | head -1)
         json_add_diag info NVIDIA-SMI "${smi}"
     else

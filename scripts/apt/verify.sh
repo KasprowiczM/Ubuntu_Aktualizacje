@@ -76,7 +76,12 @@ fi
 
 # ── 4. NVIDIA driver health (informational) ──────────────────────────────────
 if has_cmd nvidia-smi; then
-    if nvidia-smi >/dev/null 2>&1; then
+    smi_out=$(nvidia-smi 2>&1 || true)
+    if [[ "$smi_out" == *"Driver/library version mismatch"* ]]; then
+        json_add_diag warn NVIDIA-SMI-MISMATCH "nvidia-smi reports driver/library version mismatch (reboot required)"
+        json_count_warn
+        json_set_needs_reboot 1
+    elif [[ -n "$smi_out" ]] && nvidia-smi >/dev/null 2>&1; then
         json_add_diag info NVIDIA-SMI-OK "nvidia-smi responsive"
     else
         json_add_diag warn NVIDIA-SMI-DOWN "nvidia-smi not responsive (reboot or DKMS rebuild may be needed)"

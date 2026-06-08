@@ -667,7 +667,7 @@ for rcfile in "${HOME}/.bashrc" "${HOME}/.zshrc"; do
 done
 
 print_step "Make scripts executable"
-find "${SCRIPT_DIR}" -name "*.sh" -exec chmod +x {} \; && print_ok || print_warn "chmod failed"
+find "${SCRIPT_DIR}" -name "*.sh" ! -path "*/.git/*" ! -path "*/lib/*" ! -path "*/.venv/*" -exec chmod +x {} \; && print_ok || print_warn "chmod failed"
 
 # =============================================================================
 # GENERATE INVENTORY

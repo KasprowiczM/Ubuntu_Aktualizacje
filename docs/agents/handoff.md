@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-06-08 (Etap 15) — Discover-First Installation, Sudo check avoidance, and NVIDIA mismatch grace
+
+### Master Installer Flow & Discovery First
+- **Problem**: When a user ran `install.sh` on a new machine, `bootstrap.sh` automatically ran `setup.sh` in migrate mode, forcing all template applications from the original developer's Precision 5520 host onto the new machine.
+- **Fix**:
+  1. Updated `install.sh` to prompt user: `"Initialize package configuration lists with applications already installed on this host?"` (default `y`).
+  2. If accepted, it executes `setup.sh --discover --non-interactive` to scan local package managers and overwrite `config/*.list` files with the local system package inventory.
+  3. When bootstrap triggers, it reconciles but installs no new packages since the config lists exactly match what is already installed.
+- **Removed Uninstallable Package**: Commented out `proton-mail` from the default `config/apt-packages.list` template, noting that it has no official APT repository and should be manually installed via `.deb`.
+
+### Sudo Prompts during Read-Only Checks
+- **Problem**: Running `setup.sh --check` or `update-inventory.sh` triggered a prompt for a `sudo` password because `detect_hardware` and BIOS checks invoked `sudo dmidecode`.
+- **Fix**: Modified `lib/detect.sh` and `scripts/update-inventory.sh` to read details directly from `/sys/class/dmi/id/...` if readable by regular users, completely avoiding the sudo requirement for checking phases.
+
+### NVIDIA SMI Version Mismatch Handling
+- **Problem**: If the library version differs from the loaded kernel module version (common after driver package upgrades before reboot), `nvidia-smi` fails with `Driver/library version mismatch`. This was reported as a critical error, failing verification.
+- **Fix**: Updated `scripts/apt/verify.sh`, `scripts/drivers/check.sh`, and `scripts/drivers/verify.sh` to detect the mismatch string, log it as a warning, and flag `needs_reboot` to true, rather than failing the exit codes.
+
+### Setup script permission pollution
+- **Problem**: `setup.sh` recursively executed `chmod +x` on all `.sh` files, modifying permissions of library scripts under `lib/`. This dirtied the working tree and broke `verify-state.sh`.
+- **Fix**: Modified the search path in `setup.sh` to explicitly exclude `.git/`, `lib/`, and `.venv/` directories when setting executable bits.
+
+### Verification Status
+- Verified all shell script syntax: `bash -n` checks pass.
+- Verified state checks locally: `bash scripts/verify-state.sh` reports success (excluding the git dirty check caused by uncommitted changes).
+- Ran dry-runs: `./update-all.sh --dry-run` and `./update-all.sh --profile quick` pass cleanly.
+
+---
+
 ## 2026-05-29 (Etap 14) — Rebrand GUI/CLI Package Separation & Launcher Fix
 
 ### Package Separation & Renaming

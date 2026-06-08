@@ -226,9 +226,8 @@ _setup_repo_antigravity() {
 # ── Grub Customizer PPA ───────────────────────────────────────────────────────
 
 _setup_repo_grub_customizer_ppa() {
-    local listfile
-    listfile=$(ls /etc/apt/sources.list.d/danielrichter2007* 2>/dev/null | head -1)
-    if [[ -n "$listfile" ]]; then
+    local files=(/etc/apt/sources.list.d/danielrichter2007*)
+    if [[ -e "${files[0]}" ]]; then
         print_info "Grub Customizer PPA: already configured — skipping"; return 0
     fi
     print_step "Add Grub Customizer PPA"

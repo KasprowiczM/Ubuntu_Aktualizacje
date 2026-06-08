@@ -34,8 +34,16 @@ assert_ubuntu() {
 # ── Hardware Detection ────────────────────────────────────────────────────────
 
 detect_hardware() {
-    HW_VENDOR=$(sudo dmidecode -s system-manufacturer 2>/dev/null | tr -d '\n' || echo "Unknown")
-    HW_MODEL=$(sudo dmidecode -s system-product-name 2>/dev/null | tr -d '\n' || echo "Unknown")
+    if [[ -r /sys/class/dmi/id/sys_vendor ]]; then
+        HW_VENDOR=$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null | tr -d '\n' || echo "Unknown")
+    else
+        HW_VENDOR=$(sudo dmidecode -s system-manufacturer 2>/dev/null | tr -d '\n' || echo "Unknown")
+    fi
+    if [[ -r /sys/class/dmi/id/product_name ]]; then
+        HW_MODEL=$(cat /sys/class/dmi/id/product_name 2>/dev/null | tr -d '\n' || echo "Unknown")
+    else
+        HW_MODEL=$(sudo dmidecode -s system-product-name 2>/dev/null | tr -d '\n' || echo "Unknown")
+    fi
     HW_CHASSIS=$(hostnamectl 2>/dev/null | grep "Chassis" | awk '{print $NF}' || echo "unknown")
     CPU_MODEL=$(grep 'model name' /proc/cpuinfo 2>/dev/null | head -1 | sed 's/.*: //' || echo "Unknown")
     RAM_GB=$(awk '/MemTotal/{printf "%.0f", $2/1048576}' /proc/meminfo 2>/dev/null || echo "?")

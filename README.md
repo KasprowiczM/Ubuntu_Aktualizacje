@@ -37,7 +37,30 @@ Technical details and agent docs:
 
 ## Quick Start
 
-### New machine (fresh clone, one-liner)
+### Master Installer (One-Liner / Local)
+
+If you are on a new machine, you can run the master installer directly:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/KasprowiczM/Ubuntu_Aktualizacje/main/install.sh)"
+```
+
+Or run it locally:
+
+```bash
+bash install.sh
+```
+
+The master installer will:
+1. Verify the OS is Ubuntu.
+2. Clone the repository to your host if not already run from one.
+3. Prompt for Developer mode (Dev-Sync/Proton Drive) vs Normal mode.
+4. Install base system prerequisites.
+5. **Build inventory first**: Prompt to scan the local machine and initialize package lists with the applications currently installed on your host. This prevents forcing templates or applications from another machine onto your system.
+6. Reconcile package managers and bootstrap the stack.
+7. Setup the user service and generate the initial `APPS.md` report.
+
+### Manual Installation (fresh clone)
 
 ```bash
 git clone https://github.com/KasprowiczM/Ubuntu_Aktualizacje

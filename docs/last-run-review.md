@@ -1,5 +1,27 @@
 # Last Run Review
 
+## 2026-06-08 — Host P5820 migration & warning/permission cleanup
+
+Reviewed run:
+
+```text
+logs/runs/20260608T101056Z-85810/run.json
+status: ok  (check-only / dry-run passes cleanly)
+reboot_required: true (due to NVIDIA driver mismatch)
+```
+
+### Findings & fixes shipped
+
+| Finding | Root cause | Fix |
+|---|---|---|
+| First-time install forced all template apps | `bootstrap.sh` called `setup.sh` in migrate mode unconditionally, installing all apps from the developer's original machine | Modified `install.sh` to prompt and run `setup.sh --discover --non-interactive` before bootstrapping on a new machine. This builds a local inventory first. |
+| `proton-mail` warning in `apt:verify` | `proton-mail` was in default `config/apt-packages.list` but has no official APT repo, so it was always missing | Commented out `proton-mail` in the default list and added comments instructing users to download the `.deb` file manually. |
+| `NVIDIA-SMI-DOWN` error on mismatch | Upgraded packages on `P5820` changed libraries to `580.159.03` but the loaded kernel module was still `535.183.01`, causing `nvidia-smi` to fail verification | Updated check/verify scripts to detect `Driver/library version mismatch` from `nvidia-smi` and flag `needs_reboot` without raising error status or non-zero exit codes. |
+| `verify-state.sh` failed on dirty files | `setup.sh` recursively ran `chmod +x` on all `.sh` files, modifying non-executable files in `lib/` | Excluded `.git/`, `lib/`, and `.venv/` from the recursive `chmod +x` search in `setup.sh`. |
+| Sudo prompted on read-only check | `detect_hardware` and `update-inventory.sh` used `sudo dmidecode` for vendor/model data | Read directly from `/sys/class/dmi/id/...` if accessible to regular users, avoiding sudo entirely for checking phases. |
+
+---
+
 ## 2026-04-30 — Full run analysis + UX/perf overhaul
 
 Reviewed run:
