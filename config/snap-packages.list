@@ -25,3 +25,12 @@ keepassxc                   # KeePassXC password manager
 htop                        # Interactive process viewer
 firmware-updater            # GNOME firmware updater
 snap-store
+code
+cups
+proton-mail
+snapd-desktop-integration
+snapd
+gtk-common-themes
+gnome-46-2404
+core24
+bare

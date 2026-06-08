@@ -234,27 +234,29 @@ sudo apt-get upgrade "${APT_OPTS[@]}" \
     BEGIN { i = 0 }
     /^Setting up / {
         i++
-        # capture: "Setting up firefox (132.0+build1-0ubuntu1) ..."
-        match($0, /^Setting up ([^ ]+) \(([^)]+)\)/, m)
-        if (m[1] != "") {
+        pkg = $3
+        ver = $4
+        sub(/^\(/, "", ver)
+        sub(/\).*$/, "", ver)
+        if (pkg != "") {
             # Human-friendly line for the console.
-            printf "  \033[0;32m✔\033[0m  [%d/%d] %s → %s\n", i, total, m[1], m[2]
+            printf "  \033[0;32m✔\033[0m  [%d/%d] %s → %s\n", i, total, pkg, ver
             # Machine marker for the dashboard SSE consumer (matches lib/progress.sh).
-            printf "PROGRESS|step|apt-upgrade|%d|%d|ok|%s → %s\n", i, total, m[1], m[2]
+            printf "PROGRESS|step|apt-upgrade|%d|%d|ok|%s → %s\n", i, total, pkg, ver
             fflush()
         }
     }
     /^Unpacking / {
-        match($0, /^Unpacking ([^ ]+) \(([^)]+)\)/, m)
-        if (m[1] != "") {
-            printf "  \033[2m·  unpacking %s\033[0m\n", m[1]
+        pkg = $2
+        if (pkg != "") {
+            printf "  \033[2m·  unpacking %s\033[0m\n", pkg
             fflush()
         }
     }
     /^Removing / {
-        match($0, /^Removing ([^ ]+) /, m)
-        if (m[1] != "") {
-            printf "  \033[2m·  removing %s\033[0m\n", m[1]
+        pkg = $2
+        if (pkg != "") {
+            printf "  \033[2m·  removing %s\033[0m\n", pkg
             fflush()
         }
     }

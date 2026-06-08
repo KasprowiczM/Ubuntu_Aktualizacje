@@ -24,3 +24,40 @@ gcc                         # GNU Compiler Collection
 
 # ── Search & CLI Utilities ────────────────────────────────────────────────────
 ripgrep                     # Fast grep replacement (used by editors/tools)
+ada-url
+zstd
+zlib-ng-compat
+xz
+uvwasi
+unzip
+sqlite
+simdutf
+simdjson
+readline
+binutils
+brotli
+bzip2
+c-ares
+ca-certificates
+expat
+fmt
+gmp
+hdrhistogram_c
+icu4c@78
+isl
+libedit
+libffi
+libmpc
+libnghttp2
+libnghttp3
+libngtcp2
+libuv
+llhttp
+lz4
+merve
+mpdecimal
+mpfr
+nbytes
+ncurses
+openssl@3
+pcre2
