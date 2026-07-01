@@ -92,7 +92,7 @@ The latest full `update-all.sh` run completed without fatal errors.
 | APT phased updates | Deferred | `remmina*` and `thermald` were deferred by Ubuntu phased updates. Do not force unless needed. |
 | Snap | OK in full update | Snap packages reported current and no disabled revisions were removed. |
 | Homebrew | WARN | `brew cleanup --prune=7` hit a permission issue in old `pipx` keg cleanup. `brew doctor` still reported ready. |
-| npm | OK | Global AI CLIs are current: Claude Code, Gemini CLI, Codex. |
+| npm | OK | Global AI CLIs are current: Claude Code, Codex. |
 | pip/pipx | OK | `graphifyy 0.4.23` present through pipx. |
 | Flatpak | OK | Nothing to update; no Flatpak apps installed. |
 | NVIDIA | OK | NVIDIA upgrade skipped by policy; `nvidia-smi` reports Quadro M1200 on driver `570.211.01`. |

@@ -1,5 +1,24 @@
 # Handoff
 
+## 2026-07-01 (Etap 16) — Remove Gemini CLI from Updates and System
+
+### Gemini CLI Removal
+- **Goal**: Fully uninstall `gemini-cli` / `@google/gemini-cli` and exclude it from future global packages update and planning cycles.
+- **Actions**:
+  1. Ran `npm uninstall -g @google/gemini-cli` to remove it from global npm packages.
+  2. Removed `@google/gemini-cli` from [config/npm-globals.list](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/config/npm-globals.list).
+  3. Cleaned up comments in [config/brew-formulas.list](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/config/brew-formulas.list).
+  4. Updated [scripts/npm/apply.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/scripts/npm/apply.sh), [scripts/npm/plan.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/scripts/npm/plan.sh), and [scripts/update-npm.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/scripts/update-npm.sh) to exclude it from updates, checks, and plan items.
+  5. Updated [docs/last-run-review.md](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/docs/last-run-review.md) status table.
+- **Verification Status**:
+  - Run syntax check: `bash -n` checks pass.
+  - Python dev sync safety tests pass.
+  - Dry run check: `./update-all.sh --dry-run` runs successfully without any planned action for Gemini CLI.
+  - Verification: `bash scripts/verify-state.sh` reports a clean **OVERALL PASS** (0 failures, 0 warnings).
+  - Exported dev-sync to Proton Drive.
+
+---
+
 ## 2026-06-08 (Etap 15) — Discover-First Installation, Sudo check avoidance, and NVIDIA mismatch grace
 
 ### Master Installer Flow & Discovery First
