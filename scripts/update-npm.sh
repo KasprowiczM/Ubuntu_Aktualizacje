@@ -22,7 +22,6 @@ MIGRATE_BREW_AI_CLIS="${MIGRATE_BREW_AI_CLIS:-1}"
 # Keep these CLIs on the earliest generally-available channel.
 PRIORITY_AI_CLI_PKGS=(
     "@anthropic-ai/claude-code"
-    "@google/gemini-cli"
     "@openai/codex"
 )
 

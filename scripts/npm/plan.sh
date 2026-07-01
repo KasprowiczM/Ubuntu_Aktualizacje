@@ -37,7 +37,7 @@ except Exception:
 " 2>/dev/null)
 
 # Priority AI CLIs always force-installed @latest in apply
-for pkg in "@anthropic-ai/claude-code" "@google/gemini-cli" "@openai/codex"; do
+for pkg in "@anthropic-ai/claude-code" "@openai/codex"; do
     json_add_item id="npm:force-latest:${pkg}" action="reinstall" \
         to="latest" result="noop"
     n=$((n + 1))

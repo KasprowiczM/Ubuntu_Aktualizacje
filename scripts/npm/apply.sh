@@ -24,7 +24,6 @@ fi
 CONFIG_NPM="${SCRIPT_DIR}/config/npm-globals.list"
 PRIORITY_AI_CLI_PKGS=(
     "@anthropic-ai/claude-code"
-    "@google/gemini-cli"
     "@openai/codex"
 )
 EXIT_RC=0
