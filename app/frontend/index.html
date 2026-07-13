@@ -659,7 +659,7 @@ ascendo exclusions list / add / remove cat:pkg</code></pre>
             <tr><td><code>scripts/apt/*.sh</code></td><td>APT: refresh repos (fail-closed), <code>apt-get upgrade</code> with per-package streaming progress, NVIDIA hold by default, exclusions via <code>apt-mark hold</code> for the duration of the phase.</td></tr>
             <tr><td><code>scripts/snap/*.sh</code></td><td>Snap: <code>snap refresh</code> with <code>--ignore-running</code> fallback for browsers, removes disabled revisions in cleanup.</td></tr>
             <tr><td><code>scripts/brew/*.sh</code></td><td>Homebrew: drops to <code>SUDO_USER</code> (brew refuses root), proactive Cellar chown to fix pipx pyc cleanup warnings.</td></tr>
-            <tr><td><code>scripts/npm/*.sh</code></td><td>npm globals: forces <code>@latest</code> for AI CLIs (Claude Code, Codex, Gemini CLI), <code>npm audit</code> in verify.</td></tr>
+            <tr><td><code>scripts/npm/*.sh</code></td><td>npm globals: forces <code>@latest</code> for AI CLIs (Claude Code, Codex), <code>npm audit</code> in verify.</td></tr>
             <tr><td><code>scripts/pip/*.sh</code></td><td>pip user packages + pipx <code>upgrade-all</code>; respects PEP-668 by routing system-managed Python through pipx.</td></tr>
             <tr><td><code>scripts/flatpak/*.sh</code></td><td>flatpak update + cleanup of unused runtimes.</td></tr>
             <tr><td><code>scripts/drivers/*.sh</code></td><td>NVIDIA driver (held unless <code>--nvidia</code>), fwupd metadata refresh + manual update advisory.</td></tr>
