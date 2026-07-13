@@ -43,6 +43,33 @@ _ensure_configured_repos() {
     fi
 }
 
+_safe_apt_mark() {
+    local cmd="$1"
+    shift
+    local max_tries=30
+    local try=1
+    local delay=5
+    while [[ $try -le $max_tries ]]; do
+        local err_out
+        if err_out=$(sudo apt-mark "$cmd" "$@" 2>&1); then
+            echo "${err_out}" >> "${LOG_FILE}"
+            return 0
+        else
+            echo "${err_out}" >> "${LOG_FILE}"
+            if echo "${err_out}" | grep -qE "lock|locked|Resource temporarily unavailable"; then
+                print_warn "apt-mark lock busy (try $try/$max_tries), waiting ${delay}s..."
+                sleep "$delay"
+                try=$((try + 1))
+            else
+                print_error "apt-mark failed with: ${err_out}"
+                return 1
+            fi
+        fi
+    done
+    print_error "apt-mark timed out waiting for lock"
+    return 1
+}
+
 declare -a NVIDIA_TEMP_HELD=()
 
 _installed_nvidia_packages() {
@@ -62,7 +89,7 @@ _temporarily_hold_nvidia() {
             [[ "$pkg" == "$held" ]] && already_held=1 && break
         done
         [[ $already_held -eq 1 ]] && continue
-        if sudo apt-mark hold "$pkg" >> "${LOG_FILE}" 2>&1; then
+        if _safe_apt_mark hold "$pkg"; then
             NVIDIA_TEMP_HELD+=("$pkg")
         fi
     done
@@ -70,7 +97,7 @@ _temporarily_hold_nvidia() {
 
 _restore_nvidia_holds() {
     [[ ${#NVIDIA_TEMP_HELD[@]} -eq 0 ]] && return 0
-    sudo apt-mark unhold "${NVIDIA_TEMP_HELD[@]}" >> "${LOG_FILE}" 2>&1 || true
+    _safe_apt_mark unhold "${NVIDIA_TEMP_HELD[@]}" || true
     NVIDIA_TEMP_HELD=()
 }
 

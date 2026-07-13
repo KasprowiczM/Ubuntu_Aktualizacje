@@ -1,5 +1,17 @@
 # Handoff
 
+## 2026-07-13 (Etap 17) — Robust APT Lock Retries & final Gemini CLI help documentation update
+
+### APT Lock Contention Fix
+- **Problem**: The `update-all.sh` run failed in the `apt/apply` phase because `apt-mark` does not support a native timeout (unlike `apt-get`'s `DPkg::Lock::Timeout`). If `unattended-upgrades` or another process held the dpkg lock, `apt-mark` failed immediately and aborted the update.
+- **Fix**: Implemented `_safe_apt_mark` helper in [scripts/apt/apply.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/scripts/apt/apply.sh) and [scripts/update-apt.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/scripts/update-apt.sh). It retries `apt-mark hold` and `unhold` commands up to 30 times (with 5-second delays) if a lock contention error is detected.
+
+### Gemini CLI Documentation Clean-up
+- **Actions**: Removed the final mention of Gemini CLI from [app/frontend/index.html](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/app/frontend/index.html#L662) help reference.
+- **Verification**: Ran `verify-state.sh` to confirm 0 failures and 0 warnings.
+
+---
+
 ## 2026-07-01 (Etap 16) — Remove Gemini CLI from Updates and System
 
 ### Gemini CLI Removal

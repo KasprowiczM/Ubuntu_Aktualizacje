@@ -45,6 +45,33 @@ CONFIG_REPOS="${SCRIPT_DIR}/config/apt-repos.list"
 CONFIG_APT="${SCRIPT_DIR}/config/apt-packages.list"
 UPGRADE_NVIDIA="${UPGRADE_NVIDIA:-0}"
 
+_safe_apt_mark() {
+    local cmd="$1"
+    shift
+    local max_tries=30
+    local try=1
+    local delay=5
+    while [[ $try -le $max_tries ]]; do
+        local err_out
+        if err_out=$(sudo apt-mark "$cmd" "$@" 2>&1); then
+            echo "${err_out}" >> "${LOG_FILE}"
+            return 0
+        else
+            echo "${err_out}" >> "${LOG_FILE}"
+            if echo "${err_out}" | grep -qE "lock|locked|Resource temporarily unavailable"; then
+                print_warn "apt-mark lock busy (try $try/$max_tries), waiting ${delay}s..."
+                sleep "$delay"
+                try=$((try + 1))
+            else
+                print_error "apt-mark failed with: ${err_out}"
+                return 1
+            fi
+        fi
+    done
+    print_error "apt-mark timed out waiting for lock"
+    return 1
+}
+
 declare -a NVIDIA_TEMP_HELD=()
 
 _installed_nvidia_packages() {
@@ -64,7 +91,7 @@ _temporarily_hold_nvidia() {
             [[ "$pkg" == "$held" ]] && already=1 && break
         done
         [[ $already -eq 1 ]] && continue
-        if sudo apt-mark hold "$pkg" >> "${LOG_FILE}" 2>&1; then
+        if _safe_apt_mark hold "$pkg"; then
             NVIDIA_TEMP_HELD+=("$pkg")
         fi
     done
@@ -74,7 +101,7 @@ _temporarily_hold_nvidia() {
 
 _restore_nvidia_holds() {
     [[ ${#NVIDIA_TEMP_HELD[@]} -eq 0 ]] && return 0
-    sudo apt-mark unhold "${NVIDIA_TEMP_HELD[@]}" >> "${LOG_FILE}" 2>&1 || true
+    _safe_apt_mark unhold "${NVIDIA_TEMP_HELD[@]}" || true
     NVIDIA_TEMP_HELD=()
 }
 
@@ -82,6 +109,7 @@ declare -a EXCL_TEMP_HELD=()
 
 # Apply per-user exclusions via apt-mark hold for the duration of this phase.
 # Exclusions live in config/exclusions.list as "apt:<package>" lines.
+# shellcheck disable=SC2034
 APT_CATEGORY_EXCLUDED=0
 _temporarily_hold_excluded_apt() {
     # shellcheck disable=SC1091
@@ -104,7 +132,7 @@ _temporarily_hold_excluded_apt() {
             local already=0
             for h in "${current_holds[@]:-}"; do [[ "$h" == "$pkg" ]] && already=1 && break; done
             [[ $already -eq 1 ]] && continue
-            if sudo apt-mark hold "$pkg" >> "${LOG_FILE}" 2>&1; then
+            if _safe_apt_mark hold "$pkg"; then
                 EXCL_TEMP_HELD+=("$pkg")
             fi
         fi
@@ -115,7 +143,7 @@ _temporarily_hold_excluded_apt() {
 }
 _restore_excluded_apt_holds() {
     [[ ${#EXCL_TEMP_HELD[@]} -eq 0 ]] && return 0
-    sudo apt-mark unhold "${EXCL_TEMP_HELD[@]}" >> "${LOG_FILE}" 2>&1 || true
+    _safe_apt_mark unhold "${EXCL_TEMP_HELD[@]}" || true
     EXCL_TEMP_HELD=()
 }
 
