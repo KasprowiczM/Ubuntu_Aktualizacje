@@ -120,7 +120,7 @@ fi
 if [[ "${UPGRADE_NVIDIA}" -eq 0 ]]; then
     print_info "NVIDIA packages held (use --nvidia to upgrade)"
     _temporarily_hold_nvidia
-    trap _apt_exit_cleanup EXIT
+    add_exit_trap _apt_exit_cleanup
 fi
 
 # ── 1. Refresh all apt sources ────────────────────────────────────────────────
@@ -212,7 +212,7 @@ sudo_silent apt-get autoclean -q && print_ok || { print_warn "autoclean non-zero
 
 # ── Restore NVIDIA hold state ─────────────────────────────────────────────────
 _restore_nvidia_holds
-[[ -n "${SUDO_KEEP_ALIVE_PID:-}" ]] && trap 'kill "${SUDO_KEEP_ALIVE_PID}" 2>/dev/null; true' EXIT || trap - EXIT
+true
 
 # ── 4. Feed/candidate health for key desktop apps ────────────────────────────
 print_section "Desktop app feed health"

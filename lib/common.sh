@@ -21,6 +21,22 @@ LOG_FILE="${LOG_FILE:-${LOG_DIR}/update_${TIMESTAMP}.log}"
 
 mkdir -p "${LOG_DIR}"
 
+# ── Cooperative EXIT trap manager ─────────────────────────────────────────────
+declare -a EXIT_TRAP_CMDS=()
+
+_run_exit_traps() {
+    local rc=$?
+    local cmd
+    for cmd in "${EXIT_TRAP_CMDS[@]}"; do
+        ( exit "$rc" ) && eval "$cmd" 2>/dev/null || eval "$cmd" 2>/dev/null || true
+    done
+}
+trap _run_exit_traps EXIT
+
+add_exit_trap() {
+    EXIT_TRAP_CMDS+=("$1")
+}
+
 # ── Internal log (both file and screen) ───────────────────────────────────────
 _log_raw() {
     local level="$1"; shift
@@ -163,7 +179,7 @@ require_sudo() {
     fi
     (while true; do sudo -n true 2>/dev/null || break; sleep 50; done) &
     SUDO_KEEP_ALIVE_PID=$!
-    trap 'kill ${SUDO_KEEP_ALIVE_PID} 2>/dev/null' EXIT
+    add_exit_trap 'kill ${SUDO_KEEP_ALIVE_PID} 2>/dev/null || true'
 }
 
 # ── Check if a command exists ─────────────────────────────────────────────────

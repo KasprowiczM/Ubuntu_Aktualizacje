@@ -185,7 +185,7 @@ phase_supported_for_category() {
 }
 
 # ── Init orchestrator + lock ──────────────────────────────────────────────────
-[[ -n "$RUN_ID" ]] && orch_init "$RUN_ID" || orch_init ""
+if [[ -n "$RUN_ID" ]]; then orch_init "$RUN_ID"; else orch_init ""; fi
 orch_set_dry_run "$DRY_RUN"
 orch_set_profile "$PROFILE"
 
@@ -246,7 +246,7 @@ if [[ "$DRY_RUN" -eq 0 && "$needs_sudo" -eq 1 ]]; then
             UA_PW=""
             while [[ -z "$UA_PW" ]]; do
                 read -r -s -p "  [sudo] password for ${USER}: " UA_PW; echo
-                if ! printf '%s\n' "$UA_PW" | sudo -S -p '' -v 2>/dev/null; then
+                if ! sudo -S -p '' -v <<< "$UA_PW" 2>/dev/null; then
                     echo -e "${RED}  Wrong password, try again.${RESET}"; UA_PW=""
                 fi
             done
@@ -256,7 +256,10 @@ if [[ "$DRY_RUN" -eq 0 && "$needs_sudo" -eq 1 ]]; then
             chmod 0700 "$UA_ASKPASS_HELPER"
             # Embed password as single-quoted shell literal (escape ' as '"'"').
             UA_ESC=${UA_PW//\'/\'\"\'\"\'}
-            printf '#!/usr/bin/env bash\nprintf %%s '"'"'%s'"'"'\n' "$UA_ESC" > "$UA_ASKPASS_HELPER"
+            cat <<EOF > "$UA_ASKPASS_HELPER"
+#!/usr/bin/env bash
+printf %s '$UA_ESC'
+EOF
             unset UA_PW UA_ESC
             export SUDO_ASKPASS="$UA_ASKPASS_HELPER"
             sudo -A -n -v >/dev/null 2>&1 || true

@@ -1,5 +1,27 @@
 # Handoff
 
+## 2026-07-13 (Etap 18) — Deep Script Integrity fixes, cooperative EXIT traps & CI filename alignment
+
+### Cooperative EXIT traps
+- **Problem**: When a script needed both sudo keep-alive cleanup and JSON sidecar finalization, whichever EXIT trap was registered second would clobber the first one.
+- **Fix**: Created a cooperative exit trap manager in [lib/common.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/lib/common.sh) (`EXIT_TRAP_CMDS` array + `add_exit_trap` helper). Refactored [lib/json.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/lib/json.sh), [scripts/apt/apply.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/scripts/apt/apply.sh), and [scripts/update-apt.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/scripts/update-apt.sh) to use cooperative traps, preventing any cleanup or JSON serialization from being silently skipped.
+
+### CI required files validation
+- **Problem**: The CI required files check in `.github/workflows/validate.yml` was checking for obsolete file names from before the `ascendo-ubuntu` rebranding, which would cause CI runs on GitHub to fail.
+- **Fix**: Updated all stale paths in [.github/workflows/validate.yml](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/.github/workflows/validate.yml) (systemd units, deb packaging, applications desktop config) to match the current files on disk.
+
+### Shell/Python script security & robustness
+- **Python injection prevention**: Modified [scripts/pip/apply.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/scripts/pip/apply.sh), [scripts/pip/verify.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/scripts/pip/verify.sh), and [lib/orchestrator.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/lib/orchestrator.sh) to pass values to inline python scripts via `sys.argv[1]` instead of raw string interpolation, eliminating syntax errors on special characters and shell/python injection paths.
+- **Robustness improvements**:
+  - Fixed logic anti-pattern at line 188 of [update-all.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/update-all.sh).
+  - Ensured `HW_CHASSIS` and `CPU_MODEL` fallbacks in [lib/detect.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/lib/detect.sh) trigger when commands return empty string.
+  - Wrapped `pip list` JSON parsing inside a try/except block in [scripts/pip/check.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/scripts/pip/check.sh).
+  - Exported `PIP_PHASE="plan"` in [scripts/pip/plan.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/scripts/pip/plan.sh) and updated [scripts/pip/check.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/scripts/pip/check.sh) to respect it, resolving wrong JSON `kind` in the plan phase.
+  - Securely handled `mktemp` usage in [lib/detect.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/lib/detect.sh) to avoid symlink vulnerability.
+  - Unused `refresh_rc` assignment removed in [scripts/snap/apply.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/scripts/snap/apply.sh) and stale `gemini-cli` formula cleanup removed in [scripts/update-npm.sh](file:///home/mk/Dev_Env/Ubuntu_Aktualizacje/scripts/update-npm.sh).
+
+---
+
 ## 2026-07-13 (Etap 17) — Robust APT Lock Retries & final Gemini CLI help documentation update
 
 ### APT Lock Contention Fix

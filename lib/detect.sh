@@ -44,8 +44,10 @@ detect_hardware() {
     else
         HW_MODEL=$(sudo dmidecode -s system-product-name 2>/dev/null | tr -d '\n' || echo "Unknown")
     fi
-    HW_CHASSIS=$(hostnamectl 2>/dev/null | grep "Chassis" | awk '{print $NF}' || echo "unknown")
-    CPU_MODEL=$(grep 'model name' /proc/cpuinfo 2>/dev/null | head -1 | sed 's/.*: //' || echo "Unknown")
+    HW_CHASSIS=$(hostnamectl 2>/dev/null | grep "Chassis" | awk '{print $NF}')
+    [[ -z "$HW_CHASSIS" ]] && HW_CHASSIS="unknown"
+    CPU_MODEL=$(grep 'model name' /proc/cpuinfo 2>/dev/null | head -1 | sed 's/.*: //')
+    [[ -z "$CPU_MODEL" ]] && CPU_MODEL="Unknown"
     RAM_GB=$(awk '/MemTotal/{printf "%.0f", $2/1048576}' /proc/meminfo 2>/dev/null || echo "?")
     export HW_VENDOR HW_MODEL HW_CHASSIS CPU_MODEL RAM_GB
 }
@@ -136,6 +138,8 @@ apt_inventory_cache_init() {
     local manual=()
     mapfile -t manual < <(apt-mark showmanual 2>/dev/null)
     if (( ${#manual[@]} > 0 )); then
+        local temp_file
+        temp_file=$(mktemp "/tmp/.ua_apt_cache.XXXXXX")
         # apt-cache policy ignores unknown packages silently.
         apt-cache policy "${manual[@]}" 2>/dev/null \
         | awk '
@@ -169,15 +173,15 @@ apt_inventory_cache_init() {
             # Re-emit so caller (parent shell) can rebuild the assoc arrays —
             # the while-pipe runs in a subshell, so we serialize back via stdout.
             printf '%s|%s|%s\n' "$tag" "$p" "$val"
-        done > /tmp/.ua_apt_cache.$$
+        done > "$temp_file"
         # Re-read in current shell (avoids subshell-scope assoc-array loss).
         while IFS='|' read -r tag p val; do
             case "$tag" in
                 C) APT_CACHE_CANDIDATE[$p]="$val" ;;
                 S) APT_CACHE_SOURCE[$p]="$val" ;;
             esac
-        done < /tmp/.ua_apt_cache.$$
-        rm -f /tmp/.ua_apt_cache.$$
+        done < "$temp_file"
+        rm -f "$temp_file"
     fi
     APT_CACHE_INIT=1
     export APT_CACHE_INIT

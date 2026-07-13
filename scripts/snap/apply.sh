@@ -39,7 +39,7 @@ if (( n_pre > 0 )); then
     progress_start "snap-refresh" "$n_pre" "snap refresh"
 fi
 print_step "snap refresh"
-refresh_out=$(sudo snap refresh 2>&1) || refresh_rc=$? || true
+refresh_out=$(sudo snap refresh 2>&1) || true
 echo "${refresh_out}" >> "${LOG_FILE}"
 
 if echo "${refresh_out}" | grep -q "All snaps up to date"; then

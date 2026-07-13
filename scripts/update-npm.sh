@@ -69,7 +69,6 @@ if [[ "${MIGRATE_BREW_AI_CLIS}" == "1" && "${HAS_BREW:-0}" -eq 1 ]]; then
 
     _brew_remove_if_present cask "claude-code"
     _brew_remove_if_present cask "claude-code@latest"
-    _brew_remove_if_present formula "gemini-cli"
     _brew_remove_if_present cask "codex"
     _brew_remove_if_present formula "codex"
 else

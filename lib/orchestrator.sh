@@ -158,10 +158,10 @@ PY
         local nr
         nr=$(python3 -c "import json,sys
 try:
-    d=json.load(open('$json_out'))
+    d=json.load(open(sys.argv[1]))
     print('1' if d.get('needs_reboot') else '0')
 except Exception:
-    print('0')" 2>/dev/null || echo 0)
+    print('0')" "$json_out" 2>/dev/null || echo 0)
         ORCH_NEEDS_REBOOT[$key]="$nr"
     else
         ORCH_NEEDS_REBOOT[$key]=0

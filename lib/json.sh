@@ -141,7 +141,7 @@ json_finalize() {
 json_register_exit_trap() {
     JSON_OUT_PATH="${1:-${JSON_OUT:-}}"
     [[ -z "${JSON_OUT_PATH}" ]] && return 0
-    trap '_json_finalize_on_exit $?' EXIT
+    add_exit_trap '_json_finalize_on_exit $?'
 }
 
 _json_finalize_on_exit() {

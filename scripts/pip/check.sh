@@ -6,10 +6,10 @@ source "${SCRIPT_DIR}/lib/detect.sh"
 source "${SCRIPT_DIR}/lib/json.sh"
 source "${SCRIPT_DIR}/lib/progress.sh"
 
-json_init check pip
+json_init "${PIP_PHASE:-check}" pip
 json_register_exit_trap "${JSON_OUT:-}"
 
-print_header "Python — check"
+print_header "Python — ${PIP_PHASE:-check}"
 detect_package_managers
 
 PY3=""
@@ -25,9 +25,12 @@ fi
 out=$($PY3 -m pip list --user --outdated --format=json 2>/dev/null || echo '[]')
 n=$(echo "$out" | python3 -c "
 import json, sys
-d=json.loads(sys.stdin.read() or '[]')
-for x in d:
-    print(f\"{x['name']}|{x['version']}|{x['latest_version']}\")
+try:
+    d=json.loads(sys.stdin.read() or '[]')
+    for x in d:
+        print(f\"{x['name']}|{x['version']}|{x['latest_version']}\")
+except Exception:
+    pass
 ")
 count_pip=0; detail=""
 while IFS='|' read -r name cur lat; do

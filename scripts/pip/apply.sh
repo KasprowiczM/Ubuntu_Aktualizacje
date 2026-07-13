@@ -140,10 +140,10 @@ else
 import json, sys
 try:
     d = json.loads(sys.stdin.read() or '{}')
-    print('1' if '$base' in d.get('venvs', {}) else '0')
+    print('1' if sys.argv[1] in d.get('venvs', {}) else '0')
 except Exception:
     print('0')
-")
+" "$base")
             if [[ "$present" == "1" ]]; then
                 json_add_item id="pipx:configured:${base}" action="present" result="ok"
                 json_count_ok

@@ -147,17 +147,9 @@ _restore_excluded_apt_holds() {
     EXCL_TEMP_HELD=()
 }
 
-# Compose EXIT handler so that hold-restoration AND JSON sidecar finalize both
-# fire on exit (regardless of whether we exit normally or via set -e). The
-# previous version overrode the json trap and the apply.json sidecar was never
-# written — orchestrator then silently dropped apt:apply from run.json.
-_apt_apply_on_exit() {
-    local rc=$?
-    _restore_nvidia_holds 2>/dev/null || true
-    _restore_excluded_apt_holds 2>/dev/null || true
-    _json_finalize_on_exit "$rc"
-}
-trap _apt_apply_on_exit EXIT
+# Register our custom cleanups via the cooperatively managed exit trap list.
+add_exit_trap '_restore_nvidia_holds 2>/dev/null || true'
+add_exit_trap '_restore_excluded_apt_holds 2>/dev/null || true'
 
 _temporarily_hold_excluded_apt
 if [[ "$APT_CATEGORY_EXCLUDED" -eq 1 ]]; then
@@ -258,7 +250,7 @@ sudo apt-get upgrade "${APT_OPTS[@]}" \
     -o Dpkg::Progress-Fancy=0 \
     -o Dpkg::Use-Pty=0 2>&1 \
 | tee -a "${LOG_FILE}" \
-| awk -v total=${#_upgradable[@]} '
+| awk -v total="${#_upgradable[@]}" '
     BEGIN { i = 0 }
     /^Setting up / {
         i++
